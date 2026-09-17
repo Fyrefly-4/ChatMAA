@@ -90,4 +90,4 @@ Python 在控制权过期后拒绝迟到续期和新命令，先请求停止，�
 
 本轮采用 150 ms 轮询/续期、1500 ms 控制租约、900 ms 停止等待和 450 ms 单次 HTTP 超时。这些是实验配置，不是通过性能优化得出的生产建议。挂起使用 Windows native API，仅作故障注入；不作为产品 API 依赖。
 
-真实 MAA 的资源参数、成功回调、批量计数、失败重试及停止确认仍全部待实机验证。当前通过的替身实验不能替代 [MVP Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1) 的完整验收。
+原型 A 后续已经完成累计三次实机成功及正常收尾，详情见 [MAA 报告](../maa/REPORT.md)。当前又补充了 [HTTP 合并准备](../maa/HTTP-MERGE.md)：通过 `LAB_BACKEND` 选择原替身、离线回调或受限 live 入口，默认仍为原替身。停止意图会在 TS 中保留，避免较早发起的轮询覆盖它。替身和离线回放不能替代真实合并验证或 [MVP Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1) 的完整验收。

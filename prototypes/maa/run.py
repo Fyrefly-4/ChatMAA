@@ -1,5 +1,6 @@
 """单轮真实执行。重复使用同一输出目录拒绝执行；不自动补刷。"""
 import argparse
+import contextlib
 import hashlib
 import json
 import msvcrt
@@ -13,7 +14,7 @@ from core import Core, window_identity
 from contract import fight_params, write_failure_overlay, summarize
 
 
-def main():
+def main(argv=None, *, stop_requested=None, on_progress=None, device_lock_held=False):
     parser = argparse.ArgumentParser()
     parser.add_argument("--installation", type=Path, required=True)
     parser.add_argument("--hwnd", type=int, required=True)
@@ -21,7 +22,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--max-seconds", type=int, default=1200)
     parser.add_argument("--continues", choices=["verified-three"])
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     params = fight_params(args.count)
     identity = window_identity(args.hwnd)
     root = Path(__file__).resolve().parent
@@ -29,11 +30,13 @@ def main():
     artifacts.mkdir(exist_ok=True)
     output = args.output.resolve()
     output.relative_to(artifacts)  # 本原型只向自身运行产物目录写入。
-    with (artifacts / "device.lock").open("a+b") as lock:
-        if os.fstat(lock.fileno()).st_size == 0:
-            lock.write(b"0"); lock.flush()
-        lock.seek(0)
-        msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+    # HTTP 执行端在启动时持有同一路径的锁；CLI 仍自己取得锁。
+    with contextlib.nullcontext() if device_lock_held else (artifacts / "device.lock").open("a+b") as lock:
+        if not device_lock_held:
+            if os.fstat(lock.fileno()).st_size == 0:
+                lock.write(b"0"); lock.flush()
+            lock.seek(0)
+            msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
         output.mkdir()  # 一轮操作只可启动一次；已有目录必须先人工核对，不能重放。
         policy = write_failure_overlay(output)
         manifest = {"created_at": time.time(), "pid": os.getpid(), "window": identity,
@@ -42,10 +45,11 @@ def main():
                     "failure_policy": "private Fight-prefixed Stop overrides", "state": "preparing"}
         (output / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         (artifacts / "live-run.json").write_text(json.dumps({"pid": os.getpid(), "output": str(output)}), encoding="utf-8")
-        stop_requested = threading.Event()
+        stop_requested = stop_requested if stop_requested is not None else threading.Event()
         stop_returned = threading.Event()
-        signal.signal(signal.SIGINT, lambda *_: stop_requested.set())
-        signal.signal(signal.SIGTERM, lambda *_: stop_requested.set())
+        if threading.current_thread() is threading.main_thread():
+            signal.signal(signal.SIGINT, lambda *_: stop_requested.set())
+            signal.signal(signal.SIGTERM, lambda *_: stop_requested.set())
         core = Core(args.installation, output, incremental=policy, quiet_callbacks=True)
         task_id = 0
         started = False
@@ -117,6 +121,8 @@ def main():
             while True:
                 with core.event_lock:
                     projection = summarize(list(core.events), task_id, args.count)
+                if on_progress is not None:
+                    on_progress(projection)
                 if projection["observed_successes"] != last_count:
                     last_count = projection["observed_successes"]
                     core.write("observed_progress", count=last_count, requested=args.count)

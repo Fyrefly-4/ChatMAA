@@ -19,6 +19,10 @@ mkdirSync(data, { recursive: true });
 const token = required('LAB_APP_TOKEN');
 const adapterToken = required('LAB_ADAPTER_TOKEN');
 const controller = randomUUID();
+const backend = process.env.LAB_BACKEND ?? 'fake';
+if (!['fake', 'maa-replay', 'maa-live'].includes(backend)) throw new Error('unknown LAB_BACKEND');
+const nativeContract = backend !== 'fake';
+const adapterEntry = nativeContract ? '../maa/http_service.py' : 'adapter/service.py';
 const interval = Number(process.env.LAB_POLL_MS ?? 150);
 const requestTimeout = Number(process.env.LAB_HTTP_TIMEOUT_MS ?? 450);
 const deadline = Number(process.env.LAB_STOP_DEADLINE_MS ?? 900);
@@ -54,7 +58,7 @@ async function call(path: string, method = 'GET', body?: unknown) {
 }
 
 const runtime = pythonRuntime(required('LAB_PYTHON'));
-const child: ChildProcess = spawn(runtime.executable, ['-S', '-u', resolve('adapter/service.py')], {
+const child: ChildProcess = spawn(runtime.executable, ['-S', '-u', resolve(adapterEntry)], {
   env: { ...process.env, PYTHONPATH: runtime.site, LAB_DATA: data, LAB_CONTROLLER: controller },
   // 保留进程句柄与显式启停；不 unref。避免 Windows 默认 Job 在 TS 崩溃时
   // 立即杀死 Python，使其有机会按租约先正常停止，再按期限退出。
@@ -141,7 +145,7 @@ app.addHook('onRequest', async (request, reply) => {
 });
 const paramsSchema = { type: 'object', additionalProperties: false,
   required: ['stage', 'count', 'medicine', 'premium'], properties: {
-    stage: { type: 'string', const: '1-7' }, count: { type: 'integer', minimum: 1, maximum: 100 },
+    stage: { type: 'string', const: '1-7' }, count: { type: 'integer', minimum: 1, maximum: nativeContract ? 3 : 100 },
     medicine: { type: 'integer', const: 0 }, premium: { type: 'integer', const: 0 },
   } };
 app.post<{ Body: { id: string; params: Params } }>('/tasks', { schema: { body: {
@@ -156,7 +160,10 @@ app.post<{ Body: { id: string; params: Params } }>('/tasks', { schema: { body: {
     return store.view(id); // 重启或网络故障后也不自动重发。
   }
   if (closing || childExited || storageFailed || faults.disk_full) return reply.code(503).send({ error: 'not_ready' });
-  if (store.all().some(t => !['ended', 'rejected'].includes(JSON.parse(t.snapshot).state))) {
+  if (store.all().some(t => {
+    const snapshot = JSON.parse(t.snapshot);
+    return !['ended', 'rejected'].includes(snapshot.state) || (nativeContract && snapshot.device !== 'ready');
+  })) {
     return reply.code(409).send({ error: 'device_busy_or_uncertain' });
   }
   try { store.prepare(id, params); } catch { storageFailed = true; return reply.code(503).send({ error: 'storage_unavailable' }); }
@@ -173,7 +180,7 @@ app.post<{ Body: { id: string; params: Params } }>('/tasks', { schema: { body: {
   }
   return reply.code(202).send(store.view(id));
 });
-app.get('/health', async () => ({ controller, adapter, childExited, storageFailed, closing }));
+app.get('/health', async () => ({ backend, controller, adapter, childExited, storageFailed, closing }));
 app.get('/tasks', async () => store.all().map(t => store.view(t.id)));
 app.get<{ Params: { id: string } }>('/tasks/:id', async (request, reply) => {
   return store.view(request.params.id) ?? reply.code(404).send({ error: 'unknown_task' });
@@ -183,13 +190,14 @@ app.post<{ Params: { id: string } }>('/tasks/:id/stop', async (request, reply) =
   if (!store.get(id)) return reply.code(404).send({ error: 'unknown_task' });
   // 停止不依赖写入成功。请求返回不是停止确认。
   if (!faults.disk_full) {
-    try { store.mark(id, { state: 'stopping', device: 'occupied', reason: 'stop_requested' }); }
+    try { store.mark(id, { state: 'stopping', device: 'occupied', reason: 'stop_requested', stop_requested: true }); }
     catch { storageFailed = true; }
   }
   try { await call(`/executions/${id}/stop`, 'POST'); } catch { /* 保留停止未确认 */ }
   return reply.code(202).send({ id, stop_requested: true, confirmed: false });
 });
 app.post('/reconcile', async (_request, reply) => {
+  if (nativeContract) return reply.code(409).send({ error: 'real_environment_requires_manual_check' });
   try {
     const result = await call('/reconcile', 'POST');
     for (const task of store.all()) {
@@ -203,12 +211,16 @@ app.post('/reconcile', async (_request, reply) => {
     return result;
   } catch (error) { return reply.code(409).send({ error: String(error) }); }
 });
-app.post<{ Body: Record<string, unknown> }>('/lab/faults', async request => {
+app.post<{ Body: Record<string, unknown> }>('/lab/faults', async (request, reply) => {
+  if (backend === 'maa-live') return reply.code(403).send({ error: 'fault_injection_disabled' });
   Object.assign(faults, request.body);
   if (request.body.storage_readonly) store.db.exec('PRAGMA query_only=ON');
   return { configured: true };
 });
-app.post<{ Params: { id: string } }>('/lab/replay/:id', async request => { await sync(request.params.id, true); return store.view(request.params.id); });
+app.post<{ Params: { id: string } }>('/lab/replay/:id', async (request, reply) => {
+  if (backend === 'maa-live') return reply.code(403).send({ error: 'fault_injection_disabled' });
+  await sync(request.params.id, true); return store.view(request.params.id);
+});
 
 async function shutdown() {
   if (closing) return;

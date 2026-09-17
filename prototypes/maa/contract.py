@@ -87,6 +87,8 @@ def summarize(events, task_id, requested):
             elif not duplicate:
                 count_unknown = True
     return {"interpretation_version": 2, "requested": requested, "observed_successes": observed, "stage_drop_evidence": drops,
+            "started_cycles": len(cycles),
+            "unsettled_cycles": sum(cycle["drop_signature"] is None for cycle in cycles.values()),
             "task_chain_completed": complete, "errors": errors, "count_unknown": count_unknown,
             "matches_requested_evidence": complete and not errors and not count_unknown and observed == requested,
             "onsite_verification": "pending"}

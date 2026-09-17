@@ -4,6 +4,7 @@ export type Params = { stage: string; count: number; medicine: number; premium: 
 export type Snapshot = {
   id: string; seq: number; state: string; confirmed: number;
   certainty: string; device: string; reason: string | null; updated_at?: number;
+  stop_requested?: boolean;
 };
 export type Evidence = { id: string; seq: number; kind: string; source_instance: string; snapshot: Snapshot };
 export type Update = { snapshot: Snapshot; events: Evidence[]; instance: string };
@@ -55,6 +56,14 @@ export class Store {
       }
       // 快照包含绝对已确认完成量；缺口保留，不把最后值当作完整结果。
       const snapshot = { ...update.snapshot, certainty: gap ? 'lower_bound' : update.snapshot.certainty };
+      // 已发出的停止意图属于 TS。停止前发起的轮询可能晚到，不能把界面退回“运行中”。
+      if (JSON.parse(row.snapshot).stop_requested) {
+        snapshot.stop_requested = true;
+        if (['accepted', 'running', 'submitting'].includes(snapshot.state)) {
+          snapshot.state = 'stopping';
+          snapshot.reason = 'stop_requested';
+        }
+      }
       checkpoint('before_projection_commit');
       this.db.prepare('UPDATE tasks SET snapshot=?, cursor=?, gap=? WHERE id=?')
         .run(JSON.stringify(snapshot), Math.max(cursor, update.snapshot.seq), gap ? 1 : 0, id);

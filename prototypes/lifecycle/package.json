@@ -9,6 +9,8 @@
   "scripts": {
     "check": "tsc --noEmit",
     "experiment": "node experiments/run.ts",
+    "experiment:merge": "node experiments/merge.ts",
+    "evidence:merge": "node experiments/export-merge.ts",
     "start": "node src/server.ts",
     "evidence": "node experiments/export.ts"
   },

@@ -1,0 +1,380 @@
+{
+  "run_id": "2026-09-17T16-32-37.876Z",
+  "mode": "offline_callback_replay",
+  "real_maa_invoked": false,
+  "meaning": "真实回调脱敏后离线重放；多周期及故障为合成。通过不等于实机合并验证通过。",
+  "tests": [
+    {
+      "name": "stop_intent_survives_delayed_poll",
+      "status": "passed",
+      "final": null
+    },
+    {
+      "name": "normal_and_dedup",
+      "status": "passed",
+      "duration_ms": 2299,
+      "worker_entries": 1,
+      "no_leftovers": true,
+      "final": {
+        "seq": 8,
+        "state": "ended",
+        "confirmed": 2,
+        "certainty": "exact",
+        "device": "needs_check",
+        "reason": "target_reached",
+        "automation_stopped": true,
+        "started_cycles": 2,
+        "unsettled_cycles": 0,
+        "cursor": 8,
+        "gap": false
+      },
+      "business": [
+        {
+          "seq": 8,
+          "state": "ended",
+          "confirmed": 2,
+          "certainty": "exact",
+          "device": "needs_check",
+          "reason": "target_reached",
+          "automation_stopped": true,
+          "started_cycles": 2,
+          "unsettled_cycles": 0,
+          "cursor": 8,
+          "gap": false
+        }
+      ],
+      "executor": [
+        {
+          "seq": 8,
+          "state": "ended",
+          "confirmed": 2,
+          "certainty": "exact",
+          "device": "needs_check",
+          "reason": "target_reached",
+          "automation_stopped": true,
+          "started_cycles": 2,
+          "unsettled_cycles": 0
+        }
+      ]
+    },
+    {
+      "name": "stop_during_unsettled_cycle",
+      "status": "passed",
+      "duration_ms": 2854,
+      "worker_entries": 1,
+      "no_leftovers": true,
+      "final": {
+        "seq": 6,
+        "state": "ended",
+        "confirmed": 0,
+        "certainty": "lower_bound",
+        "device": "needs_check",
+        "reason": "user_stop",
+        "automation_stopped": true,
+        "started_cycles": 1,
+        "unsettled_cycles": 1,
+        "stop_requested": true,
+        "cursor": 6,
+        "gap": false
+      },
+      "business": [
+        {
+          "seq": 6,
+          "state": "ended",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "user_stop",
+          "automation_stopped": true,
+          "started_cycles": 1,
+          "unsettled_cycles": 1,
+          "stop_requested": true,
+          "cursor": 6,
+          "gap": false
+        }
+      ],
+      "executor": [
+        {
+          "seq": 6,
+          "state": "ended",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "user_stop",
+          "automation_stopped": true,
+          "started_cycles": 1,
+          "unsettled_cycles": 1
+        }
+      ]
+    },
+    {
+      "name": "lost_submission_response",
+      "status": "passed",
+      "duration_ms": 2256,
+      "worker_entries": 1,
+      "no_leftovers": true,
+      "final": {
+        "seq": 8,
+        "state": "ended",
+        "confirmed": 2,
+        "certainty": "exact",
+        "device": "needs_check",
+        "reason": "target_reached",
+        "automation_stopped": true,
+        "started_cycles": 2,
+        "unsettled_cycles": 0,
+        "cursor": 8,
+        "gap": false
+      },
+      "business": [
+        {
+          "seq": 8,
+          "state": "ended",
+          "confirmed": 2,
+          "certainty": "exact",
+          "device": "needs_check",
+          "reason": "target_reached",
+          "automation_stopped": true,
+          "started_cycles": 2,
+          "unsettled_cycles": 0,
+          "cursor": 8,
+          "gap": false
+        }
+      ],
+      "executor": [
+        {
+          "seq": 8,
+          "state": "ended",
+          "confirmed": 2,
+          "certainty": "exact",
+          "device": "needs_check",
+          "reason": "target_reached",
+          "automation_stopped": true,
+          "started_cycles": 2,
+          "unsettled_cycles": 0
+        }
+      ]
+    },
+    {
+      "name": "invalid_settlement",
+      "status": "passed",
+      "duration_ms": 1613,
+      "worker_entries": 1,
+      "no_leftovers": true,
+      "final": {
+        "seq": 7,
+        "state": "ended",
+        "confirmed": 0,
+        "certainty": "lower_bound",
+        "device": "needs_check",
+        "reason": "user_stop",
+        "automation_stopped": true,
+        "started_cycles": 1,
+        "unsettled_cycles": 1,
+        "cursor": 7,
+        "gap": false
+      },
+      "business": [
+        {
+          "seq": 7,
+          "state": "ended",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "user_stop",
+          "automation_stopped": true,
+          "started_cycles": 1,
+          "unsettled_cycles": 1,
+          "cursor": 7,
+          "gap": false
+        }
+      ],
+      "executor": [
+        {
+          "seq": 7,
+          "state": "ended",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "user_stop",
+          "automation_stopped": true,
+          "started_cycles": 1,
+          "unsettled_cycles": 1
+        }
+      ]
+    },
+    {
+      "name": "sqlite_failure_still_stops",
+      "status": "passed",
+      "duration_ms": 1802,
+      "worker_entries": 1,
+      "no_leftovers": true,
+      "final": {
+        "seq": 4,
+        "state": "unknown",
+        "confirmed": 0,
+        "certainty": "lower_bound",
+        "device": "needs_check",
+        "reason": "storage_failed",
+        "automation_stopped": false,
+        "started_cycles": 1,
+        "unsettled_cycles": 1,
+        "stop_requested": true,
+        "cursor": 4,
+        "gap": false
+      },
+      "business": [
+        {
+          "seq": 4,
+          "state": "unknown",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "executor_exited",
+          "automation_stopped": false,
+          "started_cycles": 1,
+          "unsettled_cycles": 1,
+          "stop_requested": true,
+          "cursor": 4,
+          "gap": false
+        }
+      ],
+      "executor": [
+        {
+          "seq": 4,
+          "state": "running",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "occupied",
+          "reason": null,
+          "automation_stopped": false,
+          "started_cycles": 1,
+          "unsettled_cycles": 1
+        }
+      ]
+    },
+    {
+      "name": "lease_exit_and_no_restart_replay",
+      "status": "passed",
+      "duration_ms": 5470,
+      "worker_entries": 1,
+      "no_leftovers": true,
+      "final": {
+        "seq": 7,
+        "state": "ended",
+        "confirmed": 1,
+        "certainty": "lower_bound",
+        "device": "needs_check",
+        "reason": "user_stop",
+        "automation_stopped": true,
+        "started_cycles": 1,
+        "unsettled_cycles": 0,
+        "cursor": 7,
+        "gap": false
+      },
+      "business": [
+        {
+          "seq": 7,
+          "state": "ended",
+          "confirmed": 1,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "user_stop",
+          "automation_stopped": true,
+          "started_cycles": 1,
+          "unsettled_cycles": 0,
+          "cursor": 7,
+          "gap": false
+        }
+      ],
+      "executor": [
+        {
+          "seq": 7,
+          "state": "ended",
+          "confirmed": 1,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "user_stop",
+          "automation_stopped": true,
+          "started_cycles": 1,
+          "unsettled_cycles": 0
+        }
+      ]
+    },
+    {
+      "name": "executor_crash_keeps_unknown",
+      "status": "passed",
+      "duration_ms": 3321,
+      "worker_entries": 1,
+      "no_leftovers": true,
+      "final": {
+        "seq": 5,
+        "state": "unknown",
+        "confirmed": 0,
+        "certainty": "lower_bound",
+        "device": "needs_check",
+        "reason": "executor_restarted",
+        "automation_stopped": false,
+        "started_cycles": 1,
+        "unsettled_cycles": 1,
+        "cursor": 5,
+        "gap": false
+      },
+      "business": [
+        {
+          "seq": 5,
+          "state": "unknown",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "executor_exited",
+          "automation_stopped": false,
+          "started_cycles": 1,
+          "unsettled_cycles": 1,
+          "cursor": 5,
+          "gap": false
+        }
+      ],
+      "executor": [
+        {
+          "seq": 5,
+          "state": "unknown",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "executor_restarted",
+          "automation_stopped": false,
+          "started_cycles": 1,
+          "unsettled_cycles": 1
+        }
+      ]
+    }
+  ],
+  "handoff_rehearsal": {
+    "mode": "offline_callback_replay",
+    "stopCause": "second_battle_started",
+    "stopScenarioObserved": true,
+    "shutdownConfirmed": true,
+    "failure": null,
+    "final": {
+      "seq": 8,
+      "state": "ended",
+      "confirmed": 1,
+      "certainty": "lower_bound",
+      "device": "needs_check",
+      "reason": "user_stop",
+      "automation_stopped": true,
+      "started_cycles": 2,
+      "unsettled_cycles": 1,
+      "cursor": 8,
+      "gap": false
+    }
+  },
+  "lifecycle_regression": {
+    "run_id": "2026-09-17T16-32-38.168Z",
+    "passed": 25,
+    "total": 25,
+    "meaning": "包括原有组合故障监督缺口的再现，不代表该缺口已解决。"
+  },
+  "discovered_and_fixed": "停止前发出的轮询晚到曾覆盖停止中状态；TS 现在单独保留停止意图，并有确定性回归检查。"
+}
