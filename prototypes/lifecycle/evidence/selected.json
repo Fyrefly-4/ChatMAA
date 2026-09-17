@@ -1,0 +1,1643 @@
+{
+  "runId": "2026-09-17T15-11-17.705Z",
+  "experiments": [
+    {
+      "name": "07_python_crash_after_start",
+      "status": "passed",
+      "oracle": [
+        {
+          "kind": "start",
+          "id": "op",
+          "instance": "66b1dfdd-168b-47e4-b7fa-b9664830c4e6",
+          "at": 1789657897.9114394
+        },
+        {
+          "kind": "start",
+          "id": "explicit-new",
+          "instance": "516dce9b-5543-4724-8e47-106882c3d8fc",
+          "at": 1789657898.887473
+        },
+        {
+          "kind": "success",
+          "id": "explicit-new",
+          "instance": "516dce9b-5543-4724-8e47-106882c3d8fc",
+          "at": 1789657899.0864782
+        },
+        {
+          "kind": "stop",
+          "id": "explicit-new",
+          "instance": "516dce9b-5543-4724-8e47-106882c3d8fc",
+          "at": 1789657899.093155
+        }
+      ],
+      "timeline": [
+        {
+          "kind": "adapter",
+          "at": 1789657897780,
+          "message": {
+            "kind": "ready",
+            "at": 1789657897.779318,
+            "instance": "66b1dfdd-168b-47e4-b7fa-b9664830c4e6",
+            "controller": "a7090619-e7bf-4538-818a-1bfe134f0eee",
+            "pid": 49112,
+            "port": 42964
+          }
+        },
+        {
+          "kind": "ready",
+          "at": 1789657897812,
+          "address": "http://127.0.0.1:21781",
+          "controller": "a7090619-e7bf-4538-818a-1bfe134f0eee",
+          "adapter": {
+            "kind": "ready",
+            "at": 1789657897.779318,
+            "instance": "66b1dfdd-168b-47e4-b7fa-b9664830c4e6",
+            "controller": "a7090619-e7bf-4538-818a-1bfe134f0eee",
+            "pid": 49112,
+            "port": 42964
+          },
+          "pid": 45424
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657897911,
+          "message": {
+            "kind": "evidence",
+            "at": 1789657897.910438,
+            "evidence": {
+              "id": "op",
+              "seq": 1,
+              "kind": "accepted",
+              "source_instance": "66b1dfdd-168b-47e4-b7fa-b9664830c4e6",
+              "snapshot": {
+                "id": "op",
+                "seq": 1,
+                "state": "accepted",
+                "confirmed": 0,
+                "certainty": "lower_bound",
+                "device": "occupied",
+                "reason": null,
+                "updated_at": 1789657897.910438
+              }
+            }
+          }
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657897917,
+          "message": {
+            "kind": "crash",
+            "at": 1789657897.917229,
+            "point": "after_start"
+          }
+        },
+        {
+          "kind": "sync_unavailable",
+          "at": 1789657897976,
+          "id": "op",
+          "error": "TypeError: fetch failed"
+        },
+        {
+          "kind": "child_exit",
+          "at": 1789657897978,
+          "pid": 49112,
+          "code": 71,
+          "signal": null
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657898617,
+          "message": {
+            "kind": "evidence",
+            "at": 1789657898.6167583,
+            "evidence": {
+              "id": "op",
+              "seq": 2,
+              "kind": "recovered_uncertain",
+              "source_instance": "516dce9b-5543-4724-8e47-106882c3d8fc",
+              "snapshot": {
+                "id": "op",
+                "seq": 2,
+                "state": "unknown",
+                "confirmed": 0,
+                "certainty": "lower_bound",
+                "device": "needs_check",
+                "reason": "executor_restarted",
+                "updated_at": 1789657898.6157532
+              }
+            }
+          }
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657898650,
+          "message": {
+            "kind": "ready",
+            "at": 1789657898.650256,
+            "instance": "516dce9b-5543-4724-8e47-106882c3d8fc",
+            "controller": "f61c2192-6c6c-4be0-9b59-a3aa509d04c0",
+            "pid": 42896,
+            "port": 52910
+          }
+        },
+        {
+          "kind": "ready",
+          "at": 1789657898678,
+          "address": "http://127.0.0.1:52246",
+          "controller": "f61c2192-6c6c-4be0-9b59-a3aa509d04c0",
+          "adapter": {
+            "kind": "ready",
+            "at": 1789657898.650256,
+            "instance": "516dce9b-5543-4724-8e47-106882c3d8fc",
+            "controller": "f61c2192-6c6c-4be0-9b59-a3aa509d04c0",
+            "pid": 42896,
+            "port": 52910
+          },
+          "pid": 31056
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657898808,
+          "message": {
+            "kind": "evidence",
+            "at": 1789657898.8078742,
+            "evidence": {
+              "id": "op",
+              "seq": 3,
+              "kind": "fake_environment_checked",
+              "source_instance": "516dce9b-5543-4724-8e47-106882c3d8fc",
+              "snapshot": {
+                "id": "op",
+                "seq": 3,
+                "state": "ended",
+                "confirmed": 0,
+                "certainty": "lower_bound",
+                "device": "ready",
+                "reason": "reconciled_unknown_count",
+                "updated_at": 1789657898.805872
+              }
+            }
+          }
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657898887,
+          "message": {
+            "kind": "evidence",
+            "at": 1789657898.887473,
+            "evidence": {
+              "id": "explicit-new",
+              "seq": 1,
+              "kind": "accepted",
+              "source_instance": "516dce9b-5543-4724-8e47-106882c3d8fc",
+              "snapshot": {
+                "id": "explicit-new",
+                "seq": 1,
+                "state": "accepted",
+                "confirmed": 0,
+                "certainty": "lower_bound",
+                "device": "occupied",
+                "reason": null,
+                "updated_at": 1789657898.8864567
+              }
+            }
+          }
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657898893,
+          "message": {
+            "kind": "evidence",
+            "at": 1789657898.8936582,
+            "evidence": {
+              "id": "explicit-new",
+              "seq": 2,
+              "kind": "started",
+              "source_instance": "516dce9b-5543-4724-8e47-106882c3d8fc",
+              "snapshot": {
+                "id": "explicit-new",
+                "seq": 2,
+                "state": "running",
+                "confirmed": 0,
+                "certainty": "lower_bound",
+                "device": "occupied",
+                "reason": null,
+                "updated_at": 1789657898.8936582
+              }
+            }
+          }
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657899093,
+          "message": {
+            "kind": "evidence",
+            "at": 1789657899.093155,
+            "evidence": {
+              "id": "explicit-new",
+              "seq": 3,
+              "kind": "success",
+              "source_instance": "516dce9b-5543-4724-8e47-106882c3d8fc",
+              "snapshot": {
+                "id": "explicit-new",
+                "seq": 3,
+                "state": "running",
+                "confirmed": 1,
+                "certainty": "lower_bound",
+                "device": "occupied",
+                "reason": null,
+                "updated_at": 1789657899.093155
+              }
+            }
+          }
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657899099,
+          "message": {
+            "kind": "evidence",
+            "at": 1789657899.0990884,
+            "evidence": {
+              "id": "explicit-new",
+              "seq": 4,
+              "kind": "completed",
+              "source_instance": "516dce9b-5543-4724-8e47-106882c3d8fc",
+              "snapshot": {
+                "id": "explicit-new",
+                "seq": 4,
+                "state": "ended",
+                "confirmed": 1,
+                "certainty": "exact",
+                "device": "ready",
+                "reason": "target_reached",
+                "updated_at": 1789657899.0980885
+              }
+            }
+          }
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657899383,
+          "message": {
+            "kind": "retiring",
+            "at": 1789657899.3830788,
+            "reason": "application_shutdown"
+          }
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657899414,
+          "message": {
+            "kind": "exit",
+            "at": 1789657899.4143603,
+            "reason": "retired"
+          }
+        },
+        {
+          "kind": "child_exit",
+          "at": 1789657899489,
+          "pid": 42896,
+          "code": 0,
+          "signal": null
+        }
+      ],
+      "snapshots": [
+        {
+          "label": "before_submission",
+          "at": 1789657897863,
+          "databases": [
+            {
+              "index": 0,
+              "business": {
+                "tasks": [],
+                "evidence": [],
+                "gaps": []
+              },
+              "executor": {
+                "executions": [],
+                "events": []
+              }
+            }
+          ]
+        },
+        {
+          "label": "after_crash",
+          "at": 1789657897919,
+          "databases": [
+            {
+              "index": 0,
+              "business": {
+                "tasks": [
+                  {
+                    "id": "op",
+                    "params": "{\"stage\":\"1-7\",\"count\":30,\"medicine\":0,\"premium\":0}",
+                    "snapshot": "{\"id\":\"op\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657897.910438}",
+                    "cursor": 1,
+                    "gap": 0
+                  }
+                ],
+                "evidence": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "body": "{\"id\":\"op\",\"seq\":1,\"kind\":\"accepted\",\"source_instance\":\"66b1dfdd-168b-47e4-b7fa-b9664830c4e6\",\"snapshot\":{\"id\":\"op\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657897.910438}}"
+                  }
+                ],
+                "gaps": []
+              },
+              "executor": {
+                "executions": [
+                  {
+                    "id": "op",
+                    "params": "{\"count\": 30, \"medicine\": 0, \"premium\": 0, \"stage\": \"1-7\"}",
+                    "snapshot": "{\"id\": \"op\", \"seq\": 1, \"state\": \"accepted\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657897.910438}"
+                  }
+                ],
+                "events": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "evidence": "{\"id\": \"op\", \"seq\": 1, \"kind\": \"accepted\", \"source_instance\": \"66b1dfdd-168b-47e4-b7fa-b9664830c4e6\", \"snapshot\": {\"id\": \"op\", \"seq\": 1, \"state\": \"accepted\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657897.910438}}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "label": "before_cleanup",
+          "at": 1789657899213,
+          "databases": [
+            {
+              "index": 0,
+              "business": {
+                "tasks": [
+                  {
+                    "id": "op",
+                    "params": "{\"stage\":\"1-7\",\"count\":30,\"medicine\":0,\"premium\":0}",
+                    "snapshot": "{\"id\":\"op\",\"seq\":3,\"state\":\"ended\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"ready\",\"reason\":\"reconciled_unknown_count\",\"updated_at\":1789657898.805872}",
+                    "cursor": 3,
+                    "gap": 0
+                  },
+                  {
+                    "id": "explicit-new",
+                    "params": "{\"stage\":\"1-7\",\"count\":1,\"medicine\":0,\"premium\":0}",
+                    "snapshot": "{\"id\":\"explicit-new\",\"seq\":4,\"state\":\"ended\",\"confirmed\":1,\"certainty\":\"exact\",\"device\":\"ready\",\"reason\":\"target_reached\",\"updated_at\":1789657899.0980885}",
+                    "cursor": 4,
+                    "gap": 0
+                  }
+                ],
+                "evidence": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "body": "{\"id\":\"op\",\"seq\":1,\"kind\":\"accepted\",\"source_instance\":\"66b1dfdd-168b-47e4-b7fa-b9664830c4e6\",\"snapshot\":{\"id\":\"op\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657897.910438}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 2,
+                    "body": "{\"id\":\"op\",\"seq\":2,\"kind\":\"recovered_uncertain\",\"source_instance\":\"516dce9b-5543-4724-8e47-106882c3d8fc\",\"snapshot\":{\"id\":\"op\",\"seq\":2,\"state\":\"unknown\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"needs_check\",\"reason\":\"executor_restarted\",\"updated_at\":1789657898.6157532}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 3,
+                    "body": "{\"id\":\"op\",\"seq\":3,\"kind\":\"fake_environment_checked\",\"source_instance\":\"516dce9b-5543-4724-8e47-106882c3d8fc\",\"snapshot\":{\"id\":\"op\",\"seq\":3,\"state\":\"ended\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"ready\",\"reason\":\"reconciled_unknown_count\",\"updated_at\":1789657898.805872}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 1,
+                    "body": "{\"id\":\"explicit-new\",\"seq\":1,\"kind\":\"accepted\",\"source_instance\":\"516dce9b-5543-4724-8e47-106882c3d8fc\",\"snapshot\":{\"id\":\"explicit-new\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657898.8864567}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 2,
+                    "body": "{\"id\":\"explicit-new\",\"seq\":2,\"kind\":\"started\",\"source_instance\":\"516dce9b-5543-4724-8e47-106882c3d8fc\",\"snapshot\":{\"id\":\"explicit-new\",\"seq\":2,\"state\":\"running\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657898.8936582}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 3,
+                    "body": "{\"id\":\"explicit-new\",\"seq\":3,\"kind\":\"success\",\"source_instance\":\"516dce9b-5543-4724-8e47-106882c3d8fc\",\"snapshot\":{\"id\":\"explicit-new\",\"seq\":3,\"state\":\"running\",\"confirmed\":1,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657899.093155}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 4,
+                    "body": "{\"id\":\"explicit-new\",\"seq\":4,\"kind\":\"completed\",\"source_instance\":\"516dce9b-5543-4724-8e47-106882c3d8fc\",\"snapshot\":{\"id\":\"explicit-new\",\"seq\":4,\"state\":\"ended\",\"confirmed\":1,\"certainty\":\"exact\",\"device\":\"ready\",\"reason\":\"target_reached\",\"updated_at\":1789657899.0980885}}"
+                  }
+                ],
+                "gaps": []
+              },
+              "executor": {
+                "executions": [
+                  {
+                    "id": "op",
+                    "params": "{\"count\": 30, \"medicine\": 0, \"premium\": 0, \"stage\": \"1-7\"}",
+                    "snapshot": "{\"id\": \"op\", \"seq\": 3, \"state\": \"ended\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"ready\", \"reason\": \"reconciled_unknown_count\", \"updated_at\": 1789657898.805872}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "params": "{\"count\": 1, \"medicine\": 0, \"premium\": 0, \"stage\": \"1-7\"}",
+                    "snapshot": "{\"id\": \"explicit-new\", \"seq\": 4, \"state\": \"ended\", \"confirmed\": 1, \"certainty\": \"exact\", \"device\": \"ready\", \"reason\": \"target_reached\", \"updated_at\": 1789657899.0980885}"
+                  }
+                ],
+                "events": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "evidence": "{\"id\": \"op\", \"seq\": 1, \"kind\": \"accepted\", \"source_instance\": \"66b1dfdd-168b-47e4-b7fa-b9664830c4e6\", \"snapshot\": {\"id\": \"op\", \"seq\": 1, \"state\": \"accepted\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657897.910438}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 2,
+                    "evidence": "{\"id\": \"op\", \"seq\": 2, \"kind\": \"recovered_uncertain\", \"source_instance\": \"516dce9b-5543-4724-8e47-106882c3d8fc\", \"snapshot\": {\"id\": \"op\", \"seq\": 2, \"state\": \"unknown\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"needs_check\", \"reason\": \"executor_restarted\", \"updated_at\": 1789657898.6157532}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 3,
+                    "evidence": "{\"id\": \"op\", \"seq\": 3, \"kind\": \"fake_environment_checked\", \"source_instance\": \"516dce9b-5543-4724-8e47-106882c3d8fc\", \"snapshot\": {\"id\": \"op\", \"seq\": 3, \"state\": \"ended\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"ready\", \"reason\": \"reconciled_unknown_count\", \"updated_at\": 1789657898.805872}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 1,
+                    "evidence": "{\"id\": \"explicit-new\", \"seq\": 1, \"kind\": \"accepted\", \"source_instance\": \"516dce9b-5543-4724-8e47-106882c3d8fc\", \"snapshot\": {\"id\": \"explicit-new\", \"seq\": 1, \"state\": \"accepted\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657898.8864567}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 2,
+                    "evidence": "{\"id\": \"explicit-new\", \"seq\": 2, \"kind\": \"started\", \"source_instance\": \"516dce9b-5543-4724-8e47-106882c3d8fc\", \"snapshot\": {\"id\": \"explicit-new\", \"seq\": 2, \"state\": \"running\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657898.8936582}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 3,
+                    "evidence": "{\"id\": \"explicit-new\", \"seq\": 3, \"kind\": \"success\", \"source_instance\": \"516dce9b-5543-4724-8e47-106882c3d8fc\", \"snapshot\": {\"id\": \"explicit-new\", \"seq\": 3, \"state\": \"running\", \"confirmed\": 1, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657899.093155}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 4,
+                    "evidence": "{\"id\": \"explicit-new\", \"seq\": 4, \"kind\": \"completed\", \"source_instance\": \"516dce9b-5543-4724-8e47-106882c3d8fc\", \"snapshot\": {\"id\": \"explicit-new\", \"seq\": 4, \"state\": \"ended\", \"confirmed\": 1, \"certainty\": \"exact\", \"device\": \"ready\", \"reason\": \"target_reached\", \"updated_at\": 1789657899.0980885}}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "label": "after_cleanup",
+          "at": 1789657899537,
+          "databases": [
+            {
+              "index": 0,
+              "business": {
+                "tasks": [
+                  {
+                    "id": "op",
+                    "params": "{\"stage\":\"1-7\",\"count\":30,\"medicine\":0,\"premium\":0}",
+                    "snapshot": "{\"id\":\"op\",\"seq\":3,\"state\":\"ended\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"ready\",\"reason\":\"reconciled_unknown_count\",\"updated_at\":1789657898.805872}",
+                    "cursor": 3,
+                    "gap": 0
+                  },
+                  {
+                    "id": "explicit-new",
+                    "params": "{\"stage\":\"1-7\",\"count\":1,\"medicine\":0,\"premium\":0}",
+                    "snapshot": "{\"id\":\"explicit-new\",\"seq\":4,\"state\":\"ended\",\"confirmed\":1,\"certainty\":\"exact\",\"device\":\"ready\",\"reason\":\"target_reached\",\"updated_at\":1789657899.0980885}",
+                    "cursor": 4,
+                    "gap": 0
+                  }
+                ],
+                "evidence": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "body": "{\"id\":\"op\",\"seq\":1,\"kind\":\"accepted\",\"source_instance\":\"66b1dfdd-168b-47e4-b7fa-b9664830c4e6\",\"snapshot\":{\"id\":\"op\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657897.910438}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 2,
+                    "body": "{\"id\":\"op\",\"seq\":2,\"kind\":\"recovered_uncertain\",\"source_instance\":\"516dce9b-5543-4724-8e47-106882c3d8fc\",\"snapshot\":{\"id\":\"op\",\"seq\":2,\"state\":\"unknown\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"needs_check\",\"reason\":\"executor_restarted\",\"updated_at\":1789657898.6157532}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 3,
+                    "body": "{\"id\":\"op\",\"seq\":3,\"kind\":\"fake_environment_checked\",\"source_instance\":\"516dce9b-5543-4724-8e47-106882c3d8fc\",\"snapshot\":{\"id\":\"op\",\"seq\":3,\"state\":\"ended\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"ready\",\"reason\":\"reconciled_unknown_count\",\"updated_at\":1789657898.805872}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 1,
+                    "body": "{\"id\":\"explicit-new\",\"seq\":1,\"kind\":\"accepted\",\"source_instance\":\"516dce9b-5543-4724-8e47-106882c3d8fc\",\"snapshot\":{\"id\":\"explicit-new\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657898.8864567}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 2,
+                    "body": "{\"id\":\"explicit-new\",\"seq\":2,\"kind\":\"started\",\"source_instance\":\"516dce9b-5543-4724-8e47-106882c3d8fc\",\"snapshot\":{\"id\":\"explicit-new\",\"seq\":2,\"state\":\"running\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657898.8936582}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 3,
+                    "body": "{\"id\":\"explicit-new\",\"seq\":3,\"kind\":\"success\",\"source_instance\":\"516dce9b-5543-4724-8e47-106882c3d8fc\",\"snapshot\":{\"id\":\"explicit-new\",\"seq\":3,\"state\":\"running\",\"confirmed\":1,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657899.093155}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 4,
+                    "body": "{\"id\":\"explicit-new\",\"seq\":4,\"kind\":\"completed\",\"source_instance\":\"516dce9b-5543-4724-8e47-106882c3d8fc\",\"snapshot\":{\"id\":\"explicit-new\",\"seq\":4,\"state\":\"ended\",\"confirmed\":1,\"certainty\":\"exact\",\"device\":\"ready\",\"reason\":\"target_reached\",\"updated_at\":1789657899.0980885}}"
+                  }
+                ],
+                "gaps": []
+              },
+              "executor": {
+                "executions": [
+                  {
+                    "id": "op",
+                    "params": "{\"count\": 30, \"medicine\": 0, \"premium\": 0, \"stage\": \"1-7\"}",
+                    "snapshot": "{\"id\": \"op\", \"seq\": 3, \"state\": \"ended\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"ready\", \"reason\": \"reconciled_unknown_count\", \"updated_at\": 1789657898.805872}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "params": "{\"count\": 1, \"medicine\": 0, \"premium\": 0, \"stage\": \"1-7\"}",
+                    "snapshot": "{\"id\": \"explicit-new\", \"seq\": 4, \"state\": \"ended\", \"confirmed\": 1, \"certainty\": \"exact\", \"device\": \"ready\", \"reason\": \"target_reached\", \"updated_at\": 1789657899.0980885}"
+                  }
+                ],
+                "events": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "evidence": "{\"id\": \"op\", \"seq\": 1, \"kind\": \"accepted\", \"source_instance\": \"66b1dfdd-168b-47e4-b7fa-b9664830c4e6\", \"snapshot\": {\"id\": \"op\", \"seq\": 1, \"state\": \"accepted\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657897.910438}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 2,
+                    "evidence": "{\"id\": \"op\", \"seq\": 2, \"kind\": \"recovered_uncertain\", \"source_instance\": \"516dce9b-5543-4724-8e47-106882c3d8fc\", \"snapshot\": {\"id\": \"op\", \"seq\": 2, \"state\": \"unknown\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"needs_check\", \"reason\": \"executor_restarted\", \"updated_at\": 1789657898.6157532}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 3,
+                    "evidence": "{\"id\": \"op\", \"seq\": 3, \"kind\": \"fake_environment_checked\", \"source_instance\": \"516dce9b-5543-4724-8e47-106882c3d8fc\", \"snapshot\": {\"id\": \"op\", \"seq\": 3, \"state\": \"ended\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"ready\", \"reason\": \"reconciled_unknown_count\", \"updated_at\": 1789657898.805872}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 1,
+                    "evidence": "{\"id\": \"explicit-new\", \"seq\": 1, \"kind\": \"accepted\", \"source_instance\": \"516dce9b-5543-4724-8e47-106882c3d8fc\", \"snapshot\": {\"id\": \"explicit-new\", \"seq\": 1, \"state\": \"accepted\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657898.8864567}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 2,
+                    "evidence": "{\"id\": \"explicit-new\", \"seq\": 2, \"kind\": \"started\", \"source_instance\": \"516dce9b-5543-4724-8e47-106882c3d8fc\", \"snapshot\": {\"id\": \"explicit-new\", \"seq\": 2, \"state\": \"running\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657898.8936582}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 3,
+                    "evidence": "{\"id\": \"explicit-new\", \"seq\": 3, \"kind\": \"success\", \"source_instance\": \"516dce9b-5543-4724-8e47-106882c3d8fc\", \"snapshot\": {\"id\": \"explicit-new\", \"seq\": 3, \"state\": \"running\", \"confirmed\": 1, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657899.093155}}"
+                  },
+                  {
+                    "id": "explicit-new",
+                    "seq": 4,
+                    "evidence": "{\"id\": \"explicit-new\", \"seq\": 4, \"kind\": \"completed\", \"source_instance\": \"516dce9b-5543-4724-8e47-106882c3d8fc\", \"snapshot\": {\"id\": \"explicit-new\", \"seq\": 4, \"state\": \"ended\", \"confirmed\": 1, \"certainty\": \"exact\", \"device\": \"ready\", \"reason\": \"target_reached\", \"updated_at\": 1789657899.0980885}}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08_ts_crash_before_projection_commit",
+      "status": "passed",
+      "oracle": [
+        {
+          "kind": "start",
+          "id": "op",
+          "instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+          "at": 1789657908.5886908
+        },
+        {
+          "kind": "success",
+          "id": "op",
+          "instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+          "at": 1789657908.7823405
+        },
+        {
+          "kind": "success",
+          "id": "op",
+          "instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+          "at": 1789657908.9695783
+        },
+        {
+          "kind": "success",
+          "id": "op",
+          "instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+          "at": 1789657909.1704018
+        },
+        {
+          "kind": "success",
+          "id": "op",
+          "instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+          "at": 1789657909.3715725
+        },
+        {
+          "kind": "success",
+          "id": "op",
+          "instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+          "at": 1789657909.5739975
+        },
+        {
+          "kind": "success",
+          "id": "op",
+          "instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+          "at": 1789657909.7729146
+        },
+        {
+          "kind": "success",
+          "id": "op",
+          "instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+          "at": 1789657909.944344
+        },
+        {
+          "kind": "success",
+          "id": "op",
+          "instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+          "at": 1789657910.1260428
+        },
+        {
+          "kind": "success",
+          "id": "op",
+          "instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+          "at": 1789657910.3263445
+        },
+        {
+          "kind": "stop",
+          "id": "op",
+          "instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+          "at": 1789657910.7853177
+        }
+      ],
+      "timeline": [
+        {
+          "kind": "adapter",
+          "at": 1789657908470,
+          "message": {
+            "kind": "ready",
+            "at": 1789657908.4688542,
+            "instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+            "controller": "640ae2b5-b9ea-42a8-9f68-54976e010b90",
+            "pid": 48664,
+            "port": 54656
+          }
+        },
+        {
+          "kind": "ready",
+          "at": 1789657908501,
+          "address": "http://127.0.0.1:58366",
+          "controller": "640ae2b5-b9ea-42a8-9f68-54976e010b90",
+          "adapter": {
+            "kind": "ready",
+            "at": 1789657908.4688542,
+            "instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+            "controller": "640ae2b5-b9ea-42a8-9f68-54976e010b90",
+            "pid": 48664,
+            "port": 54656
+          },
+          "pid": 16912
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657908587,
+          "message": {
+            "kind": "evidence",
+            "at": 1789657908.5876749,
+            "evidence": {
+              "id": "op",
+              "seq": 1,
+              "kind": "accepted",
+              "source_instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+              "snapshot": {
+                "id": "op",
+                "seq": 1,
+                "state": "accepted",
+                "confirmed": 0,
+                "certainty": "lower_bound",
+                "device": "occupied",
+                "reason": null,
+                "updated_at": 1789657908.5865586
+              }
+            }
+          }
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657908594,
+          "message": {
+            "kind": "evidence",
+            "at": 1789657908.5937066,
+            "evidence": {
+              "id": "op",
+              "seq": 2,
+              "kind": "started",
+              "source_instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+              "snapshot": {
+                "id": "op",
+                "seq": 2,
+                "state": "running",
+                "confirmed": 0,
+                "certainty": "lower_bound",
+                "device": "occupied",
+                "reason": null,
+                "updated_at": 1789657908.5937066
+              }
+            }
+          }
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657908789,
+          "message": {
+            "kind": "evidence",
+            "at": 1789657908.789178,
+            "evidence": {
+              "id": "op",
+              "seq": 3,
+              "kind": "success",
+              "source_instance": "6411d6d3-bc36-4c3e-a60f-5faa5e05db78",
+              "snapshot": {
+                "id": "op",
+                "seq": 3,
+                "state": "running",
+                "confirmed": 1,
+                "certainty": "lower_bound",
+                "device": "occupied",
+                "reason": null,
+                "updated_at": 1789657908.789178
+              }
+            }
+          }
+        },
+        {
+          "kind": "crash",
+          "at": 1789657908791,
+          "point": "before_projection_commit"
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657911439,
+          "message": {
+            "kind": "ready",
+            "at": 1789657911.4390492,
+            "instance": "f5f64c02-2047-4320-ad44-99c45b34ad51",
+            "controller": "34603222-9a0d-440e-9b64-4f320aa4e73f",
+            "pid": 41120,
+            "port": 33316
+          }
+        },
+        {
+          "kind": "ready",
+          "at": 1789657911470,
+          "address": "http://127.0.0.1:53962",
+          "controller": "34603222-9a0d-440e-9b64-4f320aa4e73f",
+          "adapter": {
+            "kind": "ready",
+            "at": 1789657911.4390492,
+            "instance": "f5f64c02-2047-4320-ad44-99c45b34ad51",
+            "controller": "34603222-9a0d-440e-9b64-4f320aa4e73f",
+            "pid": 41120,
+            "port": 33316
+          },
+          "pid": 11832
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657911765,
+          "message": {
+            "kind": "retiring",
+            "at": 1789657911.7649496,
+            "reason": "application_shutdown"
+          }
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657911793,
+          "message": {
+            "kind": "exit",
+            "at": 1789657911.793626,
+            "reason": "retired"
+          }
+        },
+        {
+          "kind": "child_exit",
+          "at": 1789657911857,
+          "pid": 41120,
+          "code": 0,
+          "signal": null
+        }
+      ],
+      "snapshots": [
+        {
+          "label": "after_crash",
+          "at": 1789657908843,
+          "databases": [
+            {
+              "index": 0,
+              "business": {
+                "tasks": [
+                  {
+                    "id": "op",
+                    "params": "{\"stage\":\"1-7\",\"count\":30,\"medicine\":0,\"premium\":0}",
+                    "snapshot": "{\"id\":\"op\",\"seq\":2,\"state\":\"running\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657908.5937066}",
+                    "cursor": 2,
+                    "gap": 0
+                  }
+                ],
+                "evidence": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "body": "{\"id\":\"op\",\"seq\":1,\"kind\":\"accepted\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657908.5865586}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 2,
+                    "body": "{\"id\":\"op\",\"seq\":2,\"kind\":\"started\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":2,\"state\":\"running\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657908.5937066}}"
+                  }
+                ],
+                "gaps": []
+              },
+              "executor": {
+                "executions": [
+                  {
+                    "id": "op",
+                    "params": "{\"count\": 30, \"medicine\": 0, \"premium\": 0, \"stage\": \"1-7\"}",
+                    "snapshot": "{\"id\": \"op\", \"seq\": 3, \"state\": \"running\", \"confirmed\": 1, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657908.789178}"
+                  }
+                ],
+                "events": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "evidence": "{\"id\": \"op\", \"seq\": 1, \"kind\": \"accepted\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 1, \"state\": \"accepted\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657908.5865586}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 2,
+                    "evidence": "{\"id\": \"op\", \"seq\": 2, \"kind\": \"started\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 2, \"state\": \"running\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657908.5937066}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 3,
+                    "evidence": "{\"id\": \"op\", \"seq\": 3, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 3, \"state\": \"running\", \"confirmed\": 1, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657908.789178}}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "label": "before_cleanup",
+          "at": 1789657911618,
+          "databases": [
+            {
+              "index": 0,
+              "business": {
+                "tasks": [
+                  {
+                    "id": "op",
+                    "params": "{\"stage\":\"1-7\",\"count\":30,\"medicine\":0,\"premium\":0}",
+                    "snapshot": "{\"id\":\"op\",\"seq\":13,\"state\":\"ended\",\"confirmed\":9,\"certainty\":\"exact\",\"device\":\"ready\",\"reason\":\"stopped\",\"updated_at\":1789657910.792651}",
+                    "cursor": 13,
+                    "gap": 0
+                  }
+                ],
+                "evidence": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "body": "{\"id\":\"op\",\"seq\":1,\"kind\":\"accepted\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657908.5865586}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 2,
+                    "body": "{\"id\":\"op\",\"seq\":2,\"kind\":\"started\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":2,\"state\":\"running\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657908.5937066}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 3,
+                    "body": "{\"id\":\"op\",\"seq\":3,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":3,\"state\":\"running\",\"confirmed\":1,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657908.789178}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 4,
+                    "body": "{\"id\":\"op\",\"seq\":4,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":4,\"state\":\"running\",\"confirmed\":2,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657908.9761112}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 5,
+                    "body": "{\"id\":\"op\",\"seq\":5,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":5,\"state\":\"running\",\"confirmed\":3,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657909.1764708}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 6,
+                    "body": "{\"id\":\"op\",\"seq\":6,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":6,\"state\":\"running\",\"confirmed\":4,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657909.3788908}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 7,
+                    "body": "{\"id\":\"op\",\"seq\":7,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":7,\"state\":\"running\",\"confirmed\":5,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657909.580222}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 8,
+                    "body": "{\"id\":\"op\",\"seq\":8,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":8,\"state\":\"running\",\"confirmed\":6,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657909.7784352}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 9,
+                    "body": "{\"id\":\"op\",\"seq\":9,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":9,\"state\":\"running\",\"confirmed\":7,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657909.950862}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 10,
+                    "body": "{\"id\":\"op\",\"seq\":10,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":10,\"state\":\"running\",\"confirmed\":8,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657910.1322086}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 11,
+                    "body": "{\"id\":\"op\",\"seq\":11,\"kind\":\"stop_requested\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":11,\"state\":\"stopping\",\"confirmed\":8,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657910.3334312}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 12,
+                    "body": "{\"id\":\"op\",\"seq\":12,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":12,\"state\":\"stopping\",\"confirmed\":9,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657910.3334312}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 13,
+                    "body": "{\"id\":\"op\",\"seq\":13,\"kind\":\"stop_confirmed\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":13,\"state\":\"ended\",\"confirmed\":9,\"certainty\":\"exact\",\"device\":\"ready\",\"reason\":\"stopped\",\"updated_at\":1789657910.792651}}"
+                  }
+                ],
+                "gaps": []
+              },
+              "executor": {
+                "executions": [
+                  {
+                    "id": "op",
+                    "params": "{\"count\": 30, \"medicine\": 0, \"premium\": 0, \"stage\": \"1-7\"}",
+                    "snapshot": "{\"id\": \"op\", \"seq\": 13, \"state\": \"ended\", \"confirmed\": 9, \"certainty\": \"exact\", \"device\": \"ready\", \"reason\": \"stopped\", \"updated_at\": 1789657910.792651}"
+                  }
+                ],
+                "events": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "evidence": "{\"id\": \"op\", \"seq\": 1, \"kind\": \"accepted\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 1, \"state\": \"accepted\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657908.5865586}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 2,
+                    "evidence": "{\"id\": \"op\", \"seq\": 2, \"kind\": \"started\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 2, \"state\": \"running\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657908.5937066}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 3,
+                    "evidence": "{\"id\": \"op\", \"seq\": 3, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 3, \"state\": \"running\", \"confirmed\": 1, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657908.789178}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 4,
+                    "evidence": "{\"id\": \"op\", \"seq\": 4, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 4, \"state\": \"running\", \"confirmed\": 2, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657908.9761112}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 5,
+                    "evidence": "{\"id\": \"op\", \"seq\": 5, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 5, \"state\": \"running\", \"confirmed\": 3, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657909.1764708}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 6,
+                    "evidence": "{\"id\": \"op\", \"seq\": 6, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 6, \"state\": \"running\", \"confirmed\": 4, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657909.3788908}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 7,
+                    "evidence": "{\"id\": \"op\", \"seq\": 7, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 7, \"state\": \"running\", \"confirmed\": 5, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657909.580222}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 8,
+                    "evidence": "{\"id\": \"op\", \"seq\": 8, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 8, \"state\": \"running\", \"confirmed\": 6, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657909.7784352}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 9,
+                    "evidence": "{\"id\": \"op\", \"seq\": 9, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 9, \"state\": \"running\", \"confirmed\": 7, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657909.950862}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 10,
+                    "evidence": "{\"id\": \"op\", \"seq\": 10, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 10, \"state\": \"running\", \"confirmed\": 8, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657910.1322086}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 11,
+                    "evidence": "{\"id\": \"op\", \"seq\": 11, \"kind\": \"stop_requested\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 11, \"state\": \"stopping\", \"confirmed\": 8, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657910.3334312}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 12,
+                    "evidence": "{\"id\": \"op\", \"seq\": 12, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 12, \"state\": \"stopping\", \"confirmed\": 9, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657910.3334312}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 13,
+                    "evidence": "{\"id\": \"op\", \"seq\": 13, \"kind\": \"stop_confirmed\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 13, \"state\": \"ended\", \"confirmed\": 9, \"certainty\": \"exact\", \"device\": \"ready\", \"reason\": \"stopped\", \"updated_at\": 1789657910.792651}}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "label": "after_cleanup",
+          "at": 1789657911933,
+          "databases": [
+            {
+              "index": 0,
+              "business": {
+                "tasks": [
+                  {
+                    "id": "op",
+                    "params": "{\"stage\":\"1-7\",\"count\":30,\"medicine\":0,\"premium\":0}",
+                    "snapshot": "{\"id\":\"op\",\"seq\":13,\"state\":\"ended\",\"confirmed\":9,\"certainty\":\"exact\",\"device\":\"ready\",\"reason\":\"stopped\",\"updated_at\":1789657910.792651}",
+                    "cursor": 13,
+                    "gap": 0
+                  }
+                ],
+                "evidence": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "body": "{\"id\":\"op\",\"seq\":1,\"kind\":\"accepted\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657908.5865586}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 2,
+                    "body": "{\"id\":\"op\",\"seq\":2,\"kind\":\"started\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":2,\"state\":\"running\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657908.5937066}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 3,
+                    "body": "{\"id\":\"op\",\"seq\":3,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":3,\"state\":\"running\",\"confirmed\":1,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657908.789178}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 4,
+                    "body": "{\"id\":\"op\",\"seq\":4,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":4,\"state\":\"running\",\"confirmed\":2,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657908.9761112}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 5,
+                    "body": "{\"id\":\"op\",\"seq\":5,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":5,\"state\":\"running\",\"confirmed\":3,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657909.1764708}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 6,
+                    "body": "{\"id\":\"op\",\"seq\":6,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":6,\"state\":\"running\",\"confirmed\":4,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657909.3788908}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 7,
+                    "body": "{\"id\":\"op\",\"seq\":7,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":7,\"state\":\"running\",\"confirmed\":5,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657909.580222}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 8,
+                    "body": "{\"id\":\"op\",\"seq\":8,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":8,\"state\":\"running\",\"confirmed\":6,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657909.7784352}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 9,
+                    "body": "{\"id\":\"op\",\"seq\":9,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":9,\"state\":\"running\",\"confirmed\":7,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657909.950862}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 10,
+                    "body": "{\"id\":\"op\",\"seq\":10,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":10,\"state\":\"running\",\"confirmed\":8,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657910.1322086}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 11,
+                    "body": "{\"id\":\"op\",\"seq\":11,\"kind\":\"stop_requested\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":11,\"state\":\"stopping\",\"confirmed\":8,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657910.3334312}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 12,
+                    "body": "{\"id\":\"op\",\"seq\":12,\"kind\":\"success\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":12,\"state\":\"stopping\",\"confirmed\":9,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657910.3334312}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 13,
+                    "body": "{\"id\":\"op\",\"seq\":13,\"kind\":\"stop_confirmed\",\"source_instance\":\"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\",\"snapshot\":{\"id\":\"op\",\"seq\":13,\"state\":\"ended\",\"confirmed\":9,\"certainty\":\"exact\",\"device\":\"ready\",\"reason\":\"stopped\",\"updated_at\":1789657910.792651}}"
+                  }
+                ],
+                "gaps": []
+              },
+              "executor": {
+                "executions": [
+                  {
+                    "id": "op",
+                    "params": "{\"count\": 30, \"medicine\": 0, \"premium\": 0, \"stage\": \"1-7\"}",
+                    "snapshot": "{\"id\": \"op\", \"seq\": 13, \"state\": \"ended\", \"confirmed\": 9, \"certainty\": \"exact\", \"device\": \"ready\", \"reason\": \"stopped\", \"updated_at\": 1789657910.792651}"
+                  }
+                ],
+                "events": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "evidence": "{\"id\": \"op\", \"seq\": 1, \"kind\": \"accepted\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 1, \"state\": \"accepted\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657908.5865586}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 2,
+                    "evidence": "{\"id\": \"op\", \"seq\": 2, \"kind\": \"started\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 2, \"state\": \"running\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657908.5937066}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 3,
+                    "evidence": "{\"id\": \"op\", \"seq\": 3, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 3, \"state\": \"running\", \"confirmed\": 1, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657908.789178}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 4,
+                    "evidence": "{\"id\": \"op\", \"seq\": 4, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 4, \"state\": \"running\", \"confirmed\": 2, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657908.9761112}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 5,
+                    "evidence": "{\"id\": \"op\", \"seq\": 5, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 5, \"state\": \"running\", \"confirmed\": 3, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657909.1764708}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 6,
+                    "evidence": "{\"id\": \"op\", \"seq\": 6, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 6, \"state\": \"running\", \"confirmed\": 4, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657909.3788908}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 7,
+                    "evidence": "{\"id\": \"op\", \"seq\": 7, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 7, \"state\": \"running\", \"confirmed\": 5, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657909.580222}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 8,
+                    "evidence": "{\"id\": \"op\", \"seq\": 8, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 8, \"state\": \"running\", \"confirmed\": 6, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657909.7784352}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 9,
+                    "evidence": "{\"id\": \"op\", \"seq\": 9, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 9, \"state\": \"running\", \"confirmed\": 7, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657909.950862}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 10,
+                    "evidence": "{\"id\": \"op\", \"seq\": 10, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 10, \"state\": \"running\", \"confirmed\": 8, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657910.1322086}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 11,
+                    "evidence": "{\"id\": \"op\", \"seq\": 11, \"kind\": \"stop_requested\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 11, \"state\": \"stopping\", \"confirmed\": 8, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657910.3334312}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 12,
+                    "evidence": "{\"id\": \"op\", \"seq\": 12, \"kind\": \"success\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 12, \"state\": \"stopping\", \"confirmed\": 9, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657910.3334312}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 13,
+                    "evidence": "{\"id\": \"op\", \"seq\": 13, \"kind\": \"stop_confirmed\", \"source_instance\": \"6411d6d3-bc36-4c3e-a60f-5faa5e05db78\", \"snapshot\": {\"id\": \"op\", \"seq\": 13, \"state\": \"ended\", \"confirmed\": 9, \"certainty\": \"exact\", \"device\": \"ready\", \"reason\": \"stopped\", \"updated_at\": 1789657910.792651}}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "14_both_unresponsive_known_gap",
+      "status": "passed",
+      "limitation": "TS 已死且整个 Python 挂起时，双进程结构不能保证终止；实验驱动恢复它才可清理。",
+      "oracle": [
+        {
+          "kind": "start",
+          "id": "op",
+          "instance": "b8793531-8983-47b1-ab3f-8c9bdfa80452",
+          "at": 1789657933.9340205
+        },
+        {
+          "kind": "success",
+          "id": "op",
+          "instance": "b8793531-8983-47b1-ab3f-8c9bdfa80452",
+          "at": 1789657937.8340204
+        },
+        {
+          "kind": "stop",
+          "id": "op",
+          "instance": "b8793531-8983-47b1-ab3f-8c9bdfa80452",
+          "at": 1789657938.277839
+        }
+      ],
+      "timeline": [
+        {
+          "kind": "adapter",
+          "at": 1789657933827,
+          "message": {
+            "kind": "ready",
+            "at": 1789657933.8260202,
+            "instance": "b8793531-8983-47b1-ab3f-8c9bdfa80452",
+            "controller": "d705393c-7c28-4c55-9c94-5944ca4c3481",
+            "pid": 15444,
+            "port": 34079
+          }
+        },
+        {
+          "kind": "ready",
+          "at": 1789657933859,
+          "address": "http://127.0.0.1:49552",
+          "controller": "d705393c-7c28-4c55-9c94-5944ca4c3481",
+          "adapter": {
+            "kind": "ready",
+            "at": 1789657933.8260202,
+            "instance": "b8793531-8983-47b1-ab3f-8c9bdfa80452",
+            "controller": "d705393c-7c28-4c55-9c94-5944ca4c3481",
+            "pid": 15444,
+            "port": 34079
+          },
+          "pid": 28324
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657933933,
+          "message": {
+            "kind": "evidence",
+            "at": 1789657933.9326596,
+            "evidence": {
+              "id": "op",
+              "seq": 1,
+              "kind": "accepted",
+              "source_instance": "b8793531-8983-47b1-ab3f-8c9bdfa80452",
+              "snapshot": {
+                "id": "op",
+                "seq": 1,
+                "state": "accepted",
+                "confirmed": 0,
+                "certainty": "lower_bound",
+                "device": "occupied",
+                "reason": null,
+                "updated_at": 1789657933.9326596
+              }
+            }
+          }
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657933940,
+          "message": {
+            "kind": "evidence",
+            "at": 1789657933.9400594,
+            "evidence": {
+              "id": "op",
+              "seq": 2,
+              "kind": "started",
+              "source_instance": "b8793531-8983-47b1-ab3f-8c9bdfa80452",
+              "snapshot": {
+                "id": "op",
+                "seq": 2,
+                "state": "running",
+                "confirmed": 0,
+                "certainty": "lower_bound",
+                "device": "occupied",
+                "reason": null,
+                "updated_at": 1789657933.9390554
+              }
+            }
+          }
+        }
+      ],
+      "snapshots": [
+        {
+          "label": "before_cleanup",
+          "at": 1789657938384,
+          "databases": [
+            {
+              "index": 0,
+              "business": {
+                "tasks": [
+                  {
+                    "id": "op",
+                    "params": "{\"stage\":\"1-7\",\"count\":30,\"medicine\":0,\"premium\":0}",
+                    "snapshot": "{\"id\":\"op\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657933.9326596}",
+                    "cursor": 1,
+                    "gap": 0
+                  }
+                ],
+                "evidence": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "body": "{\"id\":\"op\",\"seq\":1,\"kind\":\"accepted\",\"source_instance\":\"b8793531-8983-47b1-ab3f-8c9bdfa80452\",\"snapshot\":{\"id\":\"op\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657933.9326596}}"
+                  }
+                ],
+                "gaps": []
+              },
+              "executor": {
+                "executions": [
+                  {
+                    "id": "op",
+                    "params": "{\"count\": 30, \"medicine\": 0, \"premium\": 0, \"stage\": \"1-7\"}",
+                    "snapshot": "{\"id\": \"op\", \"seq\": 5, \"state\": \"ended\", \"confirmed\": 1, \"certainty\": \"exact\", \"device\": \"ready\", \"reason\": \"stopped\", \"updated_at\": 1789657938.283089}"
+                  }
+                ],
+                "events": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "evidence": "{\"id\": \"op\", \"seq\": 1, \"kind\": \"accepted\", \"source_instance\": \"b8793531-8983-47b1-ab3f-8c9bdfa80452\", \"snapshot\": {\"id\": \"op\", \"seq\": 1, \"state\": \"accepted\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657933.9326596}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 2,
+                    "evidence": "{\"id\": \"op\", \"seq\": 2, \"kind\": \"started\", \"source_instance\": \"b8793531-8983-47b1-ab3f-8c9bdfa80452\", \"snapshot\": {\"id\": \"op\", \"seq\": 2, \"state\": \"running\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657933.9390554}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 3,
+                    "evidence": "{\"id\": \"op\", \"seq\": 3, \"kind\": \"stop_requested\", \"source_instance\": \"b8793531-8983-47b1-ab3f-8c9bdfa80452\", \"snapshot\": {\"id\": \"op\", \"seq\": 3, \"state\": \"stopping\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657937.8307445}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 4,
+                    "evidence": "{\"id\": \"op\", \"seq\": 4, \"kind\": \"success\", \"source_instance\": \"b8793531-8983-47b1-ab3f-8c9bdfa80452\", \"snapshot\": {\"id\": \"op\", \"seq\": 4, \"state\": \"stopping\", \"confirmed\": 1, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657937.8390336}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 5,
+                    "evidence": "{\"id\": \"op\", \"seq\": 5, \"kind\": \"stop_confirmed\", \"source_instance\": \"b8793531-8983-47b1-ab3f-8c9bdfa80452\", \"snapshot\": {\"id\": \"op\", \"seq\": 5, \"state\": \"ended\", \"confirmed\": 1, \"certainty\": \"exact\", \"device\": \"ready\", \"reason\": \"stopped\", \"updated_at\": 1789657938.283089}}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "label": "after_cleanup",
+          "at": 1789657938525,
+          "databases": [
+            {
+              "index": 0,
+              "business": {
+                "tasks": [
+                  {
+                    "id": "op",
+                    "params": "{\"stage\":\"1-7\",\"count\":30,\"medicine\":0,\"premium\":0}",
+                    "snapshot": "{\"id\":\"op\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657933.9326596}",
+                    "cursor": 1,
+                    "gap": 0
+                  }
+                ],
+                "evidence": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "body": "{\"id\":\"op\",\"seq\":1,\"kind\":\"accepted\",\"source_instance\":\"b8793531-8983-47b1-ab3f-8c9bdfa80452\",\"snapshot\":{\"id\":\"op\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657933.9326596}}"
+                  }
+                ],
+                "gaps": []
+              },
+              "executor": {
+                "executions": [
+                  {
+                    "id": "op",
+                    "params": "{\"count\": 30, \"medicine\": 0, \"premium\": 0, \"stage\": \"1-7\"}",
+                    "snapshot": "{\"id\": \"op\", \"seq\": 5, \"state\": \"ended\", \"confirmed\": 1, \"certainty\": \"exact\", \"device\": \"ready\", \"reason\": \"stopped\", \"updated_at\": 1789657938.283089}"
+                  }
+                ],
+                "events": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "evidence": "{\"id\": \"op\", \"seq\": 1, \"kind\": \"accepted\", \"source_instance\": \"b8793531-8983-47b1-ab3f-8c9bdfa80452\", \"snapshot\": {\"id\": \"op\", \"seq\": 1, \"state\": \"accepted\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657933.9326596}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 2,
+                    "evidence": "{\"id\": \"op\", \"seq\": 2, \"kind\": \"started\", \"source_instance\": \"b8793531-8983-47b1-ab3f-8c9bdfa80452\", \"snapshot\": {\"id\": \"op\", \"seq\": 2, \"state\": \"running\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657933.9390554}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 3,
+                    "evidence": "{\"id\": \"op\", \"seq\": 3, \"kind\": \"stop_requested\", \"source_instance\": \"b8793531-8983-47b1-ab3f-8c9bdfa80452\", \"snapshot\": {\"id\": \"op\", \"seq\": 3, \"state\": \"stopping\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657937.8307445}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 4,
+                    "evidence": "{\"id\": \"op\", \"seq\": 4, \"kind\": \"success\", \"source_instance\": \"b8793531-8983-47b1-ab3f-8c9bdfa80452\", \"snapshot\": {\"id\": \"op\", \"seq\": 4, \"state\": \"stopping\", \"confirmed\": 1, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657937.8390336}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 5,
+                    "evidence": "{\"id\": \"op\", \"seq\": 5, \"kind\": \"stop_confirmed\", \"source_instance\": \"b8793531-8983-47b1-ab3f-8c9bdfa80452\", \"snapshot\": {\"id\": \"op\", \"seq\": 5, \"state\": \"ended\", \"confirmed\": 1, \"certainty\": \"exact\", \"device\": \"ready\", \"reason\": \"stopped\", \"updated_at\": 1789657938.283089}}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "18_windows_default_spawn_comparison",
+      "status": "passed",
+      "limitation": "默认 spawn 的 Windows Job 在 TS 退出时立即终止子进程；不能把这种清理当作先正常停止。",
+      "oracle": [
+        {
+          "kind": "start",
+          "id": "op",
+          "instance": "fb24a0ae-19ef-4183-a785-62ef273b1bf9",
+          "at": 1789657945.0309584
+        }
+      ],
+      "timeline": [
+        {
+          "kind": "adapter",
+          "at": 1789657944922,
+          "message": {
+            "kind": "ready",
+            "at": 1789657944.920808,
+            "instance": "fb24a0ae-19ef-4183-a785-62ef273b1bf9",
+            "controller": "0bfa9ea7-ca8c-42ce-99a8-9bb08ef94132",
+            "pid": 5240,
+            "port": 46934
+          }
+        },
+        {
+          "kind": "ready",
+          "at": 1789657944954,
+          "address": "http://127.0.0.1:44474",
+          "controller": "0bfa9ea7-ca8c-42ce-99a8-9bb08ef94132",
+          "adapter": {
+            "kind": "ready",
+            "at": 1789657944.920808,
+            "instance": "fb24a0ae-19ef-4183-a785-62ef273b1bf9",
+            "controller": "0bfa9ea7-ca8c-42ce-99a8-9bb08ef94132",
+            "pid": 5240,
+            "port": 46934
+          },
+          "pid": 1500
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657945030,
+          "message": {
+            "kind": "evidence",
+            "at": 1789657945.0299819,
+            "evidence": {
+              "id": "op",
+              "seq": 1,
+              "kind": "accepted",
+              "source_instance": "fb24a0ae-19ef-4183-a785-62ef273b1bf9",
+              "snapshot": {
+                "id": "op",
+                "seq": 1,
+                "state": "accepted",
+                "confirmed": 0,
+                "certainty": "lower_bound",
+                "device": "occupied",
+                "reason": null,
+                "updated_at": 1789657945.0299819
+              }
+            }
+          }
+        },
+        {
+          "kind": "adapter",
+          "at": 1789657945037,
+          "message": {
+            "kind": "evidence",
+            "at": 1789657945.0374742,
+            "evidence": {
+              "id": "op",
+              "seq": 2,
+              "kind": "started",
+              "source_instance": "fb24a0ae-19ef-4183-a785-62ef273b1bf9",
+              "snapshot": {
+                "id": "op",
+                "seq": 2,
+                "state": "running",
+                "confirmed": 0,
+                "certainty": "lower_bound",
+                "device": "occupied",
+                "reason": null,
+                "updated_at": 1789657945.0374742
+              }
+            }
+          }
+        }
+      ],
+      "snapshots": [
+        {
+          "label": "before_cleanup",
+          "at": 1789657945117,
+          "databases": [
+            {
+              "index": 0,
+              "business": {
+                "tasks": [
+                  {
+                    "id": "op",
+                    "params": "{\"stage\":\"1-7\",\"count\":30,\"medicine\":0,\"premium\":0}",
+                    "snapshot": "{\"id\":\"op\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657945.0299819}",
+                    "cursor": 1,
+                    "gap": 0
+                  }
+                ],
+                "evidence": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "body": "{\"id\":\"op\",\"seq\":1,\"kind\":\"accepted\",\"source_instance\":\"fb24a0ae-19ef-4183-a785-62ef273b1bf9\",\"snapshot\":{\"id\":\"op\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657945.0299819}}"
+                  }
+                ],
+                "gaps": []
+              },
+              "executor": {
+                "executions": [
+                  {
+                    "id": "op",
+                    "params": "{\"count\": 30, \"medicine\": 0, \"premium\": 0, \"stage\": \"1-7\"}",
+                    "snapshot": "{\"id\": \"op\", \"seq\": 2, \"state\": \"running\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657945.0374742}"
+                  }
+                ],
+                "events": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "evidence": "{\"id\": \"op\", \"seq\": 1, \"kind\": \"accepted\", \"source_instance\": \"fb24a0ae-19ef-4183-a785-62ef273b1bf9\", \"snapshot\": {\"id\": \"op\", \"seq\": 1, \"state\": \"accepted\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657945.0299819}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 2,
+                    "evidence": "{\"id\": \"op\", \"seq\": 2, \"kind\": \"started\", \"source_instance\": \"fb24a0ae-19ef-4183-a785-62ef273b1bf9\", \"snapshot\": {\"id\": \"op\", \"seq\": 2, \"state\": \"running\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657945.0374742}}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "label": "after_cleanup",
+          "at": 1789657945262,
+          "databases": [
+            {
+              "index": 0,
+              "business": {
+                "tasks": [
+                  {
+                    "id": "op",
+                    "params": "{\"stage\":\"1-7\",\"count\":30,\"medicine\":0,\"premium\":0}",
+                    "snapshot": "{\"id\":\"op\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657945.0299819}",
+                    "cursor": 1,
+                    "gap": 0
+                  }
+                ],
+                "evidence": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "body": "{\"id\":\"op\",\"seq\":1,\"kind\":\"accepted\",\"source_instance\":\"fb24a0ae-19ef-4183-a785-62ef273b1bf9\",\"snapshot\":{\"id\":\"op\",\"seq\":1,\"state\":\"accepted\",\"confirmed\":0,\"certainty\":\"lower_bound\",\"device\":\"occupied\",\"reason\":null,\"updated_at\":1789657945.0299819}}"
+                  }
+                ],
+                "gaps": []
+              },
+              "executor": {
+                "executions": [
+                  {
+                    "id": "op",
+                    "params": "{\"count\": 30, \"medicine\": 0, \"premium\": 0, \"stage\": \"1-7\"}",
+                    "snapshot": "{\"id\": \"op\", \"seq\": 2, \"state\": \"running\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657945.0374742}"
+                  }
+                ],
+                "events": [
+                  {
+                    "id": "op",
+                    "seq": 1,
+                    "evidence": "{\"id\": \"op\", \"seq\": 1, \"kind\": \"accepted\", \"source_instance\": \"fb24a0ae-19ef-4183-a785-62ef273b1bf9\", \"snapshot\": {\"id\": \"op\", \"seq\": 1, \"state\": \"accepted\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657945.0299819}}"
+                  },
+                  {
+                    "id": "op",
+                    "seq": 2,
+                    "evidence": "{\"id\": \"op\", \"seq\": 2, \"kind\": \"started\", \"source_instance\": \"fb24a0ae-19ef-4183-a785-62ef273b1bf9\", \"snapshot\": {\"id\": \"op\", \"seq\": 2, \"state\": \"running\", \"confirmed\": 0, \"certainty\": \"lower_bound\", \"device\": \"occupied\", \"reason\": null, \"updated_at\": 1789657945.0374742}}"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
