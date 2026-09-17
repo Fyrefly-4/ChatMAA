@@ -1,0 +1,145 @@
+{
+  "run": "second-three",
+  "local_date": "2026-09-17",
+  "core_version": "v6.17.5",
+  "core_sha256": "295a7aa78f3245a2112924231119d81d65f0fc201f364fed8cf1fb1db62d4b9a",
+  "params": {
+    "stage": "1-7",
+    "times": 3,
+    "series": 1,
+    "medicine": 0,
+    "medicine_expire_days": 0,
+    "stone": 0,
+    "client_type": "",
+    "server": "CN",
+    "DrGrandet": false,
+    "report_to_penguin": false,
+    "report_to_yituliu": false
+  },
+  "selected_events": [
+    {
+      "elapsed_seconds": 0.188,
+      "kind": "start_returned",
+      "accepted": true
+    },
+    {
+      "elapsed_seconds": 0.188,
+      "kind": "callback",
+      "message": 10001,
+      "taskchain": "Fight",
+      "taskid": 1,
+      "subtask": null,
+      "task": null,
+      "what": null
+    },
+    {
+      "elapsed_seconds": 0.188,
+      "kind": "callback",
+      "message": 20001,
+      "taskchain": "Fight",
+      "taskid": 1,
+      "subtask": "ProcessTask",
+      "task": "StageBegin",
+      "what": null
+    },
+    {
+      "elapsed_seconds": 0.188,
+      "kind": "callback",
+      "message": 20002,
+      "taskchain": "Fight",
+      "taskid": 1,
+      "subtask": "ProcessTask",
+      "task": "StageBegin",
+      "what": null
+    },
+    {
+      "elapsed_seconds": 5.578,
+      "kind": "callback",
+      "message": 20000,
+      "taskchain": "Fight",
+      "taskid": 1,
+      "subtask": "ProcessTask",
+      "task": null,
+      "what": null
+    },
+    {
+      "elapsed_seconds": 5.609,
+      "kind": "stop_requested",
+      "reason": "execution_or_evidence_error"
+    },
+    {
+      "elapsed_seconds": 5.609,
+      "kind": "stop_returned",
+      "accepted": true
+    },
+    {
+      "elapsed_seconds": 5.609,
+      "kind": "callback",
+      "message": 10004,
+      "taskchain": "Fight",
+      "taskid": 1,
+      "subtask": null,
+      "task": null,
+      "what": null
+    },
+    {
+      "elapsed_seconds": 5.719,
+      "kind": "automation_not_running",
+      "reason": "execution_or_evidence_error"
+    },
+    {
+      "elapsed_seconds": 6.094,
+      "kind": "callback",
+      "message": 5,
+      "taskchain": null,
+      "taskid": null,
+      "subtask": null,
+      "task": null,
+      "what": null
+    },
+    {
+      "elapsed_seconds": 6.156,
+      "kind": "destroy_returned"
+    }
+  ],
+  "result": {
+    "requested": 3,
+    "observed_successes": 0,
+    "stage_drop_evidence": [],
+    "task_chain_completed": false,
+    "errors": [
+      {
+        "at": 1789660142.6402445,
+        "message": 20000,
+        "node": "",
+        "subtask": "ProcessTask",
+        "first": [
+          "StageBegin"
+        ],
+        "pre_task": "",
+        "what": null,
+        "why": null
+      }
+    ],
+    "count_unknown": false,
+    "matches_requested_evidence": false,
+    "onsite_verification": "pending",
+    "reason": "execution_or_evidence_error",
+    "start_accepted": true,
+    "callback_error": null,
+    "runtime_error": null,
+    "stop_error": null,
+    "asst_running_false_observed": true,
+    "destroy_returned": true,
+    "automation_stopped": true,
+    "finished_at": 1789660143.2106514
+  },
+  "interpretation": {
+    "navigation_failed": true,
+    "battle_start_callbacks_observed": 0,
+    "drop_callbacks_observed": 0,
+    "controller_clicks_in_native_log": 0,
+    "further_runs_authorized": false,
+    "root_cause": "unconfirmed; awaiting independent official MAA GUI baseline"
+  }
+}

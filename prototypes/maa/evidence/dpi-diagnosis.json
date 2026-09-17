@@ -1,0 +1,47 @@
+{
+  "method": "offline unmasked multichannel normalized correlation; not full MaaCore recognition",
+  "roi": [
+    227,
+    327,
+    386,
+    479
+  ],
+  "results": [
+    {
+      "source": "after",
+      "image_scale": 1.0,
+      "score": 0.968327,
+      "xy": [
+        306,
+        393
+      ]
+    },
+    {
+      "source": "after",
+      "image_scale": 0.8,
+      "score": 0.319061,
+      "xy": [
+        356,
+        371
+      ]
+    },
+    {
+      "source": "failure",
+      "image_scale": 1.0,
+      "score": 0.28341,
+      "xy": [
+        246,
+        335
+      ]
+    },
+    {
+      "source": "failure",
+      "image_scale": 0.8,
+      "score": 0.978648,
+      "xy": [
+        286,
+        390
+      ]
+    }
+  ]
+}

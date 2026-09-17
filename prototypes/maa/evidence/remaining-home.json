@@ -1,0 +1,22 @@
+{
+  "home_recognized": true,
+  "matches": [
+    {
+      "rect": [
+        292,
+        391,
+        29,
+        24
+      ],
+      "score": 0.974162,
+      "template": "SwitchTheme@ToggleSettingsMenu.png"
+    }
+  ],
+  "task_chain_completed": true,
+  "errors": [],
+  "runtime_error": null,
+  "callback_error": null,
+  "battle_started": false,
+  "automation_stopped": true,
+  "destroy_returned": true
+}
