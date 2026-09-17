@@ -75,6 +75,7 @@ active = {}
 inbox = queue.SimpleQueue()
 storage_failed = False
 retiring = False
+awaiting_ack = False
 retire_at = None
 last_lease = time.monotonic()
 
@@ -148,10 +149,11 @@ def request_stop(execution_id):
             pass
 
 
-def retire(reason):
-    global retiring, retire_at
+def retire(reason, await_ack=False):
+    global retiring, retire_at, awaiting_ack
     if not retiring:
         retiring, retire_at = True, time.monotonic()
+        awaiting_ack = await_ack
         trace("retiring", reason=reason)
         for execution_id in list(active):
             request_stop(execution_id)
@@ -207,10 +209,13 @@ async def supervise():
         if time.monotonic() - last_lease > LEASE:
             retire("lease_expired")
         if retiring:
-            if not active:
+            if not active and not awaiting_ack:
                 trace("exit", reason="retired")
                 os._exit(0)
             if time.monotonic() - retire_at > DEADLINE:
+                if not active:
+                    trace("final_handoff_expired")
+                    os._exit(0)
                 trace("forced_self_exit", reason="stop_deadline")
                 os._exit(72)
 
@@ -234,7 +239,7 @@ async def authorize(request: Request, call_next):
         request.headers.get("x-controller-id") != CONTROLLER or
         request.headers.get("x-instance-id") != INSTANCE):
         return JSONResponse({"error": "wrong_control_identity"}, status_code=403)
-    if retiring and request.method != "GET":
+    if retiring and request.method != "GET" and request.url.path != "/shutdown":
         return JSONResponse({"error": "controller_retired"}, status_code=409)
     try:
         return await call_next(request)
@@ -317,9 +322,17 @@ async def reconcile():
     raise HTTPException(409, "real_environment_requires_manual_check")
 
 
+@app.post("/prepare-shutdown", status_code=202)
+async def prepare_shutdown():
+    retire("application_shutdown", await_ack=True)
+    return {"retiring": True, "awaiting_final_ack": True}
+
+
 @app.post("/shutdown", status_code=202)
 async def shutdown():
+    global awaiting_ack
     retire("application_shutdown")
+    awaiting_ack = False
     return {"retiring": True}
 
 

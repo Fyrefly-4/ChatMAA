@@ -28,7 +28,15 @@ const summary = {
     shutdownConfirmed: handoff.shutdownConfirmed, failure: handoff.failure, final: view(handoff.final) },
   lifecycle_regression: { run_id: regression.runId, passed: regression.results.filter((r: any) => r.status === 'passed').length,
     total: regression.results.length, meaning: '包括原有组合故障监督缺口的再现，不代表该缺口已解决。' },
-  discovered_and_fixed: '停止前发出的轮询晚到曾覆盖停止中状态；TS 现在单独保留停止意图，并有确定性回归检查。',
+  discovered_and_fixed: [
+    '停止前发出的轮询晚到曾覆盖停止中状态；TS 现在单独保留停止意图，并有确定性回归检查。',
+    '执行中正常退出曾在 Python 最终证据同步前关闭 TS 查询；现以有期限的两阶段交接先持久化最终证据，再允许 Python 退出。',
+    '实验驱动原本会因快照读取异常跳过清理，已拆分记录和清理步骤，记录失败仍必定尝试清理。',
+  ],
+  earlier_regression_failure: {
+    run_id: '2026-09-17T16-44-27.466Z', passed: 23, total: 25,
+    observation: '两个崩溃场景读取 SQLite 证据时发生 disk I/O error；稍后对原文件的只读 quick_check 均为 ok，I/O 异常根因尚未确定。失败记录保留，不计为通过。',
+  },
 };
 writeFileSync('../maa/evidence/http-merge-offline.json', JSON.stringify(summary, null, 2) + '\n');
 console.log(`已导出 ${merge.runId} 的脱敏摘要`);

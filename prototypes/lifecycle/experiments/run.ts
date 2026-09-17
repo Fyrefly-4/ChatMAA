@@ -177,8 +177,13 @@ async function experiment(name: string, run: () => Promise<void>) {
   } catch (error) {
     current.status = 'failed'; current.error = String(error); process.exitCode = 1;
   } finally {
-    try { capture('before_cleanup'); await cleanup(); capture('after_cleanup'); }
+    // 证据读取失败不能跳过进程清理；两类失败分别留痕。
+    try { capture('before_cleanup'); }
+    catch (error) { current.status = 'failed'; current.snapshot_error = String(error); process.exitCode = 1; }
+    try { await cleanup(); }
     catch (error) { current.status = 'failed'; current.cleanup_error = String(error); process.exitCode = 1; }
+    try { capture('after_cleanup'); }
+    catch (error) { current.status = 'failed'; current.snapshot_error_after_cleanup = String(error); process.exitCode = 1; }
     current.duration_ms = Date.now() - current.started;
     current.oracle = [...oracleEvents];
     current.timeline = apps.flatMap(a => a.lines);

@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS events(id TEXT NOT NULL, seq INTEGER NOT NULL,
 active = {}
 storage_failed = False
 retiring = False
+awaiting_ack = False
 last_lease = time.monotonic()
 retire_at = None
 
@@ -206,10 +207,11 @@ def request_stop(execution_id):
     asyncio.create_task(deliver_stop(execution_id))
 
 
-def retire(reason):
-    global retiring, retire_at
+def retire(reason, await_ack=False):
+    global retiring, retire_at, awaiting_ack
     if not retiring:
         retiring = True
+        awaiting_ack = await_ack
         retire_at = time.monotonic()
         trace("retiring", reason=reason)
         for execution_id in list(active):
@@ -222,10 +224,13 @@ async def supervise():
         if time.monotonic() - last_lease > LEASE:
             retire("lease_expired")
         if retiring:
-            if not active:
+            if not active and not awaiting_ack:
                 trace("exit", reason="retired")
                 os._exit(0)
             if time.monotonic() - retire_at > DEADLINE:
+                if not active:
+                    trace("final_handoff_expired")
+                    os._exit(0)
                 trace("forced_self_exit", reason="stop_deadline")
                 os._exit(72)
 
@@ -248,7 +253,7 @@ async def authorize(request: Request, call_next):
         request.headers.get("x-controller-id") != CONTROLLER or
         request.headers.get("x-instance-id") != INSTANCE):
         return JSONResponse({"error": "wrong_control_identity"}, status_code=403)
-    if retiring and request.method != "GET":
+    if retiring and request.method != "GET" and request.url.path != "/shutdown":
         return JSONResponse({"error": "controller_retired"}, status_code=409)
     try:
         return await call_next(request)
@@ -337,9 +342,17 @@ async def reconcile():
     return {"environment": "fake_only", "device": "ready"}
 
 
+@app.post("/prepare-shutdown", status_code=202)
+async def prepare_shutdown():
+    retire("application_shutdown", await_ack=True)
+    return {"retiring": True, "awaiting_final_ack": True}
+
+
 @app.post("/shutdown", status_code=202)
 async def shutdown():
+    global awaiting_ack
     retire("application_shutdown")
+    awaiting_ack = False
     return {"retiring": True}
 
 

@@ -13,6 +13,7 @@ const runId = new Date().toISOString().replaceAll(':', '-');
 const root = resolve('.artifacts', `merge-${runId}`);
 mkdirSync(root, { recursive: true });
 const results: any[] = [];
+const only = process.argv.find(argument => argument.startsWith('--only='))?.slice(7);
 const pause = (ms: number) => new Promise(r => setTimeout(r, ms));
 const params = (count = 2) => ({ stage: '1-7', count, medicine: 0, premium: 0 });
 const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
@@ -83,6 +84,7 @@ class App {
 }
 
 async function experiment(name: string, body: (app: App) => Promise<any>, faults = {}) {
+  if (only && only !== name) return;
   const app = new App(join(root, name));
   const entry: any = { name, status: 'running', started: Date.now() };
   try {
@@ -225,5 +227,50 @@ await experiment('executor_crash_keeps_unknown', async app => {
   assert.equal(app.entered().length, 1);
   return task;
 }, { tick_ms: 400 });
+
+await experiment('normal_shutdown_handoff', async app => {
+  await app.submit();
+  await until(async () => (await app.api('/tasks/op')).started_cycles === 1);
+  await app.shutdown();
+  const rows = snapshot(app.data) as any;
+  const task = JSON.parse(rows.business.tasks[0].snapshot);
+  const execution = JSON.parse(rows.executor.executions[0].snapshot);
+  assert.equal(execution.automation_stopped, true);
+  assert.equal(task.state, 'ended');
+  assert.equal(task.automation_stopped, true);
+  assert.equal(task.confirmed, execution.confirmed);
+  assert.equal(rows.business.tasks[0].cursor, execution.seq);
+  assert.equal(task.certainty, 'lower_bound');
+  assert.equal(app.entered().length, 1);
+  return task;
+}, { tick_ms: 200, stop_delay_ms: 600 });
+
+await experiment('shutdown_storage_failure_is_uncertain', async app => {
+  await app.submit();
+  await until(async () => (await app.api('/tasks/op')).started_cycles === 1);
+  await app.api('/lab/faults', 'POST', { storage_readonly: true }, 200, true);
+  await app.shutdown();
+  const rows = snapshot(app.data) as any;
+  const task = JSON.parse(rows.business.tasks[0].snapshot);
+  assert.equal(task.state, 'unknown'); assert.equal(task.certainty, 'lower_bound');
+  assert.equal(task.automation_stopped, false);
+  assert(app.lines.some(line => line.kind === 'shutdown_handoff' && line.complete === false));
+  return task;
+}, { tick_ms: 200 });
+
+await experiment('controller_lost_during_handoff', async app => {
+  await app.submit();
+  await until(async () => (await app.api('/tasks/op')).started_cycles === 1);
+  await app.api('/prepare-shutdown', 'POST', {}, 202, true);
+  const pid = app.ready.adapter.pid;
+  app.child.kill();
+  await until(() => !alive(pid));
+  const rows = snapshot(app.data) as any;
+  const execution = JSON.parse(rows.executor.executions[0].snapshot);
+  assert.equal(execution.automation_stopped, true);
+  assert(readFileSync(join(app.data, 'executor-trace.jsonl'), 'utf8').includes('final_handoff_expired'));
+  assert.equal(app.entered().length, 1);
+  return execution;
+}, { tick_ms: 200, stop_delay_ms: 600 });
 
 console.log(`证据: ${root}`);

@@ -66,7 +66,7 @@ pnpm evidence
 |---|---|---|
 | 驱动 → TS | `POST /tasks`、`GET /tasks/:id`、`POST /tasks/:id/stop` | 固定 1-7、次数 1–100、不吃药不碎石；100 是实验输入上限 |
 | TS → Python | `POST /executions`、`GET /executions/:id?after=N`、`POST /executions/:id/stop` | 受理返回不等于启动或完成；按同一标识核对 |
-| 控制管理 | `/health`、`/lease`、`/shutdown` | 身份校验、续期及退出；停止不依赖新进度事件 |
+| 控制管理 | `/health`、`/lease`、`/prepare-shutdown`、`/shutdown` | 身份校验、续期、停止后的最终结果交接及退出；停止不依赖新进度事件 |
 | 恢复核对 | `POST /reconcile` | 只对无外部动作的替身检查环境；不能直接迁移到真实 MAA |
 | 故障注入 | `/lab/faults`、`/lab/replay/:id` | 实验专用，未来应用不得直接保留这些入口 |
 
@@ -80,7 +80,7 @@ pnpm evidence
 
 ## 当前监督范围
 
-TS 保留 Python 子进程句柄，正常退出先请求停止，再等待退出；超时只终止该句柄对应的自有进程，并等待实际 `exit`。普通任务停止不会自动升级强杀。
+TS 保留 Python 子进程句柄，正常退出先进入有期限的停止与结果交接阶段，将最终证据保存到业务库后再通知 Python 退出；交接失败保留未知，超时只终止该句柄对应的自有进程，并等待实际 `exit`。普通任务停止不会自动升级强杀。Python 在交接期间拒绝新执行，TS 消失后也会按期限退出，避免永久等待确认。
 
 Python 在控制权过期后拒绝迟到续期和新命令，先请求停止，超时自行退出。Windows 使用 `detached: true` 给这个流程留出执行机会；TS 仍持有引用、管理正常启停，没有改成独立常驻服务。默认启动方式作为实验 18 保留对照。
 

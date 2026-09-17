@@ -227,8 +227,34 @@ async function shutdown() {
   closing = true;
   clearInterval(heartbeat);
   clearInterval(polling);
-  try { await call('/shutdown', 'POST'); } catch { /* 超时后仅终止自己创建的 child */ }
   const until = Date.now() + deadline + 500;
+  let handoffComplete = false;
+  try {
+    // Python 先拒绝新执行并停止，留在有期限的交接阶段；此时只做最后的查询。
+    await call('/prepare-shutdown', 'POST');
+    while (!childExited && Date.now() < until) {
+      let complete = !storageFailed;
+      for (const task of store.all()) {
+        if (JSON.parse(task.snapshot).state === 'rejected') continue;
+        try { await sync(task.id); }
+        catch { complete = false; }
+        const final = store.view(task.id);
+        if (final.state !== 'ended' || (nativeContract && final.automation_stopped !== true)) complete = false;
+      }
+      if (storageFailed) break;
+      if (complete) {
+        const health = await call('/health');
+        if (health.retiring && !health.storage_failed && health.active.length === 0) {
+          handoffComplete = true;
+          break;
+        }
+      }
+      await new Promise(r => setTimeout(r, 30));
+    }
+  } catch (error) { trace('shutdown_handoff_unavailable', { error: String(error) }); }
+  trace('shutdown_handoff', { complete: handoffComplete });
+  // 有完整证据则确认交接；交接失败也允许按期限退出，未知部分由记录保留。
+  try { await call('/shutdown', 'POST'); } catch { /* 超时后仅终止自己创建的 child */ }
   while (!childExited && Date.now() < until) await new Promise(r => setTimeout(r, 30));
   if (!childExited) {
     trace('force_child', { pid: child.pid });
