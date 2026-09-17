@@ -1,2 +1,37 @@
 # Personal drafts
 /docs/user/
+/docs/research/
+
+# Locally installed third-party skills
+/.agents/skills/
+/skills-lock.json
+
+# Local environment configuration
+.env
+.env.*
+!.env.example
+
+# JavaScript / TypeScript dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.eslintcache
+.cache/
+
+# Python environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
