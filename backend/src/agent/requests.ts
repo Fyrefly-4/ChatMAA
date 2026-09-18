@@ -49,6 +49,8 @@ export class AgentRequests {
     let open = true;
     let toolsOpen = true;
     const emit: EventSink = async event => {
+      // SDK callbacks can arrive after the bounded request has settled and storage has closed.
+      if (!open) throw new Error('request_closed');
       try {
         this.records.event(record.requestId, event);
         await waitForOutput(() => sink(event), signal);

@@ -2,6 +2,25 @@
 
 Backend 提供明确参数的提交、查询、停止和结果读取；不解析自然语言，不依赖 Web 或模型。TS 管理 Python 子进程，通过本机 HTTP 协作，各自保存 SQLite。默认使用脱敏回调回放，启动不会自动提交任务。
 
+## 浏览器入口
+
+`npm --prefix backend start -- --web` 装配同进程的浏览器接口；页面构建产物须放在 `web/dist`。终端输出的 `web_ready.url` 含本次启动的浏览器令牌，只在本机打开，不分享或写入公共记录。缺少模型配置时仍可查询和停止已有任务。此模式不使用控制台自然语言输入，也不因标准输入关闭而退出；通过 Ctrl+C 或原 CLI `shutdown` 收尾。
+
+浏览器接口使用 `x-web-token`，检查本机 Host 和同源 Origin。原 `x-app-token` 入口继续拒绝浏览器 Origin；两种令牌不能互换。`--web-dev` 额外允许固定的 `http://127.0.0.1:5173` 开发来源，须与 `--web` 同用；开发代理保留 Origin。生产运行不添加该参数。
+
+| 接口 | 行为 |
+|---|---|
+| `GET /api/status` | 模式、模型可用性、请求忙碌及冲突任务 ID |
+| `POST /api/requests` | 接收 `requestId`、`original`、可选 `targetId`，立即返回可查询请求；相同 ID 只读，内容冲突返回 409 |
+| `GET /api/requests/:id` | 请求记录、事件、关联任务及当前摘要回执标识 |
+| `POST /api/requests/:id/summary-displayed` | 校验 `operationId` 与 `receiptId`，释放当前摘要展示等待；不创建授权 |
+| `GET /api/tasks/:id` | 独立读取当前执行事实 |
+| `POST /api/tasks/:id/stop` | 独立请求停止；是否停止以随后任务证据为准 |
+
+`browser/requests.ts` 保持一个常驻 Agent 实例及一个活动模型请求。未收到有效摘要回执不执行；超时、关闭服务或迟到回执不恢复请求。退出时先取消并等待模型处理收敛，再交给既有宿主停止执行端和保存证据。浏览器没有原始参数提交、复核解锁或宿主关闭接口。静态服务只提供构建目录，私人资料和配置不在服务范围内。
+
+2026-09-19 浏览器入口离线检查：正式回放、摘要顺序、防重、超时、独立停止、来源隔离与退出检查通过；尚不代表真实浏览器和真实模型链路已验收。
+
 <a id="live-verification"></a>
 
 ## 实机验证：统一入口
