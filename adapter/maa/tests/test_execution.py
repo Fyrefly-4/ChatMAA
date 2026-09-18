@@ -15,7 +15,7 @@ from contract import fight_params, MAX_COUNT, summarize
 from core import ResourceLoadError
 from native import execute_native
 from readiness import fresh, interpret_probe, write_readiness_overlay
-from service import Controller, Submission
+from service import Controller, Submission, RecheckRequest
 from settings import Settings, DeviceLocks
 
 FIXTURE = json.loads((Path(__file__).resolve().parents[1] / "fixtures/verified-first-battle.json").read_text(encoding="utf-8"))["events"]
@@ -193,7 +193,60 @@ class ExecutionTest(unittest.TestCase):
                     self.assertEqual(result["environment"]["basis"], "ChatMAAReadyHome")
                     self.assertEqual(result["observed_successes"], 1)
 
+    def test_recheck_only_recognizes_and_preserves_old_outcome(self):
+        from native import probe
+        with tempfile.TemporaryDirectory() as tmp:
+            settings = Settings("maa-live", Path(tmp), "controller", "token", installation=Path(tmp), hwnd=1)
+            control = Controller(settings, worker=lambda *args: None)
+            control.submit(request(identity="old"))
+            control.active.clear()
+            control.record("old", "test_finished", state="ended", automation_stopped=True, device="needs_check",
+                           reason="environment_unconfirmed", environment={"ready": False})
+            original = control.read("old")
+            harness = NativeHarness()
+            with patch("core.window_identity", return_value={}), patch("native.probe", side_effect=lambda s, stop, output: probe(s, stop, output, harness.core)):
+                control.recheck("old", RecheckRequest(id="check-1"))
+                with self.assertRaises(Exception):
+                    control.submit(request(identity="too-early"))
+                deadline = time.monotonic() + 3
+                while control.active and time.monotonic() < deadline:
+                    time.sleep(0.01)
+                    control.drain()
+            result = control.read("old")
+            self.assertEqual(result["device"], "ready")
+            self.assertTrue(result["recheck"]["automation_stopped"])
+            for field in ["state", "confirmed", "certainty", "reason", "environment", "started_cycles", "unsettled_cycles"]:
+                self.assertEqual(result[field], original[field])
+            self.assertTrue(any(kind == "Custom" for kind, _ in harness.calls))
+            self.assertFalse(any(kind == "Fight" for kind, _ in harness.calls))
+            control.db.close()
+            recovered = Controller(settings, worker=lambda *a: None, recheck_worker=lambda *a: self.fail("duplicate probe"))
+            recovered.recheck("old", RecheckRequest(id="check-1"))
+            self.assertFalse(recovered.active)
+            recovered.submit(request(identity="new"))
+            self.assertIn("new", recovered.active)
+            recovered.db.close()
 
+    def test_failed_canceled_and_interrupted_rechecks_do_not_unlock(self):
+        for cancel in [False, True]:
+            with tempfile.TemporaryDirectory() as tmp:
+                settings = Settings("maa-replay", Path(tmp), "controller", "token")
+                control = Controller(settings, worker=lambda *a: None, recheck_worker=lambda *a: None)
+                control.submit(request(identity="old")); control.active.clear()
+                control.record("old", "test_finished", state="ended", automation_stopped=True, device="needs_check")
+                control.recheck("old", RecheckRequest(id="check"))
+                if cancel:
+                    control.request_stop("old")
+                control.inbox.put(("old", "recheck_finished", {"environment": {"ready": cancel, "observed_at": time.time()}, "automation_stopped": True}))
+                control.drain()
+                self.assertEqual(control.read("old")["device"], "needs_check")
+                with self.assertRaises(Exception): control.submit(request(identity="blocked"))
+                control.recheck("old", RecheckRequest(id="interrupted"))
+                control.db.close()
+                recovered = Controller(settings, worker=lambda *a: None)
+                self.assertEqual(recovered.read("old")["recheck"]["state"], "unknown")
+                with self.assertRaises(Exception): recovered.recheck("old", RecheckRequest(id="no-bypass"))
+                recovered.db.close()
 
     def test_parameters_and_evidence(self):
         for count in [0, -1, True, "10", 1.2, MAX_COUNT + 1]:

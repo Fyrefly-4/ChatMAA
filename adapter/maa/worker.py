@@ -6,6 +6,29 @@ from pathlib import Path
 import time
 
 
+def recheck(settings, execution_id, recheck_id, stop, emit):
+    """只识别当前环境，不执行 Fight，不重跑旧任务。"""
+    stopped = True
+    try:
+        directory = hashlib.sha256((execution_id + "\0" + recheck_id).encode("utf-8")).hexdigest()
+        output = settings.data / "rechecks" / directory
+        if settings.mode == "maa-live":
+            from native import probe
+            from core import window_identity
+            window_identity(settings.hwnd)
+            stopped = False
+            environment = probe(settings, stop, output)
+            stopped = environment["automation_stopped"]
+        else:
+            output.mkdir(parents=True)
+            environment = {"ready": not stop.is_set(), "observed_at": time.time(), "basis": "offline_recheck"}
+            (output / "result.json").write_text(json.dumps(environment), encoding="utf-8")
+        (output / "request.json").write_text(json.dumps({"execution_id": execution_id, "recheck_id": recheck_id}), encoding="utf-8")
+        emit("recheck_finished", {"environment": environment, "automation_stopped": stopped})
+    except BaseException as error:
+        emit("recheck_finished", {"environment": {"ready": False}, "automation_stopped": stopped, "error": repr(error)})
+
+
 def execute(settings, operation, stop, emit):
     try:
         # Stable, case-sensitive identity without Windows reserved-name/path collisions.

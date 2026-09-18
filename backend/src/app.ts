@@ -20,6 +20,7 @@ export function createApp(tasks: TaskService, token: string, shutdown: () => voi
   app.post('/tasks', async (request, reply) => reply.code(202).send(await tasks.submit(request.body)));
   app.get<{ Params: { id: string } }>('/tasks/:id', async request => tasks.get(request.params.id));
   app.post<{ Params: { id: string } }>('/tasks/:id/stop', async (request, reply) => reply.code(202).send(await tasks.stop(request.params.id)));
+  app.post<{ Params: { id: string } }>('/tasks/:id/recheck', async (request, reply) => reply.code(202).send(await tasks.recheck(request.params.id, request.body)));
   app.post('/shutdown', async (_request, reply) => {
     reply.code(202).send({ shutting_down: true });
     setTimeout(shutdown, 10);

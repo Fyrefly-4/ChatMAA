@@ -12,6 +12,26 @@ import type { Update } from '../src/task-contract.ts';
 const run = resolve(repository, '.artifacts/checks', `execution-${Date.now()}`);
 mkdirSync(run, { recursive: true });
 const params = (count = 10) => ({ stage: '1-7', count, medicine: 0, premium: 0 });
+test('explicit recheck releases stopped history without changing its result or rerunning it', async t => {
+  const x = await setup('recheck'); t.after(x.close);
+  await x.host.tasks.submit({ id: 'old', params: params(100) });
+  assert.equal((await x.request('POST', '/tasks/old/recheck', { id: 'premature' })).statusCode, 409);
+  await until(() => x.host.tasks.get('old'), v => v.confirmed >= 1);
+  await x.host.tasks.stop('old');
+  const old = await until(() => x.host.tasks.get('old'), v => v.state === 'ended');
+  assert.equal(old.device, 'needs_check');
+  assert.equal((await x.request('POST', '/tasks/old/recheck', { id: 'check', extra: true })).statusCode, 422);
+  assert.equal((await x.request('POST', '/tasks/old/recheck', { id: 'check' })).statusCode, 202);
+  const checked = await until(() => x.host.tasks.get('old'), v => v.recheck?.state === 'ended');
+  assert.equal(checked.device, 'ready'); assert.equal(checked.recheck?.ready, true);
+  for (const key of ['confirmed', 'certainty', 'reason', 'environment', 'state'] as const) assert.deepEqual(checked[key], old[key]);
+  const seq = checked.seq;
+  await x.request('POST', '/tasks/old/recheck', { id: 'check' });
+  assert.equal(x.host.tasks.get('old').seq, seq);
+  await x.host.tasks.submit({ id: 'new', params: params(1) });
+  await until(() => x.host.tasks.get('new'), v => v.state === 'ended');
+  assert.equal(x.audit().length, 2);
+});
 async function until<T>(read: () => T | Promise<T>, accept: (value: T) => boolean, ms = 8000): Promise<T> {
   const deadline = Date.now() + ms;
   while (Date.now() < deadline) {

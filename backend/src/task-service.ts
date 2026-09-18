@@ -16,6 +16,7 @@ export class TaskService {
   storageFailed = false;
   private synchronizations = new Map<string, SyncStatus>();
   private stopIntents = new Set<string>();
+  private rechecking = false;
 
   constructor(store: Store, adapter: AdapterClient, source: string) {
     this.store = store; this.adapter = adapter; this.source = source;
@@ -71,7 +72,7 @@ export class TaskService {
       if (existing.params !== JSON.stringify(params)) throw new TaskError(409, 'id_parameter_conflict');
       return this.get(id); // Never resend an uncertain operation, including after restart.
     }
-    if (this.closing || this.exited || this.storageFailed) throw new TaskError(503, 'service_unavailable');
+    if (this.closing || this.exited || this.storageFailed || this.rechecking) throw new TaskError(503, 'service_unavailable');
     if (this.list().some(t => t.state !== 'rejected' && (!['ended'].includes(t.state) ||
         !t.automation_stopped || t.device !== 'ready'))) throw new TaskError(409, 'device_busy_or_uncertain');
     // Reserve synchronously before the first await, so concurrent callers cannot both pass admission.
@@ -93,8 +94,13 @@ export class TaskService {
     taskId(id);
     const known = this.get(id);
     // A repeated stop must not erase terminal evidence, even after the Adapter exits.
-    if (['ended', 'rejected'].includes(known.state)) {
-      return { id, stop_requested: false, confirmed: known.automation_stopped };
+    if (['ended', 'rejected'].includes(known.state) && !['running', 'stopping'].includes(known.recheck?.state ?? '')) {
+      return { id, stop_requested: false, confirmed: known.automation_stopped && (!known.recheck || known.recheck.automation_stopped) };
+    }
+    if (['running', 'stopping'].includes(known.recheck?.state ?? '')) {
+      await this.adapter.call(`/executions/${id}/stop`, 'POST');
+      await this.sync(id);
+      return { id, stop_requested: true, confirmed: false };
     }
     this.stopIntents.add(id);
     try { this.store.mark(id, known.state === 'unknown' ? { stop_requested: true } :
@@ -104,6 +110,23 @@ export class TaskService {
     try { await this.adapter.call(`/executions/${id}/stop`, 'POST'); delivered = true; }
     catch { this.unavailable(id, 'stop_delivery_unconfirmed'); }
     return { id, stop_requested: true, delivered, confirmed: false };
+  }
+  async recheck(id: string, input: unknown) {
+    taskId(id);
+    if (!input || typeof input !== 'object' || Object.keys(input).join() !== 'id') throw new TaskError(422, 'invalid_recheck');
+    const recheckId = taskId((input as { id: string }).id);
+    if (this.closing || this.exited || this.storageFailed || this.rechecking) throw new TaskError(503, 'service_unavailable');
+    this.rechecking = true;
+    try {
+      await this.poll();
+      this.get(id);
+      if (this.list().some(t => t.state !== 'rejected' && (t.state !== 'ended' || !t.automation_stopped || !t.sync.available || t.gap || t.evidence_conflict))) {
+        throw new TaskError(409, 'automation_stop_unconfirmed');
+      }
+      await this.adapter.call(`/executions/${id}/recheck`, 'POST', { id: recheckId });
+      await this.sync(id);
+      return this.get(id);
+    } finally { this.rechecking = false; }
   }
   adapterExited() {
     this.exited = true;

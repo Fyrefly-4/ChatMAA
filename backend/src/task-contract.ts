@@ -8,6 +8,7 @@ export type Snapshot = {
   device: string; reason: string | null; updated_at?: number; stop_requested?: boolean;
   automation_stopped: boolean; started_cycles: number; unsettled_cycles: number;
   evidence_source: string; environment?: EnvironmentEvidence; evidence_conflict?: boolean;
+  recheck?: { id: string; state: string; automation_stopped: boolean; ready: boolean; environment?: EnvironmentEvidence };
 };
 export type Evidence = { id: string; seq: number; kind: string; source_instance: string; snapshot: Snapshot };
 export type Update = { snapshot: Snapshot; events: Evidence[]; instance: string };

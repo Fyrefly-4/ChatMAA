@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from contract import MAX_COUNT
 from readiness import fresh
-from worker import execute
+from worker import execute, recheck
 
 
 class Params(BaseModel):
@@ -33,9 +33,15 @@ class Submission(BaseModel):
     params: Params
 
 
+class RecheckRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,80}$")
+
+
 class Controller:
-    def __init__(self, settings, worker=execute):
+    def __init__(self, settings, worker=execute, recheck_worker=recheck):
         self.settings, self.worker = settings, worker
+        self.recheck_worker = recheck_worker
         self.instance = str(uuid.uuid4())
         settings.data.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(settings.data / "executor.sqlite", isolation_level=None)
@@ -52,6 +58,9 @@ class Controller:
         self.last_lease = time.monotonic()
         for row in self.db.execute("SELECT id, snapshot FROM executions").fetchall():
             snap = json.loads(row["snapshot"])
+            if snap.get("recheck", {}).get("state") in ("running", "stopping"):
+                self.record(row["id"], "recheck_interrupted", device="needs_check",
+                            recheck={**snap["recheck"], "state": "unknown", "automation_stopped": False})
             if snap["state"] != "ended":
                 self.record(row["id"], "recovered_uncertain", state="unknown", certainty="lower_bound",
                             device="needs_check", reason="executor_restarted", automation_stopped=False)
@@ -94,7 +103,10 @@ class Controller:
         if control:
             control["stop"].set()  # Signal first, even when persistence is broken.
             try:
-                self.record(execution_id, "stop_requested", state="stopping", device="occupied", reason="stop_requested")
+                if control.get("kind") == "recheck":
+                    self.record(execution_id, "recheck_stop_requested", recheck={**self.read(execution_id)["recheck"], "state": "stopping"})
+                else:
+                    self.record(execution_id, "stop_requested", state="stopping", device="occupied", reason="stop_requested")
             except sqlite3.Error:
                 pass
 
@@ -108,7 +120,14 @@ class Controller:
 
     def receive(self, execution_id, kind, value):
         control = self.active[execution_id]
-        if kind == "worker_started":
+        if kind == "recheck_finished":
+            stopped = value.get("automation_stopped") is True
+            environment = value.get("environment", {})
+            ready = stopped and not control["stop"].is_set() and fresh(environment)
+            self.record(execution_id, kind, detail=value, device="ready" if ready else "needs_check",
+                        recheck={"id": control["recheck_id"], "state": "ended" if stopped else "unknown",
+                                 "automation_stopped": stopped, "ready": ready, "environment": environment})
+        elif kind == "worker_started":
             self.record(execution_id, kind, state="stopping" if control["stop"].is_set() else "running")
         elif kind == "progress":
             signature = json.dumps(value, sort_keys=True)
@@ -146,8 +165,31 @@ class Controller:
                 self.active[execution_id]["stop"].set()
                 self.trace("storage_failed", id=execution_id)
             finally:
-                if kind in ("finished", "worker_error"):
+                if kind in ("finished", "worker_error", "recheck_finished"):
                     self.active.pop(execution_id, None)
+
+    def recheck(self, execution_id, body):
+        if self.retiring or time.monotonic() - self.last_lease > self.settings.lease_ms / 1000:
+            raise HTTPException(409, "controller_retired")
+        if self.storage_failed:
+            raise HTTPException(503, "storage_unavailable")
+        snap = self.read(execution_id)
+        # Accepted intent is durable: the same ID is never another probe, including after restart.
+        if self.db.execute("SELECT 1 FROM events WHERE id=? AND json_extract(evidence, '$.kind')='recheck_requested' AND json_extract(evidence, '$.detail.recheck_id')=?",
+                           (execution_id, body.id)).fetchone():
+            return snap
+        snapshots = [json.loads(r[0]) for r in self.db.execute("SELECT snapshot FROM executions")]
+        if self.active or any(s["state"] != "ended" or not s["automation_stopped"] or
+                              (s.get("recheck") and not s["recheck"].get("automation_stopped")) for s in snapshots):
+            raise HTTPException(409, "automation_stop_unconfirmed")
+        self.record(execution_id, "recheck_requested", detail={"recheck_id": body.id}, device="occupied",
+                    recheck={"id": body.id, "state": "running", "automation_stopped": False, "ready": False})
+        stop = threading.Event()
+        self.active[execution_id] = {"stop": stop, "kind": "recheck", "recheck_id": body.id}
+        def emit(kind, value):
+            self.inbox.put((execution_id, kind, value))
+        threading.Thread(target=self.recheck_worker, args=(self.settings, execution_id, body.id, stop, emit), daemon=True).start()
+        return self.read(execution_id)
 
     def submit(self, body):
         if self.retiring or time.monotonic() - self.last_lease > self.settings.lease_ms / 1000:
@@ -253,7 +295,12 @@ def create_app(control, port):
         snap = control.read(execution_id)
         control.request_stop(execution_id)
         return {"id": execution_id, "stop_requested": execution_id in control.active,
-                "confirmed": snap["automation_stopped"] if snap["state"] == "ended" else False}
+                "confirmed": snap["automation_stopped"] and execution_id not in control.active and
+                (not snap.get("recheck") or snap["recheck"].get("automation_stopped") is True) if snap["state"] == "ended" else False}
+
+    @app.post("/executions/{execution_id}/recheck", status_code=202)
+    async def recheck_environment(execution_id: str, body: RecheckRequest):
+        return control.recheck(execution_id, body)
 
     @app.post("/prepare-shutdown", status_code=202)
     async def prepare_shutdown():
