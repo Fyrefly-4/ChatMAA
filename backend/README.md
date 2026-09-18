@@ -84,7 +84,7 @@ live 的参数请求、记录与受理流程已建立；固定范围正常实机
 ```mermaid
 flowchart LR
   CLI[确定参数客户端] --> App[app.ts：身份与 HTTP]
-  Agent[后续 Agent] -. 同进程 .-> Tasks[task-service.ts：共同业务规则]
+  Agent[Agent 请求核对与工具适配] --> Tasks[task-service.ts：共同业务规则]
   App --> Tasks
   Tasks --> Store[store.ts：业务 SQLite 与证据投影]
   Tasks -->|本机 HTTP| Adapter[Python Adapter：执行 SQLite 与工作线程]
@@ -93,7 +93,7 @@ flowchart LR
 
 `task-contract.ts` 定义输入与结果；`task-service.ts` 在发出执行前保存稳定 ID 和意图。超时只查询原 ID，未确认状态阻止冲突；停止不等待模型或进度事件。`store.ts` 在一个事务内保存证据、读取位置及结果，重复事件不重复计数，缺口保留下界。`host.ts` 管理自有 Python，关闭后端时交接最终证据；客户端退出不走此流程。
 
-`app.ts` 只做调用方身份与协议映射，业务检查仍在共同任务服务。后续 Agent 从已启动的宿主取得 `host.tasks`，使用同样的方法，例如：
+`app.ts` 只做调用方身份与协议映射，业务检查仍在共同任务服务。Agent 从已启动的宿主取得 `host.tasks`，使用同样的方法，例如：
 
 ```typescript
 await host.tasks.submit({ id: applicationOperationId,
@@ -102,15 +102,26 @@ const task = host.tasks.get(applicationOperationId);
 await host.tasks.stop(applicationOperationId);
 ```
 
-`applicationOperationId` 由可信应用在明确执行请求中确定，重试复用它；#9 负责把用户请求、参数和操作 ID 关联起来。身份令牌不是执行授权，模型不得自行声明授权或切换 live 模式。
+`applicationOperationId` 由可信应用在明确执行请求中确定，重试复用它；`agent/requests.ts` 把原指令、核对结论和操作 ID 关联起来。身份令牌不是执行授权，模型不得自行声明授权或切换 live 模式。
 
-## Agent 本地授权核对
+## Agent 请求接入
 
-`agent/policy.ts` 完整匹配有限的明确指令，保留次数及资源约束；疑问、缺项、否定、引用、条件与未理解的附加要求不授予执行权限。模型不能自行声明授权。此规则本身不提交任务。
+模型适配及配置见下文。当前提供程序调用接口，尚未接入终端调试入口。
 
 ## Agent 模型适配
 
 `agent/provider.ts` 使用 DeepSeek `deepseek-flash` 的 Responses 接口；调用方在本地设置 `DEEPSEEK_API_KEY`。固定模型、完整工具往返和禁用服务端存储通过离线协议测试核对；密钥不传给 Python。当前尚未接入终端入口，普通 Backend 启动不需要模型凭据。
+
+当前本地规则完整匹配少量直接命令，支持有效范围内的阿拉伯数字和一至九十九的规范中文数字（含“两”）。未覆盖的中文数字可改用阿拉伯数字重新给出完整指令；这不是执行次数上限。疑问、否定、引用、条件、多目标或未理解的附加要求均不执行，不删除条件后执行。模型参数还须逐项等于核对结果。
+
+主要代码入口：
+
+- `agent/policy.ts`：原指令允许什么；扩展表达时须同时增加误执行反例。
+- `agent/requests.ts`、`records.ts`：请求 ID、唯一操作 ID、原文、最小追踪、取消；记录使用原业务 SQLite。重放只读取，崩溃后不自动补做。
+- `agent/runtime.ts`、`provider.ts`：AI SDK 两步循环，一轮工具与一轮解释，第二轮禁用工具；默认总等待 60 秒、重试 0。固定规则使用 `system`，每轮携带完整当前输入与工具结果，禁用服务端存储。
+- `agent/tools.ts`：模型参数核对、一次变更预留、等待摘要展示完成，然后调用 `TaskService`。摘要或前置记录失败不提交；提交后的追踪失败不抹掉任务事实。
+
+下一阶段可直接创建 `new AgentRequests(host.tasks, model)`，调用 `handle({requestId, original, targetId?}, async event => ...)` 和 `read(requestId)`。同一次传输重试复用 `requestId`；独立新指令使用新 ID。事件为项目结构，不暴露 SDK 消息类型。`summary` 回调必须等展示完成才 resolve；浏览器接入需要实现这个顺序，不能把执行后的最终 HTTP 响应当作执行前摘要。执行事实来自返回的 `task` 和独立任务接口，不能以模型回复代替；`task: null` 表示没有关联任务记录。
 
 ## 结果怎样理解
 
