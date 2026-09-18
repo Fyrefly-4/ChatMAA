@@ -1,0 +1,9 @@
+{
+  "mode": "maa-replay",
+  "python": "../adapter/maa/.venv/Scripts/python.exe",
+  "port": 0,
+  "pollMs": 200,
+  "httpTimeoutMs": 2000,
+  "leaseMs": 10000,
+  "stopDeadlineMs": 20000
+}
