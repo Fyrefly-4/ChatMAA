@@ -6,7 +6,7 @@
 
 正式 Backend 使用 npm 和 `backend/package-lock.json` 安装与检查；原型的历史工具与证据不随此调整重写。
 
-2026-09-18 CI 简化补充：采用单 workflow、单 Windows job，全量执行 Backend 类型检查、Backend 集成测试与 Adapter 单元测试；保留固定环境和锁定依赖，移除按需调度及独立门禁。简化结构的本地完整检查和远端 Windows PR 检查均已通过，未启用强制门禁。Python 3.13.15 的既有离线结论不扩大为实机结论。方案、运行证据及验证边界见 [CI 方案](ci-plan.md)。
+2026-09-18 CI 简化补充：采用单 workflow、单 Windows job，全量执行 Backend 类型检查、Backend 集成测试与 Adapter 单元测试；保留固定环境和锁定依赖，移除按需调度及独立门禁。简化结构的本地完整检查和远端 Windows PR 检查均已通过，未启用强制门禁。Python 3.13.15 的既有离线结论不扩大为实机结论。日常运行、后续检查接入及验证边界见 [CI 使用与接入](ci-plan.md)，实施过程见 [归档方案](../archive/2026-09-ci/ci-plan.md)。
 
 本地验证向导按轮次保存 live 数据，两端配置均允许 `.artifacts/live-wizard/run-*/data/`，默认手动入口仍为 `.artifacts/live/`。各轮次共用仓库设备锁；上一轮服务退出与上一轮验收通过分开判断，历史记录原样保留。配置校验失败会报告“执行端未启动”，不要求对未启动的执行端做收尾。
 

@@ -1,51 +1,82 @@
-# CI／GitHub Actions 实施方案
+# CI 使用与接入
 
-状态：简化结构已实现，本地完整检查和远端 Windows PR 验证通过，未启用强制门禁。最近核对：2026-09-18；修改前基线：`f0bc99e`。确认依据：项目负责人在本次讨论中同意单 workflow、单 Windows job、全量离线检查，并要求先写方案再实施及完成一轮本地和远端验证。实施追踪：[Issue #14](https://github.com/Fyrefly-4/ChatMAA/issues/14)。
+最近核对：2026-09-18；配置基线：`126808c`。本文是日常运行和新增检查的维护入口；路径沿用 `ci-plan.md`，实施过程见 [归档方案](../archive/2026-09-ci/ci-plan.md)。
 
-## 目标与取舍
+## 当前如何运行
 
-快速开发阶段优先降低 CI 的理解与维护成本，保留现有业务验证能力。每次运行全套检查，包括纯文档修改；暂不维护路径选择和检查组合。三项检查顺序执行、共用一次环境准备，减少重复安装；是否缩短等待时间以实际运行结果为准，不预先承诺提速。
+[CI workflow](../../.github/workflows/ci.yml) 使用单个 Windows `offline-checks` job，超时 20 分钟。所有触发都运行全套离线检查，包括纯文档修改。
 
-## 执行结构
+| 入口 | 行为 |
+|---|---|
+| 面向 `main` 的 PR | opened、synchronize、reopened、edited 时运行，Draft 和 Ready 相同；调整目标分支或修改标题、描述也可能触发 |
+| `main` push | 检查合并后的状态 |
+| 手动 `workflow_dispatch` | 无参数运行全套；workflow 进入默认分支后可从 Actions 页面选择分支运行 |
 
-只保留 `.github/workflows/ci.yml`，包含一个名为 `offline-checks` 的 Windows job，超时 20 分钟。沿用两个环境准备 action，依次安装 Node、Backend 依赖、Python、固定 pip 和 Adapter 依赖，执行 `pip check`。保留精确版本、锁文件、下载缓存、Actions 完整 SHA、只读权限和 `persist-credentials: false`。
+同一 PR 的新运行取消旧运行；main 和手动运行各自使用 run ID，不互相取消。Node、Python 和两端依赖各准备一次，然后依次执行 Backend 类型检查、Backend 集成测试、Adapter 单元测试。
 
-| 顺序 | 检查 | 命令 |
-|---|---|---|
-| 1 | Backend 类型 | `npm --prefix backend run check` |
-| 2 | Backend 集成测试 | `npm --prefix backend test` |
-| 3 | Adapter 单元测试 | `./adapter/maa/.venv/Scripts/python.exe -m unittest discover -s adapter/maa/tests -v` |
+环境准备失败时跳过检查；准备成功后，一项检查失败仍继续后续检查，除非运行被取消。任何检查失败都使 job 失败。排错时查看对应 step 的日志，可在 Actions 页面重跑失败的 job；由于只有一个 job，重跑会重新准备环境并执行全套检查。
 
-Backend 集成测试会启动 Python Adapter，必须先准备全部环境。环境准备失败则跳过检查；准备成功后，即使某项检查失败，也继续执行后续检查，除非运行被取消。检查不使用 `continue-on-error`，任何检查失败均使整个 job 失败，无独立汇总脚本。
+截至上述基线，未启用强制门禁。以后设为 required 前，应另行确认并核对检查名 `offline-checks`。本轮已验证 PR 路径；main、手动和 fork 入口尚未分别验证。CI 仅运行离线、替身／回放测试，通过不表示实机验收通过。
 
-## 触发与结果
+## 本地运行相同检查
 
-- 面向 `main` 的 PR：opened、synchronize、reopened、edited 事件全量检查，覆盖目标分支调整；标题或描述修改也可能触发。Draft 和 Ready 一视同仁。
-- `main` push：全量检查，验证合并结果。
-- `workflow_dispatch`：无参数，全量检查。入口需进入默认分支后才能正式手动调用。
-- 同一 PR 新运行取消旧运行；main 和手动运行使用各自 run ID，不互相取消。
-- 本次保持非强制状态，不变更分支保护，不合并 PR。以后启用 required 时另行确认，并核对新的 `offline-checks` 检查名。
+在仓库根目录使用 PowerShell，先准备版本文件指定的 Node 和 Python。版本以 [.node-version](../../.node-version)、[.python-version](../../.python-version)、[.pip-version](../../.pip-version) 为准，依赖分别以 [npm 锁文件](../../backend/package-lock.json) 和 [Python 锁文件](../../adapter/maa/requirements.lock) 为准。
 
-## 移除范围
+按以下顺序准备环境；任何命令失败都应先修复再继续：
 
-删除三个 `check-*.yml` reusable workflow、`ci-manual.yml`、`plan.mjs`、`gate.mjs`、`policy.json` 和只验证这些已删除功能的 `ci.test.mjs`。删除 Node 准备 action 不再需要的可选安装参数。保留 `check-node.mjs` 和全部业务测试。同步更新 CI 维护说明与工程说明。
+```powershell
+node scripts/ci/check-node.mjs
+python -c "import pathlib,platform; assert platform.python_version()==pathlib.Path('.python-version').read_text().strip()"
+npm --prefix backend ci --registry=https://registry.npmjs.org
+python -m venv adapter/maa/.venv
+$pipVersion = (Get-Content .pip-version -Raw).Trim()
+& ./adapter/maa/.venv/Scripts/python.exe -m pip install --index-url https://pypi.org/simple "pip==$pipVersion"
+& ./adapter/maa/.venv/Scripts/python.exe -m pip install --index-url https://pypi.org/simple -r adapter/maa/requirements.lock
+& ./adapter/maa/.venv/Scripts/python.exe -m pip check
+```
 
-## 验证与完成条件
+Backend 集成测试也会启动 Python Adapter，不能省略 Python 准备。已有 venv 应与指定 Python 版本一致。CI 的环境准备实现见 [setup-node](../../.github/actions/setup-node/action.yml) 和 [setup-python](../../.github/actions/setup-python/action.yml)。
 
-1. 先写入本方案，再实施配置与文档修改。
-2. 按锁文件准备依赖，执行以上三项完整本地检查，并用 actionlint 检查工作流。
-3. 核对环境失败、检查失败和取消时的条件表达式；不以容忍失败掩盖结果。
-4. 推送当前 PR 分支，确认最新提交的远端 Windows job 完整执行三项检查且成功；记录提交、运行链接及实际结果。
-5. 本轮不要求合并、开启强制门禁或完成 fork／main／手动入口的额外平台验收；这些未验证范围明确记录，不以 PR 运行代替。
+分别执行三项检查，并检查各自的退出状态：
 
-只运行离线、替身／回放测试，不连接真实游戏、不加载 MaaCore DLL、不读取真实配置或 secrets。CI 通过不表示实机验收通过。依赖、解释器版本及业务代码不在本次升级范围。
+```powershell
+npm --prefix backend run check
+npm --prefix backend test
+& ./adapter/maa/.venv/Scripts/python.exe -m unittest discover -s adapter/maa/tests -v
+```
 
-## 后续扩展条件
+## 后续如何接入
 
-某组测试实际拖慢反馈时拆 job；新增独立 Web 检查时按需要单独组织；无关变更反复触发昂贵检查时再评估路径选择；多个入口确实复用时再提取 reusable workflow；有明确跨平台支持目标时再增加矩阵。
+| 场景 | 接入方式 |
+|---|---|
+| 为现有模块增加测试 | 确认现有命令能发现新测试，通常无需修改 workflow。Backend 当前匹配 `backend/tests/*.test.ts`；Adapter 从 `adapter/maa/tests` 执行 unittest discovery，默认匹配 `test*.py` |
+| 增加一种检查 | 先提供本地可运行且失败返回非零退出码的命令，再在 `offline-checks` 中增加有明确名称的 step |
+| 增加新模块，例如 Web | 增加锁定依赖的安装和检查命令；按实际依赖与耗时判断是否沿用当前 job，新增准备步骤也要纳入检查条件 |
+| 修改运行时或依赖 | 更新对应版本文件或锁文件，必要时同步环境准备 action；Node 的 `engines` 范围格式改变时也需同步 `check-node.mjs` |
 
-## 历史依据与验证记录
+新增检查 step 可沿用现有条件，在两端准备成功且未取消时执行；这样前一项检查失败不会挡住后续检查：
 
-原按需方案由本方案替代，原文和独有版本决策、验收证据保留在 [f0bc99e 历史版本](https://github.com/Fyrefly-4/ChatMAA/blob/f0bc99e/docs/engineering/ci-plan.md)。原方案的按需、custom、调度测试和五次代表性观察要求不再作为本次简化验收条件。旧记录按当时方案解读。
+```yaml
+- name: 新检查
+  if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.python.outcome == 'success' }}
+  run: npm --prefix backend run <检查脚本名>
+```
 
-原方案 [Windows 运行 35346210732](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35346210732) 成功，仅证明旧结构。新结构本地验证：Node 24.19.0 版本校验、Backend 类型检查、Backend 16 项集成测试、Adapter 25 项单元测试、pip check、actionlint 1.7.12 和 git diff --check 全部通过。npm ci 与 Python 锁定依赖安装完成；本地沿用 Python 3.12.14／pip 25.0.1，固定 Python 3.13.15／pip 26.2.1 由远端验证。首次本地提权命令解析到 Node 24.18.0，版本校验按预期拒绝，改用显式 PATH 的 24.19.0 后通过。远端 [运行 35347464772](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35347464772) 对应实现提交 `3885229`，单个 Windows `offline-checks` job 在 1 分 24 秒内成功完成环境准备、类型检查、Backend 16 项和 Adapter 25 项测试。该结果证明 PR 路径与固定 CI 环境；main、手动、fork 触发未在本轮分别执行。
+将示例命令替换为已实现的检查命令；若增加其他准备步骤，补充它们成功的条件。环境准备步骤保持默认的成功条件。不要用 `continue-on-error` 将必要检查的失败变成成功。
+
+新增检查沿用离线边界、只读权限、Actions 完整 SHA、精确版本和锁文件。缓存用于下载加速，不代替安装与检查；不接入真实游戏、真实配置、secrets 或部署。
+
+## 修改后如何验证
+
+- 修改 workflow 或 composite action 后，运行 `actionlint`，并核对准备失败、检查失败及取消时的条件。
+- 新增或修改检查命令、依赖、版本或准备逻辑后，执行完整本地检查，再验证远端 Windows job。
+- 核对远端运行的提交和结论，确认每个预期检查 step 实际执行且成功，不能只看 workflow 已触发。
+- 运行 `git diff --check`，更新本文中受影响的命令、入口和验证范围。仅整理文档时检查链接和内容一致性即可。
+
+## 何时扩展结构
+
+某组测试明显拖慢反馈时再拆 job；多个入口确实复用相同检查时再提取 reusable workflow；无关修改反复触发昂贵检查时再评估路径选择；有明确跨平台或多版本支持目标时再增加矩阵。新增模块本身不要求引入上述全部机制。
+
+## 历史与证据
+
+取舍、原按需方案的历史入口及首轮验证保留在 [实施方案归档](../archive/2026-09-ci/ci-plan.md)。基线 `126808c` 的 [Windows PR CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35347687701) 全部通过，单 job 用时 1 分 20 秒；本次文档整理不代表重新执行这些检查。

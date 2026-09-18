@@ -31,4 +31,11 @@
 
 ## CI 方案历史
 
-2026-09-18：原按需 CI 方案由快速开发阶段的单 job 全量方案替代。旧路径仍为 `docs/engineering/ci-plan.md`；原文冻结于 [f0bc99e 历史版本](https://github.com/Fyrefly-4/ChatMAA/blob/f0bc99e/docs/engineering/ci-plan.md)，保留原始版本决策和运行证据。当前入口为 [CI 方案](../engineering/ci-plan.md)。
+2026-09-18：CI 简化方案已实施并完成本轮验证，归档保存当时的取舍和证据。当前运行与接入说明统一见 [CI 使用与接入](../engineering/ci-plan.md)。
+
+| 来源／旧路径 | 归档与当前入口 |
+|---|---|
+| `126808c` 的 `docs/engineering/ci-plan.md` | [单 job 全量 CI 实施方案](2026-09-ci/ci-plan.md)；原路径改为日常使用入口 |
+| 简化前的按需 CI 方案 | [f0bc99e 历史版本](https://github.com/Fyrefly-4/ChatMAA/blob/f0bc99e/docs/engineering/ci-plan.md)，保留原始版本决策和运行证据 |
+
+归档正文冻结，旧链接按所引用提交的历史内容解读；不将历史验收要求视为当前待办。
