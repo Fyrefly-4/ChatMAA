@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures";
+import { resolve } from "node:path";
 
 test("visible summary precedes real replay acceptance; result, tools, repeat request and narrow layout", async ({
   page,
@@ -27,7 +28,7 @@ test("visible summary precedes real replay acceptance; result, tools, repeat req
     page.getByRole("heading", { name: "tool_call", exact: true }),
   ).toBeVisible();
   await page.screenshot({
-    path: "../.artifacts/checks/web-desktop.png",
+    path: resolve(import.meta.dirname, "../../.artifacts/checks/web-desktop.png"),
     fullPage: true,
   });
   await page.unroute("**/summary-displayed");
@@ -39,7 +40,7 @@ test("visible summary precedes real replay acceptance; result, tools, repeat req
   expect(server.audit()).toHaveLength(2);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({
-    path: "../.artifacts/checks/web-mobile.png",
+    path: resolve(import.meta.dirname, "../../.artifacts/checks/web-mobile.png"),
     fullPage: true,
   });
   expect(
