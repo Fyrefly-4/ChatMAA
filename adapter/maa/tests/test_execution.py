@@ -164,7 +164,7 @@ class ExecutionTest(unittest.TestCase):
                 def factory(installation, output, **kwargs):
                     if output.name == "after-check":
                         if load_failure:
-                            raise ResourceLoadError("resource unavailable before instance creation")
+                            raise ResourceLoadError("resource unavailable: D:/private-installation/resource")
                         core = harness.core(installation, output, **kwargs)
                         core.close = lambda: (_ for _ in ()).throw(RuntimeError("destroy unconfirmed"))
                         return core
@@ -186,6 +186,10 @@ class ExecutionTest(unittest.TestCase):
                 self.assertEqual(view["certainty"], "exact")
                 self.assertEqual(view["state"], "ended" if load_failure else "unknown")
                 self.assertEqual(view["device"], "needs_check")
+                self.assertEqual(view["environment"]["error"], "environment_check_failed")
+                self.assertNotIn("private-installation", json.dumps(view))
+                final_event = control.query("op")["events"][-1]
+                self.assertEqual(final_event["detail"]["environment"]["error"], result["environment"]["error"])
                 with self.assertRaises(Exception): control.submit(request(identity="blocked"))
                 control.db.close()
 
@@ -255,9 +259,13 @@ class ExecutionTest(unittest.TestCase):
                 control.recheck("old", RecheckRequest(id="check"))
                 if cancel:
                     control.request_stop("old")
-                control.inbox.put(("old", "recheck_finished", {"environment": {"ready": cancel, "observed_at": time.time()}, "automation_stopped": True}))
+                raw_error = "resource unavailable: D:/private-installation/resource"
+                control.inbox.put(("old", "recheck_finished", {"environment": {"ready": cancel, "observed_at": time.time(), "error": raw_error}, "automation_stopped": True}))
                 control.drain()
                 self.assertEqual(control.read("old")["device"], "needs_check")
+                self.assertEqual(control.read("old")["recheck"]["environment"]["error"], "environment_check_failed")
+                self.assertNotIn("private-installation", json.dumps(control.read("old")))
+                self.assertEqual(control.query("old")["events"][-1]["detail"]["environment"]["error"], raw_error)
                 with self.assertRaises(Exception): control.submit(request(identity="blocked"))
                 control.recheck("old", RecheckRequest(id="interrupted"))
                 control.db.close()

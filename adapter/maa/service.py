@@ -19,6 +19,14 @@ from readiness import fresh
 from worker import execute, recheck
 
 
+def environment_view(evidence):
+    """上游只接收识别结论；原始异常留在本地事件 detail 中。"""
+    result = dict(evidence)
+    if result.get("error"):
+        result["error"] = "environment_check_failed"
+    return result
+
+
 class Params(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     stage: str = Field(pattern=r"^1-7$")
@@ -122,7 +130,7 @@ class Controller:
         control = self.active[execution_id]
         if kind == "recheck_finished":
             stopped = value.get("automation_stopped") is True
-            environment = value.get("environment", {})
+            environment = environment_view(value.get("environment", {}))
             ready = stopped and not control["stop"].is_set() and fresh(environment)
             self.record(execution_id, kind, detail=value, device="ready" if ready else "needs_check",
                         recheck={"id": control["recheck_id"], "state": "ended" if stopped else "unknown",
@@ -141,7 +149,7 @@ class Controller:
             healthy = not any(value.get(k) for k in ("callback_error", "runtime_error", "stop_error"))
             stopped = value.get("automation_stopped") is True
             exact = value.get("battle_automation_stopped", stopped) and healthy and value["matches_requested_evidence"] and value["unsettled_cycles"] == 0
-            environment = value.get("environment", {})
+            environment = environment_view(value.get("environment", {}))
             ready = stopped and healthy and fresh(environment)
             self.record(execution_id, "final_evidence", detail=value, state="ended" if stopped else "unknown",
                         confirmed=value["observed_successes"], certainty="exact" if exact else "lower_bound",
