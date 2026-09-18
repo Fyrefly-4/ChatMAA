@@ -31,6 +31,9 @@ __pycache__/
 .coverage.*
 htmlcov/
 
+# Formal runtime records and local configuration
+/.artifacts/
+
 # Operating system files
 .DS_Store
 Thumbs.db

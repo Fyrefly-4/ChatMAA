@@ -21,7 +21,7 @@ def cycle_prefix():
 
 class ContractTest(unittest.TestCase):
     def test_budget_and_resource_limits(self):
-        for invalid in [0, 4, -1, True, "3"]:
+        for invalid in [0, 2147483648, -1, True, "3"]:
             with self.assertRaises(ValueError):
                 fight_params(invalid)
         params = fight_params(3)

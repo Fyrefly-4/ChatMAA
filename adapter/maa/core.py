@@ -7,6 +7,10 @@ import threading
 import time
 
 
+class ResourceLoadError(RuntimeError):
+    """资源加载失败；发生在创建自动化实例之前。"""
+
+
 class Core:
     def __init__(self, installation: Path, output: Path, incremental=None, quiet_callbacks=False):
         # 与官方 WPF GUI 的 system DPI 声明一致，在 native 创建线程/窗口前设置。
@@ -64,9 +68,11 @@ class Core:
                 resource_roots.append(candidate.resolve())
         for resource_root in resource_roots:
             if not self.lib.AsstLoadResource(str(resource_root).encode("utf-8")):
-                raise RuntimeError(f"AsstLoadResource failed: {resource_root}")
+                self.dll_directory.close()
+                raise ResourceLoadError(f"AsstLoadResource failed: {resource_root}")
         if incremental and not self.lib.AsstLoadResource(str(Path(incremental).resolve()).encode("utf-8")):
-            raise RuntimeError("incremental resource load failed")
+            self.dll_directory.close()
+            raise ResourceLoadError("incremental resource load failed")
         callback_type = ctypes.WINFUNCTYPE(None, integer, text, pointer)
         self.callback = callback_type(self._callback)
         self.handle = self.lib.AsstCreateEx(self.callback, None)

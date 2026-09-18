@@ -1,13 +1,14 @@
-"""首轮实验的受限参数和保守证据读取，不执行 native 调用。"""
+"""参数及保守证据解释；承接原型 273055d，不执行 native 调用。"""
 import json
 from pathlib import Path
 
 FAILURE_NODES = {"PrtsErrorConfirm", "AbandonAction", "FightMissionFailed", "FightMissionFailedAndStop"}
+MAX_COUNT = 2_147_483_647  # v6.17.5 FightTask::set_params reads times as int.
 
 
 def fight_params(count):
-    if type(count) is not int or not 1 <= count <= 3:
-        raise ValueError("首轮仅允许明确指定 1–3 次")
+    if type(count) is not int or not 1 <= count <= MAX_COUNT:
+        raise ValueError("次数必须是 MaaCore int 范围内的正整数")
     return {"stage": "1-7", "times": count, "series": 1,
             "medicine": 0, "medicine_expire_days": 0, "stone": 0,
             "client_type": "", "server": "CN", "DrGrandet": False,
@@ -17,9 +18,16 @@ def fight_params(count):
 def write_failure_overlay(output: Path):
     directory = output / "failure-policy/resource/tasks"
     directory.mkdir(parents=True)
-    # 保留原识别字段，仅替换动作和后继。覆盖范围限定 Fight 前缀。
-    patch = {"Fight@" + name: {"action": "Stop", "next": [], "onErrorNext": [], "exceededNext": []}
-             for name in sorted(FAILURE_NODES)}
+    # 前缀任务跨资源重载仍会存在，必须显式声明识别方式，避免回退到
+    # Fight@AbandonAction.png 等不存在的模板。沿用固定版本的原识别区域。
+    patch = {}
+    for name in sorted(FAILURE_NODES):
+        recognition = ({"algorithm": "MatchTemplate", "template": name + ".png"}
+                       if name in {"AbandonAction", "PrtsErrorConfirm"}
+                       else {"algorithm": "OcrDetect", "text": ["行动失败"]})
+        patch["Fight@" + name] = {"baseTask": name, **recognition, "action": "Stop",
+                                 "sub": [], "next": [], "onErrorNext": [],
+                                 "exceededNext": [], "reduceOtherTimes": []}
     (directory / "tasks.json").write_text(json.dumps(patch, indent=2), encoding="utf-8")
     return output / "failure-policy"
 
