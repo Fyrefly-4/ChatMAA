@@ -37,6 +37,8 @@ $pipVersion = (Get-Content .pip-version -Raw).Trim()
 
 Backend 集成测试也会启动 Python Adapter，不能省略 Python 准备。已有 venv 应与指定 Python 版本一致，可复用后跳过创建；`python` 不在 PATH 或指向其他版本时，用已核对的 3.12.14 x64 解释器绝对路径替代，不用 `py` 默认选择。CI 的环境准备实现见 [setup-node](../../.github/actions/setup-node/action.yml) 和 [setup-python](../../.github/actions/setup-python/action.yml)。
 
+Windows CI 的 Python 来源为 [Astral python-build-standalone 固定发布 20260901](https://github.com/astral-sh/python-build-standalone/releases/tag/20260901) 的 CPython 3.12.14 x64 `install_only` 包。准备 action 校验固定 SHA-256，再核对精确版本与位数，随后沿用 venv、固定 pip 和 requirements 安装。原因是 `actions/setup-python` 不提供该版本的 Windows 包；不是改用其他 Python 版本。今后升级须同步 `.python-version`、发布包及摘要，校验不匹配直接失败。Python 下载与 pip 暂不额外缓存，Node 缓存保持原样。
+
 另安装 Web 依赖和浏览器，再执行各项检查，并检查各自的退出状态：
 
 ```powershell
@@ -83,6 +85,8 @@ npm --prefix web run test:e2e
 某组测试明显拖慢反馈时再拆 job；多个入口确实复用相同检查时再提取 reusable workflow；无关修改反复触发昂贵检查时再评估路径选择；有明确跨平台或多版本支持目标时再增加矩阵。新增模块本身不要求引入上述全部机制。
 
 ## 历史与证据
+
+Issue #11 首次远端运行 `5e061ba` 的 [Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35379014326) 在 Python 准备失败：`actions/setup-python` 找不到 Windows x64 3.12.14，后续检查全部跳过，不能记为测试通过。随后准备步骤改用上述固定发布包；后续验证结果另列。
 
 2026-09-19 Issue #11（基于 `4bcf381`）：Node 24.19.0、Python 3.12.14 x64、npm 12.0.2，锁定依赖安装及 `pip check` 通过；pip 已对齐 `.pip-version` 的 26.2.1。本地 Backend 39、Adapter 25、Web 12 项及两端类型检查／构建通过，浏览器为 Edge Chromium。显式回放配置的正式 `--web` 启动、静态页面、无模型状态及 CLI 关闭交接另行通过。没有真实模型或游戏调用。新基线远端 Windows job 尚未运行，不用下述旧基线 CI 替代；当前 workflow 不因普通分支 push 自动运行，需面向 main 的 PR 或单独授权手动调度。
 

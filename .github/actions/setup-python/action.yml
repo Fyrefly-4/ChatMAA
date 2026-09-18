@@ -3,15 +3,28 @@ description: 安装固定 Python 与 pip，在 Backend 约定路径创建 Adapte
 runs:
   using: composite
   steps:
-    - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-      with:
-        python-version-file: .python-version
-        architecture: x64
-        cache: pip
-        cache-dependency-path: |
-          .python-version
-          .pip-version
-          adapter/maa/requirements.lock
+    # setup-python has no Windows build for this security-only CPython release.
+    # Keep the distribution and digest pinned together with .python-version.
+    - name: 准备固定 Windows CPython
+      shell: pwsh
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        $pythonVersion = (Get-Content .python-version -Raw).Trim()
+        if (!$IsWindows -or $pythonVersion -ne '3.12.14') {
+          throw '须同步固定 Windows CPython 安装包与 .python-version'
+        }
+        $pythonRoot = Join-Path $env:RUNNER_TEMP 'chatmaa-python-3.12.14'
+        New-Item -ItemType Directory -Path $pythonRoot -ErrorAction Stop | Out-Null
+        $archive = Join-Path $pythonRoot 'python.tar.gz'
+        Invoke-WebRequest -Uri 'https://github.com/astral-sh/python-build-standalone/releases/download/20260901/cpython-3.12.14%2B20260901-x86_64-pc-windows-msvc-install_only.tar.gz' -OutFile $archive
+        $expectedHash = 'e90c1b6419da3bd812dd73bb3de40287a21abf153438147639ec5e20375ea93f'
+        if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash -ne $expectedHash) {
+          throw 'CPython 安装包 SHA-256 不匹配'
+        }
+        tar -xzf $archive -C $pythonRoot
+        $pythonBin = Join-Path $pythonRoot 'python'
+        & (Join-Path $pythonBin 'python.exe') -c "import platform,struct; assert platform.python_version()=='3.12.14'; assert struct.calcsize('P')==8"
+        $pythonBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
     - shell: pwsh
       run: |
         $PSNativeCommandUseErrorActionPreference = $true
