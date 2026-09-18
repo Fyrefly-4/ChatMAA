@@ -217,7 +217,10 @@ export function useExecution() {
     notice,
     sending,
     stopping,
-    stopState,
+    // Current execution evidence supersedes an earlier (or late) stop receipt.
+    stopState: stopState && task?.automation_stopped
+      ? "执行端已确认停止自动化。"
+      : stopState,
     lastRead,
     send,
     stop,
