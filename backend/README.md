@@ -106,7 +106,7 @@ await host.tasks.stop(applicationOperationId);
 
 ## Agent 调试与接入
 
-2026-09-18：在 `be62348` 基础上增加 Agent 实现，当前以模型替身与正式回放 Adapter 验证；本提交不提供真实模型验收入口，也不代表真实游戏闭环。
+2026-09-18：在 `be62348` 基础上增加 Agent 实现，当前验证为模型替身与正式回放 Adapter；真实 DeepSeek 四个固定样例的回放调用及回复审阅已通过，该证据限于真实模型与正式回放执行端，不代表真实游戏闭环。
 
 在本地环境设置 `DEEPSEEK_API_KEY` 后，执行 `npm --prefix backend start -- --agent`。普通 Backend 启动不需要模型凭据；密钥不写入业务库，也不传给 Python 子进程。模型固定为 DeepSeek `deepseek-flash`，通过 `@ai-sdk/openai` 的 Responses 接口请求 `https://api.deepseek.com/responses`。没有自动重试或备用模型。
 
@@ -133,6 +133,10 @@ await host.tasks.stop(applicationOperationId);
 - `agent/debug.ts`：终端适配。Web 尚未实现，HTTP 的 `Origin` 检查保持原样。
 
 下一阶段可直接创建 `new AgentRequests(host.tasks, model)`，调用 `handle({requestId, original, targetId?}, async event => ...)` 和 `read(requestId)`。同一次传输重试复用 `requestId`；独立新指令使用新 ID。事件为项目结构，不暴露 SDK 消息类型。`summary` 回调必须等展示完成才 resolve；浏览器接入需要实现这个顺序，不能把执行后的最终 HTTP 响应当作执行前摘要。执行事实来自返回的 `task` 和独立任务接口，不能以模型回复代替；`task: null` 表示没有关联任务记录。
+
+真实模型验收是单独入口：`node backend/src/agent/verify.ts`。它需要本地密钥，会发送四条固定测试指令及工具结果，使用正式 `maa-replay`，不读取 live 配置、不操作游戏。结果写入忽略目录 `.artifacts/agent-verification/run-*/`；默认测试与 CI 不运行它。需逐条复查原文、工具参数、返回和解释；离线通过不替代该验收。
+
+可在仓库根目录的 `.env` 中本地配置 `DEEPSEEK_API_KEY`，从根目录执行 `node --env-file=.env backend/src/agent/verify.ts`；程序不会自动加载 `.env`，该文件已被 Git 忽略。新记录用 `automaticChecksPassed` 表示样例断言和退出交接检查结果，`replyReview: pending` 表示回复尚待逐条审阅，不能以自动检查成功替代整体验收。`verification.json` 附带语义审阅清单；旧记录中的 `passed` 同样只代表当时的自动断言。
 
 ## 结果怎样理解
 
