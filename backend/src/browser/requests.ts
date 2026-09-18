@@ -20,20 +20,21 @@ function input(value: unknown): BrowserInput {
 
 /** One application instance; HTTP reads never create another AgentRequests. */
 export class BrowserRequests {
-  readonly agent: AgentRequests | undefined;
+  readonly agent: AgentRequests;
+  readonly modelAvailable: boolean;
   private active: Promise<unknown> | undefined;
   private pending = new Map<string, Receipt & { release: () => void }>();
   private acknowledged = new Map<string, Receipt>();
   closing = false;
   constructor(tasks: TaskService, model?: LanguageModel, privateOptions: { timeoutMs?: number } = {}) {
-    this.agent = model ? new AgentRequests(tasks, model) : undefined;
+    this.agent = new AgentRequests(tasks, model);
+    this.modelAvailable = !!model;
     this.options = privateOptions;
   }
   private readonly options: { timeoutMs?: number };
   get busy() { return !!this.active; }
   read(id: string) {
     taskId(id);
-    if (!this.agent) throw new TaskError(503, 'model_unavailable');
     if (!this.agent.records.get(id)) throw new TaskError(404, 'unknown_request');
     const pending = this.pending.get(id);
     return { ...this.agent.read(id), pendingSummary: pending
@@ -43,12 +44,12 @@ export class BrowserRequests {
     const v = input(value);
     if (this.closing) throw new TaskError(503, 'service_closing');
     const agent = this.agent;
-    if (!agent) throw new TaskError(503, 'model_unavailable');
     const old = agent.records.get(v.requestId);
     if (old) {
       if (old.original !== v.original || old.targetId !== v.targetId) throw new TaskError(409, 'request_id_conflict');
       return this.read(v.requestId);
     }
+    if (!this.modelAvailable) throw new TaskError(503, 'model_unavailable');
     if (this.active) throw new TaskError(409, 'request_busy');
     // handle reserves its record synchronously, before its first output await.
     this.active = agent.handle(v, async event => {

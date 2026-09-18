@@ -3,7 +3,7 @@ import type { TaskService } from '../task-service.ts';
 import type { BrowserRequests } from './requests.ts';
 
 export function browserRoutes(app: FastifyInstance, tasks: TaskService, requests: BrowserRequests) {
-  app.get('/api/status', async () => ({ mode: tasks.source, modelAvailable: !!requests.agent,
+  app.get('/api/status', async () => ({ mode: tasks.source, modelAvailable: requests.modelAvailable,
     closing: tasks.closing || requests.closing, busy: requests.busy,
     adapterAvailable: !tasks.exited, storageFailed: tasks.storageFailed,
     conflictingTaskIds: tasks.list().filter(t => t.state !== 'rejected' &&

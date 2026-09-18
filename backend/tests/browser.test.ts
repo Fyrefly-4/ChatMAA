@@ -111,3 +111,16 @@ test('browser credential and origin scope preserve CLI and private-file boundari
     assert.notEqual((await x.request('GET', path)).statusCode, 200);
   }
 });
+
+test('missing model prevents new work but keeps stored requests readable', async t => {
+  const x = await setup('missing-model'); t.after(x.close);
+  x.requests.submit({ requestId: 'one', original: '刷1-7十次' });
+  await until(() => !!x.requests.read('one').pendingSummary);
+  await x.requests.close();
+  const unavailable = new BrowserRequests(x.host.tasks);
+  assert.equal(unavailable.modelAvailable, false);
+  assert.equal(unavailable.read('one').record.status, 'failed');
+  assert.equal(unavailable.submit({ requestId: 'one', original: '刷1-7十次' }).record.status, 'failed');
+  assert.throws(() => unavailable.submit({ requestId: 'new', original: '刷1-7十次' }), /model_unavailable/);
+  assert.equal(x.audit().length, 0);
+});

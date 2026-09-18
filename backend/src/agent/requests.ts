@@ -13,9 +13,9 @@ import { waitForOutput } from './wait.ts';
 export class AgentRequests {
   readonly records: AgentRecords;
   readonly tasks: TaskService;
-  readonly model: LanguageModel;
+  readonly model: LanguageModel | undefined;
   private active = new Map<string, AbortController>();
-  constructor(tasks: TaskService, model: LanguageModel) {
+  constructor(tasks: TaskService, model?: LanguageModel) {
     this.tasks = tasks; this.model = model; this.records = new AgentRecords(tasks.store.db);
   }
   read(requestId: string) {
@@ -38,6 +38,8 @@ export class AgentRequests {
       if (old.original !== input.original || old.targetId !== input.targetId) throw new Error('request_id_conflict');
       return this.read(input.requestId); // 传输重试和重启都只读取，不重新运行模型或执行。
     }
+    const model = this.model;
+    if (!model) throw new Error('model_unavailable');
     const record: RequestRecord = { ...input, operationId: randomUUID(),
       permission: authorize(input.original, input.targetId), policyVersion: POLICY_VERSION,
       ...MODEL_IDENTITY, createdAt: new Date().toISOString(), status: 'running' };
@@ -69,7 +71,7 @@ export class AgentRequests {
         const abort = () => reject(new Error('model_cancelled_or_timed_out'));
         signal.addEventListener('abort', abort, { once: true });
         if (signal.aborted) { abort(); return; }
-        runModel(this.model, input.original, tools, signal, () => { toolsOpen = false; }, emit).then(resolve, reject)
+        runModel(model, input.original, tools, signal, () => { toolsOpen = false; }, emit).then(resolve, reject)
           .finally(() => signal.removeEventListener('abort', abort));
       });
       record.reply = reply; record.status = 'finished';

@@ -18,6 +18,7 @@ const config = (() => {
   }
 })();
 const web = process.argv.includes('--web');
+if (process.argv.includes('--web-dev') && !web) throw new Error('--web-dev 须与 --web 同用');
 if (web && process.argv.includes('--agent')) throw new Error('--web 与 --agent 不能同时使用');
 let model;
 if (process.argv.includes('--agent')) model = deepseekModel();
