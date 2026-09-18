@@ -9,8 +9,54 @@ import { repository } from '../src/config.ts';
 import { AgentRequests } from '../src/agent/requests.ts';
 import { authorize } from '../src/agent/policy.ts';
 import type { AgentEvent } from '../src/agent/records.ts';
+import { DatabaseSync } from 'node:sqlite';
+import type { TaskService } from '../src/task-service.ts';
 
 const run = resolve(repository, '.artifacts/checks', `agent-${Date.now()}`);
+test('stalled request, reply and error output settle on timeout or cancellation', async () => {
+  for (const kind of ['request', 'reply', 'error'] as const) {
+    for (const cancel of [false, true]) {
+      const db = new DatabaseSync(':memory:');
+      try {
+        const tasks = { store: { db, get: () => undefined } } as unknown as TaskService;
+        const model = kind === 'error' ? new MockLanguageModelV4({ doGenerate: async () => { throw new Error('offline failure'); } }) : mock(reply, reply);
+        const agent = new AgentRequests(tasks, model);
+        let reached = false; let settled = false; let rejectLate!: (error: Error) => void;
+        const pending = agent.handle({ requestId: 'stalled-output', original: '你好' }, async event => {
+          if (event.kind === kind) {
+            reached = true;
+            await new Promise<void>((_, reject) => { rejectLate = reject; });
+          }
+        }, { timeoutMs: cancel ? 2000 : 100 });
+        void pending.then(() => { settled = true; });
+        await until(() => reached);
+        if (cancel) agent.cancel('stalled-output');
+        await until(() => settled);
+        assert.equal((await pending).record.status, 'failed');
+        rejectLate(new Error('late output failure'));
+        await new Promise(resolve => setTimeout(resolve, 10));
+        assert.equal((await agent.handle({ requestId: 'next', original: '你好' }, async () => {})).record.status,
+          kind === 'error' ? 'failed' : 'finished');
+      } finally { db.close(); }
+    }
+  }
+});
+
+test('cancelled stalled summary cannot submit when output completes late', async t => {
+  const x = await setup('stalled-summary'); t.after(() => x.host.close());
+  const agent = new AgentRequests(x.host.tasks, mock(calls(params()), reply));
+  let release!: () => void;
+  const pending = agent.handle({ requestId: 'stalled-summary', original: '刷1-7十次' }, async event => {
+    if (event.kind === 'summary') await new Promise<void>(resolve => { release = resolve; });
+  });
+  await until(() => !!release);
+  agent.cancel('stalled-summary');
+  assert.equal((await pending).record.status, 'failed');
+  release();
+  await new Promise(resolve => setTimeout(resolve, 60));
+  assert.equal(x.host.tasks.list().length, 0);
+  assert.equal(x.audit().length, 0);
+});
 const params = (count = 10) => ({ stage: '1-7', count, medicine: 0, premium: 0 });
 const result = (content: LanguageModelV4GenerateResult['content']): LanguageModelV4GenerateResult => ({
   content, finishReason: { unified: content.some(c => c.type === 'tool-call') ? 'tool-calls' : 'stop', raw: undefined },

@@ -8,6 +8,7 @@ import type { EventSink, RequestRecord } from './records.ts';
 import { MODEL_IDENTITY } from './provider.ts';
 import { boundTools } from './tools.ts';
 import { runModel } from './runtime.ts';
+import { waitForOutput } from './wait.ts';
 
 export class AgentRequests {
   readonly records: AgentRecords;
@@ -50,7 +51,7 @@ export class AgentRequests {
     const emit: EventSink = async event => {
       try {
         this.records.event(record.requestId, event);
-        await sink(event);
+        await waitForOutput(() => sink(event), signal);
       } catch {
         record.error = 'trace_or_display_incomplete';
         controller.abort();

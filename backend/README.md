@@ -119,7 +119,7 @@ await host.tasks.stop(applicationOperationId);
 | `查询当前任务`、`停止当前任务` | 模型只能操作已选定任务，不能提供其他 ID |
 | `/get TASK_ID`、`/stop TASK_ID` | 绕过模型等待，直接查询／请求停止 |
 | `/read REQUEST_ID` | 读取原请求、工具记录和关联任务的当前事实，不重新执行模型 |
-| `/cancel` | 取消本轮模型；已经受理的任务继续，停止须用独立入口 |
+| `/cancel` | 取消本轮模型及输出等待；已经受理的任务继续，停止须用独立入口 |
 | `/exit` | 关闭 Backend 并交接执行证据 |
 
 当前本地规则完整匹配少量直接命令，支持有效范围内的阿拉伯数字和一至九十九的规范中文数字（含“两”）。未覆盖的中文数字可改用阿拉伯数字重新给出完整指令；这不是执行次数上限。疑问、否定、引用、条件、多目标或未理解的附加要求均不执行，不删除条件后执行。模型参数还须逐项等于核对结果。
@@ -132,7 +132,7 @@ await host.tasks.stop(applicationOperationId);
 - `agent/tools.ts`：模型参数核对、一次变更预留、等待摘要展示完成，然后调用 `TaskService`。摘要或前置记录失败不提交；提交后的追踪失败不抹掉任务事实。
 - `agent/debug.ts`：终端适配。Web 尚未实现，HTTP 的 `Origin` 检查保持原样。
 
-下一阶段可直接创建 `new AgentRequests(host.tasks, model)`，调用 `handle({requestId, original, targetId?}, async event => ...)` 和 `read(requestId)`。同一次传输重试复用 `requestId`；独立新指令使用新 ID。事件为项目结构，不暴露 SDK 消息类型。`summary` 回调必须等展示完成才 resolve；浏览器接入需要实现这个顺序，不能把执行后的最终 HTTP 响应当作执行前摘要。执行事实来自返回的 `task` 和独立任务接口，不能以模型回复代替；`task: null` 表示没有关联任务记录。
+下一阶段可直接创建 `new AgentRequests(host.tasks, model)`，调用 `handle({requestId, original, targetId?}, async event => ...)` 和 `read(requestId)`。同一次传输重试复用 `requestId`；独立新指令使用新 ID。事件为项目结构，不暴露 SDK 消息类型。`summary` 回调必须等展示完成才 resolve；浏览器接入需要实现这个顺序，不能把执行后的最终 HTTP 响应当作执行前摘要。模型与事件输出等待共同受取消和总超时约束，控制台最终结果输出也在同一等待期限内；取消等待不保证底层输出已经停止，但迟到的摘要完成不会触发执行。执行事实来自返回的 `task` 和独立任务接口，不能以模型回复代替；`task: null` 表示没有关联任务记录。
 
 真实模型验收是单独入口：`node backend/src/agent/verify.ts`。它需要本地密钥，会发送四条固定测试指令及工具结果，使用正式 `maa-replay`，不读取 live 配置、不操作游戏。结果写入忽略目录 `.artifacts/agent-verification/run-*/`；默认测试与 CI 不运行它。需逐条复查原文、工具参数、返回和解释；离线通过不替代该验收。
 
