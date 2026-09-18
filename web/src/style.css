@@ -1,0 +1,247 @@
+:root {
+  font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+  color: #23342e;
+  background: #f3f5f0;
+  font-synthesis: none;
+  line-height: 1.65;
+  font-weight: 400;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+textarea {
+  font: inherit;
+}
+main {
+  max-width: 1180px;
+  margin: auto;
+  padding: 54px 32px 24px;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+}
+h1 {
+  font-size: 38px;
+  line-height: 1.35;
+  letter-spacing: -1px;
+  margin: 14px 0;
+}
+h2 {
+  font-size: 22px;
+  line-height: 1.4;
+  margin: 14px 0;
+}
+h3 {
+  font-size: 14px;
+}
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 1.7px;
+  font-weight: 700;
+  color: #597264;
+}
+.mode,
+.badge {
+  font-size: 12px;
+  border: 1px solid #c2d1c6;
+  border-radius: 24px;
+  padding: 7px 12px;
+  white-space: nowrap;
+}
+.mode {
+  background: #e4eddf;
+  margin-top: 12px;
+}
+.intro {
+  color: #64736a;
+  margin-bottom: 30px;
+}
+.workspace {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.request-column {
+  display: grid;
+  gap: 20px;
+}
+.card {
+  background: #fff;
+  border: 1px solid #d9e0d8;
+  border-radius: 18px;
+  padding: 26px;
+  box-shadow: 0 6px 20px #24362604;
+}
+.card-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+label {
+  display: block;
+  font-size: 13px;
+  margin: 20px 0 8px;
+}
+textarea {
+  display: block;
+  resize: vertical;
+  width: 100%;
+  border: 1px solid #b9c7bf;
+  border-radius: 10px;
+  padding: 14px;
+  color: inherit;
+  background: #fafbf8;
+}
+textarea:focus {
+  outline: 2px solid #648473;
+  outline-offset: 2px;
+}
+.form-footer {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+small,
+.muted {
+  font-size: 13px;
+  color: #6b786f;
+}
+button {
+  border: 0;
+  border-radius: 9px;
+  padding: 10px 18px;
+  background: #294e3c;
+  color: white;
+  cursor: pointer;
+  white-space: nowrap;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+button:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #9ab9a5;
+  outline-offset: 3px;
+}
+.stop {
+  background: #f4ebe6;
+  color: #85472f;
+  border: 1px solid #d9bfae;
+  width: 100%;
+  margin: 8px 0;
+}
+.summary {
+  background: #e6edde;
+  border-left: 4px solid #638153;
+  border-radius: 8px;
+  padding: 20px 24px;
+}
+.summary p {
+  margin: 8px 0;
+}
+.warning {
+  background: #fff2dd;
+  border: 1px solid #ead4ac;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.positive {
+  color: #2e7250;
+  font-weight: 600;
+}
+.conversation {
+  border-top: 1px solid #e1e7de;
+  margin-top: 24px;
+  padding-top: 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.original {
+  background: #f0f3ee;
+  padding: 12px;
+  border-radius: 8px;
+}
+dl {
+  display: grid;
+  grid-template-columns: 105px 1fr;
+  gap: 12px 14px;
+  font-size: 13px;
+  border-top: 1px solid #e1e7de;
+  padding-top: 20px;
+}
+dt {
+  color: #6b786f;
+}
+dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.identifier {
+  font-family: Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+pre {
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #f4f6f2;
+  padding: 14px;
+  border-radius: 8px;
+  max-height: 400px;
+  overflow: auto;
+}
+footer {
+  font-size: 12px;
+  color: #748276;
+  border-top: 1px solid #d9e0d8;
+  margin-top: 38px;
+  padding-top: 20px;
+}
+p {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  main {
+    padding: 28px 18px;
+  }
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+  header {
+    display: block;
+  }
+  h1 {
+    font-size: 29px;
+  }
+  .mode {
+    display: inline-block;
+  }
+  .card {
+    padding: 20px;
+  }
+  .form-footer {
+    align-items: flex-end;
+  }
+  dl {
+    grid-template-columns: 90px 1fr;
+  }
+}

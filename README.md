@@ -10,7 +10,7 @@ ChatMAA 是一个正在开发中的智能自动化应用，探索如何让 Agent
 
 截至 2026-09-18，项目已打通 **TypeScript 后端 → 本机 HTTP → Python Adapter → MaaCore** 的执行链路原型，在指定的 Windows 官方桌面端环境中验证了小次数的 1-7 执行、进度回传、指定阶段的停止及结果交接。同时，项目通过可控替身和离线实验检查了部分故障处理行为。
 
-独立的 Backend 与 Python Adapter 已建立，提供确定参数的命令行入口、共同任务服务和离线检查。正式入口已在固定 Windows 官方客户端环境完成两个独立 1-7 任务、各一次的实机验证，包含前后识别、设备就绪和退出交接；该结果不等于更大次数、异常恢复或完整产品验收。历史原型证据与正式工程验证分别保留。Agent Runtime 已增加常驻调试入口、原指令核对与有界工具循环，模型替身和正式回放集成已验证；真实 DeepSeek 四个固定样例的回放调用及回复审阅已通过，Web 页面尚未接入。完整应用的功能与验收要求记录在 [MVP Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1)，模块与验证边界见[工程说明](docs/engineering/architecture.md)。
+独立的 Backend 与 Python Adapter 已建立，提供确定参数的命令行入口、共同任务服务和离线检查。正式入口已在固定 Windows 官方客户端环境完成两个独立 1-7 任务、各一次的实机验证，包含前后识别、设备就绪和退出交接；该结果不等于更大次数、异常恢复或完整产品验收。历史原型证据与正式工程验证分别保留。Agent Runtime 已增加常驻调试入口、原指令核对与有界工具循环，模型替身和正式回放集成已验证；真实 DeepSeek 四个固定样例的回放调用及回复审阅已通过，最小 Web 页面已接入输入、摘要展示回执、独立任务查询／停止和工具详情；2026-09-19 浏览器离线检查通过，一次真实 DeepSeek 网页回放检查通过。完整应用的功能与验收要求记录在 [MVP Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1)，模块与验证边界见[工程说明](docs/engineering/architecture.md)。
 
 ## 从这里开始
 
@@ -28,7 +28,7 @@ ChatMAA 是一个正在开发中的智能自动化应用，探索如何让 Agent
 
 ## 运行与验证
 
-日常开发和独立操作从[正式 Backend 入口](backend/README.md)开始，默认离线，包含安装、提交、查询、停止及检查命令。[Adapter 说明](adapter/maa/README.md)解释真实接入、环境依据和记录边界。
+浏览器使用与前端排查见 [Web 执行台](web/README.md)。日常开发和独立操作从[正式 Backend 入口](backend/README.md)开始，默认离线，包含安装、提交、查询、停止及检查命令。[Adapter 说明](adapter/maa/README.md)解释真实接入、环境依据和记录边界。
 
 原型继续保留为实验与历史证据：
 

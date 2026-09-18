@@ -13,9 +13,9 @@ import { waitForOutput } from './wait.ts';
 export class AgentRequests {
   readonly records: AgentRecords;
   readonly tasks: TaskService;
-  readonly model: LanguageModel;
+  readonly model: LanguageModel | undefined;
   private active = new Map<string, AbortController>();
-  constructor(tasks: TaskService, model: LanguageModel) {
+  constructor(tasks: TaskService, model?: LanguageModel) {
     this.tasks = tasks; this.model = model; this.records = new AgentRecords(tasks.store.db);
   }
   read(requestId: string) {
@@ -38,6 +38,8 @@ export class AgentRequests {
       if (old.original !== input.original || old.targetId !== input.targetId) throw new Error('request_id_conflict');
       return this.read(input.requestId); // 传输重试和重启都只读取，不重新运行模型或执行。
     }
+    const model = this.model;
+    if (!model) throw new Error('model_unavailable');
     const record: RequestRecord = { ...input, operationId: randomUUID(),
       permission: authorize(input.original, input.targetId), policyVersion: POLICY_VERSION,
       ...MODEL_IDENTITY, createdAt: new Date().toISOString(), status: 'running' };
@@ -48,7 +50,15 @@ export class AgentRequests {
       ...(options.signal ? [options.signal] : [])]);
     let open = true;
     let toolsOpen = true;
+    const operations = new Set<Promise<unknown>>();
+    const trackOperation = <T>(operation: Promise<T>) => {
+      operations.add(operation);
+      void operation.then(() => operations.delete(operation), () => operations.delete(operation));
+      return operation;
+    };
     const emit: EventSink = async event => {
+      // SDK callbacks can arrive after the bounded request has settled and storage has closed.
+      if (!open) throw new Error('request_closed');
       try {
         this.records.event(record.requestId, event);
         await waitForOutput(() => sink(event), signal);
@@ -61,13 +71,14 @@ export class AgentRequests {
     try {
       await emit({ kind: 'request', data: record });
       signal.throwIfAborted();
-      const tools = boundTools({ record, records: this.records, tasks: this.tasks, signal, emit, isOpen: () => open && toolsOpen });
+      const tools = boundTools({ record, records: this.records, tasks: this.tasks, signal, emit,
+        isOpen: () => open && toolsOpen, trackOperation });
       // 即使 provider 忽略 abort，handle 也有界退出；迟到的工具回调受 signal/open 阻止。
       const reply = await new Promise<string>((resolve, reject) => {
         const abort = () => reject(new Error('model_cancelled_or_timed_out'));
         signal.addEventListener('abort', abort, { once: true });
         if (signal.aborted) { abort(); return; }
-        runModel(this.model, input.original, tools, signal, () => { toolsOpen = false; }, emit).then(resolve, reject)
+        runModel(model, input.original, tools, signal, () => { toolsOpen = false; }, emit).then(resolve, reject)
           .finally(() => signal.removeEventListener('abort', abort));
       });
       record.reply = reply; record.status = 'finished';
@@ -79,7 +90,11 @@ export class AgentRequests {
       try { this.records.save(record); await emit({ kind: 'error', data: { code: record.error, operationId: record.operationId } }); }
       catch { /* 执行事实仍由独立任务入口读取；不因追踪失败重发。 */ }
     } finally {
-      open = false; this.active.delete(record.requestId);
+      open = false;
+      // A cancelled model can leave a bounded TaskService HTTP operation in flight.
+      // Drain that work before the owner is allowed to close the business database.
+      await Promise.allSettled(operations);
+      this.active.delete(record.requestId);
     }
     try { return this.read(record.requestId); }
     catch { return { record, events: [], task: null, traceUnavailable: true }; }

@@ -8,6 +8,7 @@ import type { AgentRecords, EventSink, RequestRecord } from './records.ts';
 export function boundTools(context: {
   record: RequestRecord; records: AgentRecords; tasks: TaskService; signal: AbortSignal;
   emit: EventSink; isOpen: () => boolean;
+  trackOperation?: <T>(operation: Promise<T>) => Promise<T>;
 }) {
   const { record, records, tasks, signal, emit, isOpen } = context;
   let mutation: Promise<unknown> | undefined;
@@ -45,9 +46,10 @@ export function boundTools(context: {
         await emit({ kind: 'summary', data: record.summary });
         checkOpen();
         // 从最后一次检查到服务同步预留之间没有 await。
-        return name === 'submit_task' && permission.action === 'submit'
+        const operation = name === 'submit_task' && permission.action === 'submit'
           ? tasks.submit({ id: record.operationId, params: permission.params })
           : tasks.stop(permission.action === 'stop' ? permission.targetId : '');
+        return context.trackOperation ? context.trackOperation<unknown>(operation) : operation;
       })();
       return await mutation;
     } catch (error) {

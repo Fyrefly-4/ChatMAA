@@ -11,6 +11,7 @@ runs:
         cache-dependency-path: |
           .node-version
           backend/package-lock.json
+          web/package-lock.json
     - shell: pwsh
       run: |
         $PSNativeCommandUseErrorActionPreference = $true
