@@ -1,6 +1,6 @@
 # CI／GitHub Actions 实施方案
 
-状态：简化结构已实现，本地检查通过，远端验证待完成。最近核对：2026-09-18；修改前基线：`f0bc99e`。确认依据：项目负责人在本次讨论中同意单 workflow、单 Windows job、全量离线检查，并要求先写方案再实施及完成一轮本地和远端验证。实施追踪：[Issue #14](https://github.com/Fyrefly-4/ChatMAA/issues/14)。
+状态：简化结构已实现，本地完整检查和远端 Windows PR 验证通过，未启用强制门禁。最近核对：2026-09-18；修改前基线：`f0bc99e`。确认依据：项目负责人在本次讨论中同意单 workflow、单 Windows job、全量离线检查，并要求先写方案再实施及完成一轮本地和远端验证。实施追踪：[Issue #14](https://github.com/Fyrefly-4/ChatMAA/issues/14)。
 
 ## 目标与取舍
 
@@ -48,4 +48,4 @@ Backend 集成测试会启动 Python Adapter，必须先准备全部环境。环
 
 原按需方案由本方案替代，原文和独有版本决策、验收证据保留在 [f0bc99e 历史版本](https://github.com/Fyrefly-4/ChatMAA/blob/f0bc99e/docs/engineering/ci-plan.md)。原方案的按需、custom、调度测试和五次代表性观察要求不再作为本次简化验收条件。旧记录按当时方案解读。
 
-原方案 [Windows 运行 35346210732](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35346210732) 成功，仅证明旧结构。新结构本地验证：Node 24.19.0 版本校验、Backend 类型检查、Backend 16 项集成测试、Adapter 25 项单元测试、pip check、actionlint 1.7.12 和 git diff --check 全部通过。npm ci 与 Python 锁定依赖安装完成；本地沿用 Python 3.12.14／pip 25.0.1，固定 Python 3.13.15／pip 26.2.1 由远端验证。首次本地提权命令解析到 Node 24.18.0，版本校验按预期拒绝，改用显式 PATH 的 24.19.0 后通过。远端结果待补充。
+原方案 [Windows 运行 35346210732](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35346210732) 成功，仅证明旧结构。新结构本地验证：Node 24.19.0 版本校验、Backend 类型检查、Backend 16 项集成测试、Adapter 25 项单元测试、pip check、actionlint 1.7.12 和 git diff --check 全部通过。npm ci 与 Python 锁定依赖安装完成；本地沿用 Python 3.12.14／pip 25.0.1，固定 Python 3.13.15／pip 26.2.1 由远端验证。首次本地提权命令解析到 Node 24.18.0，版本校验按预期拒绝，改用显式 PATH 的 24.19.0 后通过。远端 [运行 35347464772](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35347464772) 对应实现提交 `3885229`，单个 Windows `offline-checks` job 在 1 分 24 秒内成功完成环境准备、类型检查、Backend 16 项和 Adapter 25 项测试。该结果证明 PR 路径与固定 CI 环境；main、手动、fork 触发未在本轮分别执行。
