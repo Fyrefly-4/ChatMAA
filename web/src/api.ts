@@ -15,12 +15,24 @@ export type Status = {
   conflictingTaskIds: string[];
 };
 
-const fragment = new URLSearchParams(location.hash.slice(1));
-const received = fragment.get("token");
-if (received) {
+function acceptStartupToken() {
+  const received = new URLSearchParams(location.hash.slice(1)).get("token");
+  if (!received) return false;
+  const changed = received !== sessionStorage.getItem("chatmaa.token");
+  if (changed) {
+    sessionStorage.removeItem("chatmaa.requestId");
+    sessionStorage.removeItem("chatmaa.taskId");
+  }
   sessionStorage.setItem("chatmaa.token", received);
   history.replaceState(null, "", location.pathname + location.search);
+  return changed;
 }
+acceptStartupToken();
+// Opening a new startup URL in this tab may only change the fragment.
+// Reload after a token change to also discard the mounted hook's old IDs/eligibility.
+window.addEventListener("hashchange", () => {
+  if (acceptStartupToken()) location.reload();
+});
 export const hasToken = !!sessionStorage.getItem("chatmaa.token");
 export class ApiError extends Error {
   status: number;
