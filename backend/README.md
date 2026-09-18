@@ -104,13 +104,23 @@ await host.tasks.stop(applicationOperationId);
 
 `applicationOperationId` 由可信应用在明确执行请求中确定，重试复用它；`agent/requests.ts` 把原指令、核对结论和操作 ID 关联起来。身份令牌不是执行授权，模型不得自行声明授权或切换 live 模式。
 
-## Agent 请求接入
+## Agent 调试与接入
 
-模型适配及配置见下文。当前提供程序调用接口，尚未接入终端调试入口。
+2026-09-18：在 `be62348` 基础上增加 Agent 实现，当前以模型替身与正式回放 Adapter 验证；本提交不提供真实模型验收入口，也不代表真实游戏闭环。
 
-## Agent 模型适配
+在本地环境设置 `DEEPSEEK_API_KEY` 后，执行 `npm --prefix backend start -- --agent`。普通 Backend 启动不需要模型凭据；密钥不写入业务库，也不传给 Python 子进程。模型固定为 DeepSeek `deepseek-flash`，通过 `@ai-sdk/openai` 的 Responses 接口请求 `https://api.deepseek.com/responses`。没有自动重试或备用模型。
 
-`agent/provider.ts` 使用 DeepSeek `deepseek-flash` 的 Responses 接口；调用方在本地设置 `DEEPSEEK_API_KEY`。固定模型、完整工具往返和禁用服务端存储通过离线协议测试核对；密钥不传给 Python。当前尚未接入终端入口，普通 Backend 启动不需要模型凭据。
+该终端是常驻 Backend 控制台：输入一条完整指令后，依次看到原文、核对结论、模型工具参数、应用摘要、工具返回和回复。模型返回后 Backend 继续执行与同步任务；关闭该终端、输入 `/exit` 或输入流结束会关闭宿主并执行既有退出交接。第二个终端中的独立 `client get/stop` 仍可使用，退出客户端不影响任务。
+
+| 调试输入 | 行为 |
+|---|---|
+| `帮我刷 1-7 十次`、`请刷1-7 10次，不吃药不碎石` | 完整匹配后允许模型提交相同参数；模型不调用则不会自动补执行 |
+| `/target TASK_ID` | 显式选定自然语言查询／停止的目标 |
+| `查询当前任务`、`停止当前任务` | 模型只能操作已选定任务，不能提供其他 ID |
+| `/get TASK_ID`、`/stop TASK_ID` | 绕过模型等待，直接查询／请求停止 |
+| `/read REQUEST_ID` | 读取原请求、工具记录和关联任务的当前事实，不重新执行模型 |
+| `/cancel` | 取消本轮模型；已经受理的任务继续，停止须用独立入口 |
+| `/exit` | 关闭 Backend 并交接执行证据 |
 
 当前本地规则完整匹配少量直接命令，支持有效范围内的阿拉伯数字和一至九十九的规范中文数字（含“两”）。未覆盖的中文数字可改用阿拉伯数字重新给出完整指令；这不是执行次数上限。疑问、否定、引用、条件、多目标或未理解的附加要求均不执行，不删除条件后执行。模型参数还须逐项等于核对结果。
 
@@ -120,6 +130,7 @@ await host.tasks.stop(applicationOperationId);
 - `agent/requests.ts`、`records.ts`：请求 ID、唯一操作 ID、原文、最小追踪、取消；记录使用原业务 SQLite。重放只读取，崩溃后不自动补做。
 - `agent/runtime.ts`、`provider.ts`：AI SDK 两步循环，一轮工具与一轮解释，第二轮禁用工具；默认总等待 60 秒、重试 0。固定规则使用 `system`，每轮携带完整当前输入与工具结果，禁用服务端存储。
 - `agent/tools.ts`：模型参数核对、一次变更预留、等待摘要展示完成，然后调用 `TaskService`。摘要或前置记录失败不提交；提交后的追踪失败不抹掉任务事实。
+- `agent/debug.ts`：终端适配。Web 尚未实现，HTTP 的 `Origin` 检查保持原样。
 
 下一阶段可直接创建 `new AgentRequests(host.tasks, model)`，调用 `handle({requestId, original, targetId?}, async event => ...)` 和 `read(requestId)`。同一次传输重试复用 `requestId`；独立新指令使用新 ID。事件为项目结构，不暴露 SDK 消息类型。`summary` 回调必须等展示完成才 resolve；浏览器接入需要实现这个顺序，不能把执行后的最终 HTTP 响应当作执行前摘要。执行事实来自返回的 `task` 和独立任务接口，不能以模型回复代替；`task: null` 表示没有关联任务记录。
 

@@ -4,6 +4,8 @@ import { randomInt, randomUUID } from 'node:crypto';
 import { loadConfig } from './config.ts';
 import { startHost } from './host.ts';
 import { createApp } from './app.ts';
+import { deepseekModel } from './agent/provider.ts';
+import { startDebug } from './agent/debug.ts';
 
 const config = (() => {
   try { return loadConfig(); }
@@ -13,13 +15,16 @@ const config = (() => {
     throw error;
   }
 })();
+const model = process.argv.includes('--agent') ? deepseekModel() : undefined;
 const host = await startHost(config);
 const token = randomUUID();
 let closing = false;
+let debug: ReturnType<typeof startDebug> | undefined;
 const app = createApp(host.tasks, token, () => { void shutdown(); });
 async function shutdown() {
   if (closing) return;
   closing = true;
+  debug?.close();
   const result = await host.close();
   console.log(JSON.stringify({ kind: 'shutdown', ...result }));
   await app.close();
@@ -37,4 +42,5 @@ try {
   const connection = resolve(config.dataDir, 'connection.json');
   writeFileSync(connection, JSON.stringify({ address, token, mode: config.mode }, null, 2));
   console.log(JSON.stringify({ kind: 'ready', address, mode: config.mode, connection }));
+  if (model) debug = startDebug(host.tasks, model, shutdown);
 } catch (error) { await shutdown(); throw error; }
