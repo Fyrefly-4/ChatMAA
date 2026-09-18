@@ -1,8 +1,8 @@
 # CI／GitHub Actions 实施方案
 
-状态：已开始实施，待 GitHub runner 验证，尚未启用强制门禁。最近核对：2026-09-18；实施基线：`cbda040`，原评估代码基线：`732c169`。确认依据：PR #13 对应讨论中，项目负责人确认按需检查、三个独立模块、精确版本基线，以及先观察后强制。实施追踪：[Issue #14](https://github.com/Fyrefly-4/ChatMAA/issues/14)。
+状态：已实现，首轮 Windows CI 通过，观察尚未完成，未启用强制门禁。最近核对：2026-09-18；实施基线：`cbda040`，首轮远端验证提交：`c535a9b`，原评估代码基线：`732c169`。确认依据：PR #13 对应讨论中，项目负责人确认按需检查、三个独立模块、精确版本基线，以及先观察后强制。实施追踪：[Issue #14](https://github.com/Fyrefly-4/ChatMAA/issues/14)。
 
-本文是 CI 实施依据。当前已加入 `.github/workflows/`、环境准备和调度／汇总脚本；本地调度验证与类型检查通过，GitHub runner 验证及观察尚待完成，分支保护未启用。当前模块与验证边界仍以[工程说明](architecture.md)为准。
+本文是 CI 实施依据。当前已加入 `.github/workflows/`、环境准备和调度／汇总脚本；首轮 GitHub Windows runner 的三个检查及门禁全部通过。手动入口、主分支、fork 场景和代表性观察仍待完成，分支保护未启用。当前模块与验证边界仍以[工程说明](architecture.md)为准。
 
 ## 目标与现状
 
@@ -10,7 +10,7 @@
 
 Backend 已有 `npm run check`、`npm test` 与 npm 锁文件；Adapter 已有 `unittest` 与固定直接及传递依赖的 `requirements.lock`。Backend 测试会启动 Python Adapter，使用 `adapter/maa/.venv/Scripts/python.exe`，因此 Backend 测试 job 也必须安装 Python 及 Adapter 依赖；不同 job 不共享安装环境。
 
-原正式基线为 Windows、Node `>=24.18.0 <25`、Python 3.12，进程管理包含 Windows 语义。实施时发现 `setup-python` 未提供 Python 3.12.14 的 Windows 包，经负责人确认改用候选 3.13.15，并通过完整离线检查后确定。首期不建立长期跨平台或多版本矩阵。npm 锁文件已改为官方源，版本及完整性值保持不变；Python 锁文件尚无哈希，后续增强。
+原正式基线为 Windows、Node `>=24.18.0 <25`、Python 3.12，进程管理包含 Windows 语义。实施时发现 `setup-python` 未提供 Python 3.12.14 的 Windows 包，经负责人确认改用 3.13.15；首轮完整离线检查通过后确定为 CI 基线，不扩大历史实机结论。首期不建立长期跨平台或多版本矩阵。npm 锁文件已改为官方源，版本及完整性值保持不变；Python 锁文件尚无哈希，后续增强。
 
 ## 工作流结构
 
@@ -79,16 +79,16 @@ Python 命令显式使用相应 venv 的解释器。检查并行，各自设置 
 
 | 对象 | 策略 |
 |---|---|
-| Node | 根目录 `.node-version` 指定精确版本，首期候选 `24.19.0`；所有相关检查读取同一来源 |
+| Node | 根目录 `.node-version` 指定精确版本 `24.19.0`；所有相关检查读取同一来源 |
 | Node 支持范围 | 保留 `package.json#engines` 的 `>=24.18.0 <25`，校验基线符合范围；单版本通过不表示整个范围已验证 |
-| Python | 根目录 `.python-version` 指定精确补丁版本，首期候选 `3.13.15`；两个相关检查共用 |
+| Python | 根目录 `.python-version` 指定精确补丁版本 `3.13.15`；两个相关检查共用 |
 | npm | 使用固定 Node 官方发行版附带版本，不自动升级，输出实际版本 |
 | pip | 根目录 `.pip-version` 固定 `26.2.1`，不执行无限制的 `pip install --upgrade pip` |
 | 项目依赖 | 按 npm／Python 锁文件安装，CI 不重新解析或升级依赖 |
 | GitHub Actions | 固定完整 commit SHA，注释发布版本 |
 | Windows runner | `windows-2025`，记录实际镜像版本；标签不会冻结镜像内容 |
 
-Node 候选来自本次核对的本地环境，Python 候选已由负责人重新确认。官方 Actions 发行索引均存在对应 Windows x64 包，不代表 CI 已通过。先验证 runner 安装依赖并通过检查，再确认为基线；不可用时记录原因并重新确认替代值，不静默使用浮动版本。
+Node 候选来自本次核对的本地环境，Python 替代版本已由负责人重新确认。官方 Actions 发行索引存在对应 Windows x64 包，且首轮 runner 安装与完整离线检查通过。今后升级仍须验证后确定；不可用时记录原因并重新确认替代值，不静默使用浮动版本。
 
 使用官方 npm registry 修正锁文件来源，保持依赖版本不变并核对完整性信息，不同时升级依赖。缓存只优化依赖下载，不缓存 venv、工作区或测试结果；区分操作系统、实际语言版本与锁文件，安装步骤不能省略。输出 Node、npm、Python、pip 和镜像版本。
 
@@ -134,8 +134,18 @@ Node 候选来自本次核对的本地环境，Python 候选已由负责人重�
 
 ## 实施交接与未决验证
 
-已加入版本文件、锁文件来源修正、检查模块及调度／汇总逻辑。`node --test scripts/ci/ci.test.mjs` 的 26 项测试通过，覆盖实际临时 Git 仓库多提交差异、删除／重命名、手动选择、结果汇总与 CLI 非零退出。官方源 `npm ci` 与类型检查通过，actionlint 1.7.12 通过。
+已加入版本文件、锁文件来源修正、检查模块及调度／汇总逻辑。`node --test scripts/ci/ci.test.mjs` 的 27 项本地测试通过，覆盖实际临时 Git 仓库多提交差异、删除／重命名、手动选择、结果汇总、CLI 非零退出及大 PR 摘要限制。官方源 `npm ci` 与类型检查通过，actionlint 1.7.12 通过。本地隔离故障注入确认类型错误与 Python unittest 失败均返回 1，不修改正式测试来制造失败。
 
-集中路径规则见 `scripts/ci/policy.json`；运行与扩展说明见[CI 维护说明](../../scripts/ci/README.md)。Actions 固定 checkout v7.0.1、setup-node v7.0.0、setup-python v7.0.0 的官方 tag 对应 commit SHA。尚需验证 Windows runner 全套运行，并完成 fork／主分支／手动入口及观察场景；不能把本地结果当作这些场景已经通过。
+集中路径规则见 `scripts/ci/policy.json`；运行与扩展说明见[CI 维护说明](../../scripts/ci/README.md)。Actions 固定 checkout v7.0.1、setup-node v7.0.0、setup-python v7.0.0 的官方 tag 对应 commit SHA。
+
+### 运行证据与观察清单
+
+| 证据 | 结果与范围 |
+|---|---|
+| [首轮 PR CI：35345761737](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35345761737)，提交 `c535a9b` | plan、三个 Windows 检查、`ci-gate` 全部成功；CI 配置变更触发全套。该提交含 26 项调度自检，后续本地增加大 PR 摘要测试至 27 项 |
+| 手动入口调用 | `gh workflow run ci-manual.yml --ref codex/ci/github-actions ...` 返回 404：工作流尚不在默认分支；这是尚未合并的部署状态，不是测试通过 |
+| 分支保护读取 | 默认分支返回 `Branch not protected`，未开启强制门禁 |
+
+尚待合并后验证：主分支全套、手动 full/custom、fork PR，以及纯文档和单端变更的真实按需运行。累计至少 5 次有代表性的运行才完成观察；本地场景测试和重复全套运行不替代这些平台场景。当前保持 Issue #14 开放，不启用 required。
 
 平台参考：[reusable workflows](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)、[required checks 与跳过行为](https://docs.github.com/en/enterprise-cloud%40latest/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)、[runner 选择](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job)。

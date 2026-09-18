@@ -17,7 +17,7 @@ for (const [paths, expected] of [
   [['adapter/maa/core.py'], ['backend-tests', 'adapter-tests']],
   [['adapter/maa/fixtures/new.json'], ['backend-tests', 'adapter-tests']],
   [['adapter/maa/requirements.lock'], ['backend-tests', 'adapter-tests']],
-  [['README.md', 'docs/engineering/ci-plan.md', 'backend/README.md', 'adapter/maa/README.md'], []],
+  [['README.md', 'docs/engineering/ci-plan.md', 'backend/README.md', 'adapter/maa/README.md', 'scripts/ci/README.md'], []],
   [['README.md', 'backend/src/app.ts'], ['backend-types', 'backend-tests']],
   [['backend/prompts/system.md'], ['backend-types', 'backend-tests']],
   [['.github/workflows/check-adapter-tests.yml'], ['adapter-tests']],
@@ -39,6 +39,15 @@ test('空差异和无效路径回退全套', () => {
     assert.deepEqual(selected(value), checks);
     assert.equal(value.fallback, true);
   }
+});
+
+test('大 PR 只限制原因摘要，末尾代码改动仍参与选择', () => {
+  const paths = Array.from({ length: 1000 }, (_, i) => `docs/archive/${i}.md`);
+  paths.push('adapter/maa/core.py');
+  const value = selectPaths(paths);
+  assert.deepEqual(selected(value), ['backend-tests', 'adapter-tests']);
+  assert.equal(value.reasons.length, 61);
+  assert.ok(JSON.stringify(value).length < 10000);
 });
 
 test('Git NUL 格式处理删除、重命名、特殊路径及截断', () => {

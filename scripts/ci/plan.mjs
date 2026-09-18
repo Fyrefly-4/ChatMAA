@@ -6,7 +6,10 @@ export const policy = JSON.parse(readFileSync(new URL('./policy.json', import.me
 export const checks = policy.checks;
 
 function plan(selected, reasons, fallback = false) {
-  return { version: 1, selected: Object.fromEntries(checks.map(check => [check, selected.includes(check)])), reasons, fallback };
+  // Keep job outputs well below GitHub's size limit without truncating selection.
+  const summary = reasons.slice(0, 60).map(reason => reason.length > 1000 ? `${reason.slice(0, 1000)}…` : reason);
+  if (reasons.length > summary.length) summary.push(`另有 ${reasons.length - summary.length} 项原因，全部已参与范围判断`);
+  return { version: 1, selected: Object.fromEntries(checks.map(check => [check, selected.includes(check)])), reasons: summary, fallback };
 }
 export function fullPlan(reason, fallback = false) { return plan(checks, [reason], fallback); }
 
