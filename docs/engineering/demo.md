@@ -1,0 +1,128 @@
+# 完整 Demo 运行入口
+
+最近核对：2026-09-19，Issue #11 在 `4bcf381` 上收敛入口与停止展示。本文描述现有命令和可复用操作流程；真实网页 → 模型 → 游戏的整链验收尚未完成。历史模型回放、正式实机和离线检查分别见[工程说明](architecture.md#已验证范围)，不可相互代替。
+
+## 首次准备
+
+固定 Windows 官方桌面端，Node **24.19.0**、Python **3.12.14 x64**；精确版本由仓库版本文件维护，Node 支持范围仍为 `>=24.18.0 <25`。使用对应 Node 发行版的 npm，先检查 `node --version`、`npm --version`。若 PATH 没有 npm，补齐 Node 工具链；也可用 `node <npm安装目录>/bin/npm-cli.js` 代替下列 npm 命令。不要因 `py` 可用就默认它指向正确 Python。
+
+在仓库根目录打开 PowerShell 7（下方 `utf8` 写配置不带 BOM）。已有版本正确的 `adapter/maa/.venv` 可直接复用；没有时用已安装 Python 3.12.14 的绝对路径创建（将示例路径换为实际值）：
+
+```powershell
+& 'C:/Python312/python.exe' --version
+& 'C:/Python312/python.exe' -m venv adapter/maa/.venv
+```
+
+依次执行，任一步失败先处理，不继续启动：
+
+```powershell
+node scripts/ci/check-node.mjs
+& ./adapter/maa/.venv/Scripts/python.exe -c "import pathlib,platform; assert platform.python_version()==pathlib.Path('.python-version').read_text().strip()"
+$pipVersion = (Get-Content .pip-version -Raw).Trim()
+& ./adapter/maa/.venv/Scripts/python.exe -m pip install "pip==$pipVersion"
+& ./adapter/maa/.venv/Scripts/python.exe -m pip install -r adapter/maa/requirements.lock
+& ./adapter/maa/.venv/Scripts/python.exe -m pip check
+npm --prefix backend ci
+npm --prefix web ci
+npm --prefix web run build
+```
+
+正式运行由 Backend 提供 `web/dist`，不需要 Vite 开发服务器。修改前端后重新构建再刷新。全套离线检查及 CI 命令见[CI 说明](ci-plan.md#本地运行相同检查)。测试使用模型替身和正式回放，既不读取 live 配置，也不调用真实模型。
+
+## 本次准备：显式选择模式
+
+Backend 按 `CHATMAA_CONFIG` → `backend/config.local.json` → 默认配置读取。为避免误读已有 live 配置，每次显式指定配置文件；配置中的相对路径以**配置文件所在目录**为基准。以下生成绝对路径，配置与记录均位于 Git 忽略目录。
+
+### 回放入口
+
+```powershell
+$repo = (Get-Location).Path
+$run = Join-Path $repo ('.artifacts/demo-replay/run-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+New-Item -ItemType Directory -Path $run -ErrorAction Stop | Out-Null
+@{
+  mode = 'maa-replay'
+  python = Join-Path $repo 'adapter/maa/.venv/Scripts/python.exe'
+  dataDir = Join-Path $run 'data'
+} | ConvertTo-Json | Set-Content -Encoding utf8 (Join-Path $run 'config.json')
+$env:CHATMAA_CONFIG = Join-Path $run 'config.json'
+node backend/src/main.ts --web
+```
+
+页面来源应是 `offline_callback_replay`，不操作游戏。**回放仅替代执行端**：若配置真实模型密钥，发送页面指令仍会请求真实模型并产生费用。不允许真实模型调用时，仅启动无密钥入口检查连接，或运行上述自动离线测试，不借回放名义调用模型。
+
+### 真实执行入口
+
+只在本次操作范围和现场开跑安排明确后准备。用户先登录固定官方客户端，确保 1-7 可代理、理智足够、停止其他自动化；核对当前窗口、捕获权限和固定 MaaCore `v6.17.5` 安装及资源。不要用历史截图或旧窗口句柄判断当前现场。DLL 哈希与环境限制见[Adapter 说明](../../adapter/maa/README.md)。
+
+先确认前轮 Backend 与其 Python 已退出、游戏由用户接管并准备好。保留旧记录；不能删库、改成 ready，或换目录绕过仍活动／不明的执行。历史失败轮次退出且现场重新准备后，可建立独立验证轮次；同轮多个任务始终使用同一服务及数据库。当前支持目录为 `.artifacts/live/` 或 `.artifacts/live-wizard/run-*/data/`，后者只是既有路径约定，不需要运行旧向导。
+
+在新终端回到仓库根目录，将安装路径和窗口句柄替换为本次核对值：
+
+```powershell
+$repo = (Get-Location).Path
+$run = Join-Path $repo ('.artifacts/live-wizard/run-demo-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+$maaInstallation = 'D:/MAA'
+$gameHwnd = 123456
+New-Item -ItemType Directory -Path $run -ErrorAction Stop | Out-Null
+@{
+  mode = 'maa-live'
+  python = Join-Path $repo 'adapter/maa/.venv/Scripts/python.exe'
+  dataDir = Join-Path $run 'data'
+  installation = $maaInstallation
+  hwnd = $gameHwnd
+} | ConvertTo-Json | Set-Content -Encoding utf8 (Join-Path $run 'config.json')
+$env:CHATMAA_CONFIG = Join-Path $run 'config.json'
+```
+
+窗口句柄可在用户确认游戏进程名后，用 `Get-Process -Name <实际进程名> | Select-Object Id,MainWindowTitle,MainWindowHandle` 辅助核对；有多个窗口时必须对应现场，不默认取第一个。启动校验不等于执行前环境识别，识别在正式任务内完成。
+
+## 打开网页与执行
+
+模型固定为 DeepSeek `deepseek-flash`。Backend 读取 `DEEPSEEK_API_KEY`，程序不会自动加载 `.env`。可在当前终端设置环境变量后运行 `node backend/src/main.ts --web`；或将密钥保存在仓库根目录本地 `.env` 中（`DEEPSEEK_API_KEY=实际密钥`），使用：
+
+```powershell
+node --env-file=.env backend/src/main.ts --web
+```
+
+密钥只供 Backend，不能放入 `VITE_`、前端源码或共享日志。缺少模型配置时仍可查询、停止已有任务。保留宿主终端，打开它打印的 `web_ready.url`；带 token 的启动地址只在本机使用。核对页面模式、模型状态及冲突任务；真实来源应为 `MaaCore_v6.17.5`，模式不符立即停止推进。
+
+输入本次已明确允许的完整指令，例如“帮我刷 1-7 1 次，不吃药不碎石”。完整指令即本次授权；页面先展示关卡、次数和资源摘要，自动回执后才允许工具提交，不要求第二次确认。核对工具参数与摘要一致，任务卡显示对应任务 ID。
+
+任务卡独立轮询执行证据，模型回复只解释当时结果。正常完成应同时核对目标次数、`certainty=exact`、`reason=target_reached`、`automation_stopped=true`、`device=ready`、无证据缺口／冲突及现场结果；受理成功不代表已经完成。
+
+点击“停止当前任务”独立于模型。先显示请求状态，再以任务证据确认停止；“用户请求停止”只是原因，不单独证明停止。停止不撤销消耗，不保证游戏内战斗立即结束。`lower_bound` 表示只知道已确认下界，未结算量保留未知；`needs_check` 交给用户核对，不自动解锁、补刷或继续。若请求超时／响应不明，只查询原 ID，不换 ID 重发；未知状态结束本轮推进。
+
+## 退出与检查
+
+关闭网页或刷新不会停止已受理任务。先记录当前结果，在 Backend 终端按 Ctrl+C 请求收尾；也可在另一终端指定**同一** `CHATMAA_CONFIG`，运行 `node backend/src/cli.ts shutdown`。不要直接关终端代替收尾。
+
+检查宿主退出报告中的 `handoffComplete`、`childExited` 和 `finalTasks`，再确认宿主进程已退出、游戏现场可由用户接管。退出请求成功不等于执行端已退出。正常交接后同步不可用与执行中失联分开判断；报告缺失或任一退出未确认时保留未知，处理原服务，不启动新轮次。
+
+记录位于本轮 `dataDir`：`business.sqlite` 保存请求／任务及证据投影，`executor.sqlite` 保存执行证据，`connection.json` 是本机连接凭据。日志、双库、配置、含玩家信息的截图和启动地址保留本地。不要将模型文字或黑帧截图代替游戏现场确认。
+
+## 模块协作与排查
+
+```mermaid
+flowchart LR
+  Web[Web 原文与摘要] --> Browser[Backend 浏览器接口]
+  Browser --> Agent[Agent 原文核对与工具循环]
+  Agent <--> Model[DeepSeek]
+  Agent --> Tasks[共同任务服务]
+  Web -->|独立查询与停止| Browser
+  Browser -->|查询与停止| Tasks
+  Tasks --> Business[(业务 SQLite)]
+  Tasks <-->|本机 HTTP| Adapter[Python Adapter]
+  Host[Backend 宿主] -->|启停与交接| Adapter
+  Adapter --> Evidence[(执行 SQLite)]
+  Adapter --> Core[MaaCore 与游戏]
+```
+
+| 现象 | 入口与判断 |
+|---|---|
+| 页面或配置启动失败 | `backend/src/main.ts`、`config.ts`；检查显式配置、Python 路径、`web/dist`、终端错误，不发送任务探测 |
+| 摘要不推进 | Web `OperationSummary.tsx`、`useExecution.ts`；检查页面可见性、同一请求的摘要回执，刷新不恢复执行资格 |
+| 指令未执行／参数不符 | Agent `policy.ts`、`tools.ts`；原文完整匹配、范围及参数绑定优先，模型无权放宽业务规则 |
+| 停止提示或完成量不符 | Web `task-presentation.ts`、`useExecution.ts`、`TaskCard.tsx`；比较当前任务 API 与工具调用时快照，分别检查完成量、停止、环境和同步 |
+| 执行未知／退出异常 | Backend `task-service.ts`、`host.ts` 及 Adapter 执行记录；保留原 ID、两库及现场，不以清空记录恢复 |
+
+Demo 仅覆盖固定官方桌面端、1-7 明确次数、不吃药不碎石、同设备单任务。无多轮补全、完整历史、完整刷新恢复、自动核对解锁与“继续”、自动队列或重试；不承诺其他环境与全部故障兜底。完整 MVP 要求仍见 [Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1)，整体 Demo 标准见 [#7](https://github.com/Fyrefly-4/ChatMAA/issues/7)。本说明可复用不表示必须追加游戏操作。

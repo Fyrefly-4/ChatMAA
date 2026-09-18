@@ -1,6 +1,6 @@
 # Backend 独立执行入口
 
-Backend 提供明确参数的提交、查询、停止和结果读取；不解析自然语言，不依赖 Web 或模型。TS 管理 Python 子进程，通过本机 HTTP 协作，各自保存 SQLite。默认使用脱敏回调回放，启动不会自动提交任务。
+Backend 提供明确参数的提交、查询、停止和结果读取；确定参数入口不依赖 Web 或模型，`--agent` 与 `--web` 可装配自然语言 Agent。TS 管理 Python 子进程，通过本机 HTTP 协作，各自保存 SQLite。默认使用脱敏回调回放，启动不会自动提交任务。完整网页使用从 [Demo 运行入口](../docs/engineering/demo.md)开始，显式选择配置。
 
 ## 浏览器入口
 
@@ -23,9 +23,9 @@ Backend 提供明确参数的提交、查询、停止和结果读取；不解析
 
 <a id="live-verification"></a>
 
-## 实机验证：统一入口
+## 历史实机验证：本地向导
 
-**日常只需一个终端：准备游戏 → 明确范围 → 运行向导 → 现场确认 → 查看报告。** 最近核对：2026-09-18；正式入口由本分支的能力提交建立；**两个独立 1-7 任务各一次的正常实机流程已通过**，包含前后识别及最终交接。完整产品验收仍有未实现部分。
+以下保留 2026-09-18 阶段 1 的本地向导流程及证据范围；它不经过网页与模型，不用于完整 Demo 验收。当前可随仓库使用的入口见 [Demo 运行说明](../docs/engineering/demo.md)。**两个独立 1-7 任务各一次的正常实机流程已通过**，包含前后识别及最终交接；不表示已完成真实网页整链验收。
 
 1. **准备游戏与范围。** Windows 官方客户端已登录，1-7 可代理、理智足够，停在主界面或关卡入口；停止其他 MAA／自动化。本入口固定验证两个独立任务，各 1 次、不吃药不碎石，总计最多开战 2 次，含每次执行前后识别。先明确本轮允许此范围；其他范围另行安排。
 2. **运行一条命令。** 在仓库根目录打开 PowerShell；需要管理员捕获权限时以管理员身份打开。正式依赖按下节一次性准备后，执行：
@@ -56,10 +56,10 @@ Backend 提供明确参数的提交、查询、停止和结果读取；不解析
 
 ## 准备与离线使用
 
-环境基线为 Windows，Node 支持范围为 `>=24.18.0 <25`；离线验证的精确 Node／Python 版本分别见根目录 [.node-version](../.node-version)、[.python-version](../.python-version)，npm 使用对应 Node 官方发行版随附版本。Python 基线已改为 3.13 系列并通过 Windows 离线 CI；历史实机结论没有随版本升级重新验证。正式 Backend 使用 `package-lock.json` 锁定依赖，无需额外安装包管理器。在仓库根目录准备正式工程自己的依赖：
+环境基线为 Windows，Node 支持范围为 `>=24.18.0 <25`；精确 Node／Python 基线为 24.19.0／3.12.14，分别见根目录 [.node-version](../.node-version)、[.python-version](../.python-version)，npm 使用对应 Node 官方发行版随附版本。历史 Python 3.13.15 CI 结果不代表新基线验证，当前检查见 [CI 说明](../docs/engineering/ci-plan.md)。正式 Backend 使用 `package-lock.json` 锁定依赖，无需额外安装包管理器。在仓库根目录准备依赖；已有版本正确的 venv 可复用，否则将下方 Python 路径替换为本机 3.12.14 x64 的绝对路径：
 
 ```powershell
-py -3.13 -m venv adapter/maa/.venv
+& 'C:/Python312/python.exe' -m venv adapter/maa/.venv
 .\adapter\maa\.venv\Scripts\python.exe -c "import pathlib,platform; assert platform.python_version()==pathlib.Path('.python-version').read_text().strip(), 'Python 版本与基线不一致'"
 $pipVersion = (Get-Content .pip-version -Raw).Trim()
 .\adapter\maa\.venv\Scripts\python.exe -m pip install "pip==$pipVersion"
@@ -68,7 +68,7 @@ npm --prefix backend ci
 npm --prefix backend start
 ```
 
-没有 `py` 启动器时，用版本文件指定的 Python 的绝对路径替代创建环境命令。默认 Python 位置为 `adapter/maa/.venv/Scripts/python.exe`，无需安装真实 MAA。后端打印就绪地址，连接信息保存于被忽略的 `.artifacts/replay/connection.json`。在另一个终端独立操作：
+不要依赖 `py` 默认选择其他版本。默认 Python 位置为 `adapter/maa/.venv/Scripts/python.exe`，无需安装真实 MAA。上述默认离线示例要求没有本地 live 配置；已有配置时先按 [Demo 入口](../docs/engineering/demo.md#回放入口)显式指定回放配置。连接信息保存于配置的 `dataDir/connection.json`（默认 `.artifacts/replay/connection.json`）。在另一个终端使用相同 `CHATMAA_CONFIG` 独立操作：
 
 ```powershell
 npm --prefix backend run client -- submit 10 demo-normal
@@ -149,7 +149,7 @@ await host.tasks.stop(applicationOperationId);
 - `agent/requests.ts`、`records.ts`：请求 ID、唯一操作 ID、原文、最小追踪、取消；记录使用原业务 SQLite。重放只读取，崩溃后不自动补做。
 - `agent/runtime.ts`、`provider.ts`：AI SDK 两步循环，一轮工具与一轮解释，第二轮禁用工具；默认总等待 60 秒、重试 0。固定规则使用 `system`，每轮携带完整当前输入与工具结果，禁用服务端存储。
 - `agent/tools.ts`：模型参数核对、一次变更预留、等待摘要展示完成，然后调用 `TaskService`。摘要或前置记录失败不提交；提交后的追踪失败不抹掉任务事实。
-- `agent/debug.ts`：终端适配。Web 尚未实现，HTTP 的 `Origin` 检查保持原样。
+- `agent/debug.ts`：终端适配；Web 使用 `browser/requests.ts`，两者复用共同 Agent 请求入口。
 
 下一阶段可直接创建 `new AgentRequests(host.tasks, model)`，调用 `handle({requestId, original, targetId?}, async event => ...)` 和 `read(requestId)`。同一次传输重试复用 `requestId`；独立新指令使用新 ID。事件为项目结构，不暴露 SDK 消息类型。`summary` 回调必须等展示完成才 resolve；浏览器接入需要实现这个顺序，不能把执行后的最终 HTTP 响应当作执行前摘要。模型与事件输出等待共同受取消和总超时约束，控制台最终结果输出也在同一等待期限内；取消等待不保证底层输出已经停止，但迟到的摘要完成不会触发执行。执行事实来自返回的 `task` 和独立任务接口，不能以模型回复代替；`task: null` 表示没有关联任务记录。
 
@@ -159,7 +159,7 @@ await host.tasks.stop(applicationOperationId);
 
 ## 结果怎样理解
 
-HTTP 提供 `POST /tasks`、`GET /tasks/:id`、`POST /tasks/:id/stop`，并提供本地调试用的列表、健康和关闭入口。调用需要 `x-app-token`；拒绝带浏览器 `Origin` 的请求，Web 接入尚未实现。没有实验故障注入或自动核对解锁 API。
+HTTP 提供 `POST /tasks`、`GET /tasks/:id`、`POST /tasks/:id/stop`，并提供本地调试用的列表、健康和关闭入口。调用需要 `x-app-token`；拒绝带浏览器 `Origin` 的请求，Web 使用上文独立的 `/api` 与浏览器令牌。没有实验故障注入或自动核对解锁 API。
 
 显式 `POST /tasks/:id/recheck` 接收 `{ "id": "稳定检查ID" }`，只在历史自动化均已结束且停止确认、记录同步完整时受理环境重新识别。随后仍用 `GET /tasks/:id` 查询 `recheck.state`、`recheck.ready` 和 `recheck.automation_stopped`，用原停止入口取消识别。请求超时只查询，不生成新检查 ID 重试。旧任务的 `environment` 仍描述旧现场，重新识别依据另存于 `recheck.environment`；它不修改旧任务成功与否。当前仅验证离线及替身路径，未宣称实机有效。
 

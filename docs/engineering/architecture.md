@@ -1,6 +1,6 @@
 # ChatMAA 当前工程与目标架构
 
-定位：当前工程说明，持续维护。最近核对：2026-09-18；本次实现从 `273055d` 建立正式 Backend／Adapter，原型源码保留。本次能力历史从复用层逐步建立两端服务与验证支持。离线、native 边界替身与实机结果分别说明；重整历史没有重新操作游戏。
+定位：当前工程说明，持续维护。最近核对：2026-09-19；Issue #11 基于 `4bcf381` 收敛运行入口与停止展示，当前操作入口见 [Demo 运行说明](demo.md)。正式 Backend／Adapter 原从 `273055d` 建立，原型源码保留。离线、native 边界替身与实机结果分别说明；文档更新不表示重跑历史实验。
 
 目前已有独立的确定参数执行入口、常驻 Backend 内的 Agent 调试链路和最小 Web 执行台。2026-09-18 Agent 实现基于 `be62348`：模型替身与正式回放集成已验证，真实 DeepSeek 四个固定样例的回放调用及回复审阅已通过。运行与检查见[Backend 说明](../../backend/README.md)，真实环境判据与限制见[Adapter 说明](../../adapter/maa/README.md)。本文区分目标职责、已有实现与未验证部分；不安排阶段授权。原型结论继续见[历史审阅总结](../archive/2026-09-prototype/prototype-review.md)。
 
@@ -25,6 +25,10 @@
 本地已完成浏览器离线回放和受控故障展示检查，一次真实 DeepSeek 通过网页调用的回放检查通过：摘要展示后仅受理一次 1-7 十次任务，最终确认十次完成并正常退出交接；真实游戏完整链路未验证。本地使用 Edge Chromium，CI 配置使用 Playwright 配套 Chromium；包含收尾修正的 `dccac38` 已通过 [Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35370371623)。以下较早验证记录保留其原时间范围，不把历史状态当作当前验收结论。
 
 ## 已验证范围
+
+2026-09-19 Issue #11：精确基线同步为 Node 24.19.0／Python 3.12.14；本地 Backend 39、Adapter 25、Edge Chromium 浏览器 12 项及两端类型检查／Web 构建通过。新增检查覆盖停止受理后延迟确认和回执迟到，保留完成量下界与环境待核对。正式 `--web` 在显式回放配置、无模型密钥下启动和 CLI 退出核对通过。未调用真实模型或游戏；新基线远端 Windows CI 及真实整链演示尚未验证。当前实现图与操作排查见 [Demo 入口](demo.md#模块协作与排查)，无职责、进程、API 或数据库调整。
+
+#10 的最终闭环基线为 `40be2cc`，包含摘要回执重试和同标签页启动令牌切换修正，Windows CI 的 Backend 39、Adapter 25、Web 10 项通过，已合并到 `4bcf381`。见[阶段 3 闭环记录](https://github.com/Fyrefly-4/ChatMAA/issues/10#issuecomment-5733757969)与[最终 CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35372689845)。上文 `dccac38` 和下文较早数字均是各轮历史证据。
 
 2026-09-18 Agent 补充（代码基线 `de07573`）：DeepSeek `deepseek-flash` 经 Responses API，在四个固定样例中完成工具调用与回复检查。完整指令仅建立一个正式回放任务并确认十次完成；能力询问、缺次数、不支持资源条件均未执行，提示修正后的回复与参数边界一致。此前离线全量 Backend 29 项、Python 25 项及类型检查通过；提示修正后 Agent 13 项和类型检查通过。当时的该分支远端 Windows CI 尚未运行；后续 #9 闭环与当前 Web 验证另行记录。该证据不覆盖真实 Agent—MAA 游戏闭环或任意自然语言表达。
 

@@ -4,6 +4,8 @@
 
 ## 启动与开发
 
+完整准备、显式配置及收尾步骤以 [Demo 运行入口](../docs/engineering/demo.md)为准；下面保留模块开发命令。
+
 先按 [Backend 准备说明](../backend/README.md#准备与离线使用)安装固定 Node、Python 和 Backend 依赖。仓库根目录执行：
 
 ```powershell
@@ -46,7 +48,13 @@ npm --prefix web run dev
 
 任务事实不从模型文字推导：可靠部分量可显示剩余次数；下界、证据缺口或冲突保留未知。页面断线与 Backend—Adapter 同步失败分别表达。稳定结束任务的旧证据时间不被当作断线；已停止也不等于设备已就绪。
 
+停止原因 `user_stop`／`user_stop_before_start` 解释请求发生的阶段；停止确认仍读取 `automation_stopped`。`useExecution.ts` 对外返回的操作提示优先使用当前任务证据，即使受理回执迟到也不会覆盖已确认停止。未知原因保留原码，完成量和环境状态不因文案变化而放宽。
+
 ## 离线验证
+
+Issue #11（2026-09-19，基于 `4bcf381`）：Node 24.19.0／Python 3.12.14 下本地类型检查、构建与 Edge Chromium 浏览器 12 项通过。新增两种停止回执时序的展示检查使用 API 夹具，不表示真实游戏停止已验收。真实模型与游戏本轮均未运行。新基线远端 CI 尚未验证。
+
+#10 后续修正的最终记录为 `40be2cc`：[Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35372689845) 浏览器 10 项及其他离线检查通过；见[阶段闭环](https://github.com/Fyrefly-4/ChatMAA/issues/10#issuecomment-5733757969)。文末 7 项与 `dccac38` 保留为较早一轮的证据。
 
 ```powershell
 npm --prefix web run check

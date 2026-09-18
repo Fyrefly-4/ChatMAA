@@ -1,6 +1,6 @@
 # CI 使用与接入
 
-最近核对：2026-09-19；原配置基线：`126808c`，本次在 Issue #10 分支增加 Web 检查。本文是日常运行和新增检查的维护入口；路径沿用 `ci-plan.md`，实施过程见 [归档方案](../archive/2026-09-ci/ci-plan.md)。
+最近核对：2026-09-19；Issue #11 从 `4bcf381` 调整 Python 精确基线为 3.12.14，Node 保持 24.19.0。setup action 继续读取版本文件，workflow 结构不变。本文是日常运行和新增检查的维护入口；路径沿用 `ci-plan.md`，原实施过程见 [归档方案](../archive/2026-09-ci/ci-plan.md)。
 
 ## 当前如何运行
 
@@ -35,7 +35,7 @@ $pipVersion = (Get-Content .pip-version -Raw).Trim()
 & ./adapter/maa/.venv/Scripts/python.exe -m pip check
 ```
 
-Backend 集成测试也会启动 Python Adapter，不能省略 Python 准备。已有 venv 应与指定 Python 版本一致。CI 的环境准备实现见 [setup-node](../../.github/actions/setup-node/action.yml) 和 [setup-python](../../.github/actions/setup-python/action.yml)。
+Backend 集成测试也会启动 Python Adapter，不能省略 Python 准备。已有 venv 应与指定 Python 版本一致，可复用后跳过创建；`python` 不在 PATH 或指向其他版本时，用已核对的 3.12.14 x64 解释器绝对路径替代，不用 `py` 默认选择。CI 的环境准备实现见 [setup-node](../../.github/actions/setup-node/action.yml) 和 [setup-python](../../.github/actions/setup-python/action.yml)。
 
 另安装 Web 依赖和浏览器，再执行各项检查，并检查各自的退出状态：
 
@@ -83,6 +83,10 @@ npm --prefix web run test:e2e
 某组测试明显拖慢反馈时再拆 job；多个入口确实复用相同检查时再提取 reusable workflow；无关修改反复触发昂贵检查时再评估路径选择；有明确跨平台或多版本支持目标时再增加矩阵。新增模块本身不要求引入上述全部机制。
 
 ## 历史与证据
+
+2026-09-19 Issue #11（基于 `4bcf381`）：Node 24.19.0、Python 3.12.14 x64、npm 12.0.2，锁定依赖安装及 `pip check` 通过；pip 已对齐 `.pip-version` 的 26.2.1。本地 Backend 39、Adapter 25、Web 12 项及两端类型检查／构建通过，浏览器为 Edge Chromium。显式回放配置的正式 `--web` 启动、静态页面、无模型状态及 CLI 关闭交接另行通过。没有真实模型或游戏调用。新基线远端 Windows job 尚未运行，不用下述旧基线 CI 替代；当前 workflow 不因普通分支 push 自动运行，需面向 main 的 PR 或单独授权手动调度。
+
+#10 最终修正基线 `40be2cc` 已通过 [Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35372689845)：Backend 39、Adapter 25、Web 10 项、类型检查和构建；其后合并至 `4bcf381`。以下记录属于更早的验证轮次。
 
 取舍、原按需方案的历史入口及首轮验证保留在 [实施方案归档](../archive/2026-09-ci/ci-plan.md)。基线 `126808c` 的 [Windows PR CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35347687701) 全部通过，单 job 用时 1 分 20 秒；本次文档整理不代表重新执行这些检查。
 
