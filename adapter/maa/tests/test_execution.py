@@ -109,6 +109,46 @@ class NativeHarness:
 
 
 class ExecutionTest(unittest.TestCase):
+    def test_battle_initialization_failure_preserves_only_proven_stop(self):
+        from worker import execute
+        for failure_type in [ResourceLoadError, RuntimeError]:
+            with self.subTest(failure_type=failure_type), tempfile.TemporaryDirectory() as tmp:
+                settings = Settings("maa-live", Path(tmp), "controller", "token", installation=Path(tmp), hwnd=1)
+                harness = NativeHarness()
+                def factory(installation, output, **kwargs):
+                    if output.name == "battle":
+                        raise failure_type("resource unavailable: D:/private-installation/resource")
+                    return harness.core(installation, output, **kwargs)
+                control = Controller(settings, worker=lambda *a: None, recheck_worker=lambda *a: None)
+                operation = request(count=1)
+                control.submit(operation)
+                with patch("native.execute_native", side_effect=lambda s, op, stop, emit, output:
+                           execute_native(s, op, stop, emit, output, factory, lambda hwnd: {})):
+                    execute(settings, operation.model_dump(), control.active["op"]["stop"],
+                            lambda kind, value: control.inbox.put(("op", kind, value)))
+                control.drain()
+                view = control.read("op")
+                self.assertEqual(view["confirmed"], 0)
+                self.assertEqual(view["device"], "needs_check")
+                self.assertEqual(view["automation_stopped"], failure_type is ResourceLoadError)
+                self.assertEqual(harness.active_cores, 0)
+                self.assertFalse(any(kind == "Fight" for kind, _ in harness.calls))
+                self.assertNotIn("private-installation", json.dumps(view))
+                with self.assertRaises(Exception): control.submit(request(identity="blocked"))
+                control.submit(operation)  # Same ID cannot start another execution.
+                self.assertFalse(control.active)
+                if failure_type is ResourceLoadError:
+                    self.assertEqual(view["state"], "ended")
+                    saved = list(Path(tmp).glob("operations/*/battle/result.json"))
+                    self.assertEqual(len(saved), 1)
+                    self.assertTrue(json.loads(saved[0].read_text())["automation_stopped"])
+                    control.recheck("op", RecheckRequest(id="explicit-check"))
+                    self.assertIn("op", control.active)
+                else:
+                    self.assertEqual(view["state"], "unknown")
+                    with self.assertRaises(Exception): control.recheck("op", RecheckRequest(id="blocked"))
+                control.db.close()
+
     def test_live_configuration_accepts_wizard_runs_and_keeps_one_device_lock(self):
         from settings import REPOSITORY, CORE_SHA256
         with tempfile.TemporaryDirectory() as tmp:

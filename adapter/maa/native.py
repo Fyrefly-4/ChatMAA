@@ -102,7 +102,16 @@ def execute_native(settings, operation, stop, emit, output, core_factory=Core, i
         return result
     battle = output / "battle"
     battle.mkdir()
-    core = core_factory(settings.installation, battle, incremental=write_failure_overlay(battle), quiet_callbacks=True)
+    try:
+        core = core_factory(settings.installation, battle, incremental=write_failure_overlay(battle), quiet_callbacks=True)
+    except ResourceLoadError as error:
+        # The preceding probe stopped, and no battle instance has been created.
+        result.update(automation_stopped=True, reason="resource_load_failed",
+                      environment={"ready": False, "observed_at": time.time(),
+                                   "basis": "resource_load_failed", "automation_stopped": True,
+                                   "error": repr(error)})
+        (battle / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+        return result
     session = Session(core)
     task_id = 0
     reason = "normal"
