@@ -16,7 +16,7 @@
 
 环境准备失败时跳过检查；准备成功后，一项检查失败仍继续后续检查，除非运行被取消。任何检查失败都使 job 失败。排错时查看对应 step 的日志，可在 Actions 页面重跑失败的 job；由于只有一个 job，重跑会重新准备环境并执行全套检查。
 
-截至上述基线，未启用强制门禁。以后设为 required 前，应另行确认并核对检查名 `offline-checks`。本轮已验证 PR 路径；main、手动和 fork 入口尚未分别验证。CI 仅运行离线、替身／回放测试，通过不表示实机验收通过。
+截至上述基线，未启用强制门禁。以后设为 required 前，应另行确认并核对检查名 `offline-checks`。既有记录已验证 PR 路径，本轮 Web 接入验证了手动入口；main 和 fork 入口尚未分别验证。CI 仅运行离线、替身／回放测试，通过不表示实机验收通过。
 
 ## 本地运行相同检查
 
@@ -86,4 +86,4 @@ npm --prefix web run test:e2e
 
 取舍、原按需方案的历史入口及首轮验证保留在 [实施方案归档](../archive/2026-09-ci/ci-plan.md)。基线 `126808c` 的 [Windows PR CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35347687701) 全部通过，单 job 用时 1 分 20 秒；本次文档整理不代表重新执行这些检查。
 
-2026-09-19 Web 接入：本地 actionlint、Backend／Web 类型检查、构建、Adapter 回归及 Edge Chromium 浏览器离线检查通过。模型替身与正式回放、独立展示夹具分别覆盖；上述自动检查不使用真实模型或游戏。`b4b4033` 的 [Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35369557679) 通过，已核对 Web 安装、类型检查、构建和 Chromium 浏览器检查实际执行成功。后续 `96d3769` 的退出收尾修正及 `6f62232` 的测试路径修正已通过本地检查，最终远端复验尚未完成，不能用首轮结果替代最终提交的结论。
+2026-09-19 Web 接入：本地 actionlint、Backend／Web 类型检查、构建、Adapter 回归及 Edge Chromium 浏览器离线检查通过。模型替身与正式回放、独立展示夹具分别覆盖；上述自动检查不使用真实模型或游戏。`b4b4033` 的 [Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35369557679) 通过，已核对 Web 安装、类型检查、构建和 Chromium 浏览器检查实际执行成功。随后包含 `96d3769` 退出修正及 `6f62232` 测试路径修正的 `dccac38` 已通过 [最终 Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35370371623)：Backend 39 项、Adapter 25 项、Chromium 浏览器 7 项，以及类型检查和构建全部成功。此后仅回写验证说明，没有再改生产代码或测试；文档回写不代表重新运行真实模型或游戏。
