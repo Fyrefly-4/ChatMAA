@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 
 export const repository = resolve(import.meta.dirname, '../..');
 export type Config = {
@@ -27,10 +27,15 @@ export function loadConfig(path = process.env.CHATMAA_CONFIG): Config {
     if (typeof value !== 'string' || !value) throw new Error(`无效路径：${key}`);
     return resolve(base, value);
   }
-  if (mode === 'maa-live' && raw.dataDir !== undefined) throw new Error('live 使用固定记录目录，不通过切换目录解除占用');
+  const dataDir = configuredPath('dataDir', resolve(repository, mode === 'maa-live' ? '.artifacts/live' : '.artifacts/replay'));
+  if (mode === 'maa-live' && dataDir !== resolve(repository, '.artifacts/live') &&
+      !(basename(dataDir) === 'data' && basename(dirname(dataDir)).startsWith('run-') &&
+        dirname(dirname(dataDir)) === resolve(repository, '.artifacts/live-wizard'))) {
+    throw new Error('live dataDir 须为默认目录或本地向导的 run-*/data');
+  }
   const config: Config = {
     mode, python: configuredPath('python', resolve(repository, 'adapter/maa/.venv/Scripts/python.exe')),
-    dataDir: mode === 'maa-live' ? resolve(repository, '.artifacts/live') : configuredPath('dataDir', resolve(repository, '.artifacts/replay')),
+    dataDir,
     port: integer('port', 0, 0, 65535), pollMs: integer('pollMs', 200), httpTimeoutMs: integer('httpTimeoutMs', 2000),
     leaseMs: integer('leaseMs', 10000), stopDeadlineMs: integer('stopDeadlineMs', 20000),
   };

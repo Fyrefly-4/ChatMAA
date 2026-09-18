@@ -22,7 +22,36 @@ test('configuration defaults to offline and rejects incomplete live settings', (
   writeFileSync(file, '{"mode":"maa-live"}');
   assert.throws(() => loadConfig(file), /installation/);
   writeFileSync(file, '{"mode":"maa-live","dataDir":"another-directory"}');
-  assert.throws(() => loadConfig(file), /固定记录目录/);
+  assert.throws(() => loadConfig(file), /live dataDir/);
+  writeFileSync(resolve(data, 'MaaCore.dll'), 'configuration fixture only');
+  for (const dataDir of [undefined, resolve(repository, '.artifacts/live-wizard/run-config-test/data')]) {
+    writeFileSync(file, JSON.stringify({mode:'maa-live',installation:data,hwnd:1,dataDir}));
+    assert.equal(loadConfig(file).dataDir, dataDir ?? resolve(repository,'.artifacts/live'));
+  }
+  for (const dataDir of [resolve(repository,'.artifacts/live-wizard/other/data'),
+    resolve(repository,'.artifacts/live-wizard/run-test/../../outside/data')]) {
+    writeFileSync(file, JSON.stringify({mode:'maa-live',installation:data,hwnd:1,dataDir}));
+    assert.throws(() => loadConfig(file), /live dataDir/);
+  }
+});
+
+test('configuration failure reports that the executor never started', async () => {
+  const data = resolve(repository, '.artifacts/checks', `startup-error-${Date.now()}`);
+  mkdirSync(data, { recursive: true });
+  const configFile = resolve(data, 'config.json');
+  writeFileSync(configFile, JSON.stringify({ mode: 'maa-replay', dataDir: data, pollMs: 0 }));
+  await assert.rejects(execute(process.execPath, [resolve(repository, 'backend/src/main.ts')], {
+    env: { ...process.env, CHATMAA_CONFIG: configFile }, windowsHide: true, timeout: 10000,
+  }), (error: unknown) => {
+    const event = JSON.parse((error as { stdout: string }).stdout.trim());
+    assert.equal(event.kind, 'startup_failed');
+    assert.equal(event.phase, 'configuration');
+    assert.equal(event.childStarted, false);
+    assert.match(event.error, /pollMs/);
+    return true;
+  });
+  assert.equal(existsSync(resolve(data, 'connection.json')), false);
+  assert.equal(existsSync(resolve(data, 'executor.sqlite')), false);
 });
 
 test('separate CLI processes submit, query and stop; host shutdown hands off evidence', async () => {

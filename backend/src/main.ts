@@ -5,7 +5,14 @@ import { loadConfig } from './config.ts';
 import { startHost } from './host.ts';
 import { createApp } from './app.ts';
 
-const config = loadConfig();
+const config = (() => {
+  try { return loadConfig(); }
+  catch (error) {
+    console.log(JSON.stringify({ kind: 'startup_failed', phase: 'configuration', childStarted: false,
+      error: error instanceof Error ? error.message : String(error) }));
+    throw error;
+  }
+})();
 const host = await startHost(config);
 const token = randomUUID();
 let closing = false;

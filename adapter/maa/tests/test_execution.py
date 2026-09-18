@@ -109,6 +109,24 @@ class NativeHarness:
 
 
 class ExecutionTest(unittest.TestCase):
+    def test_live_configuration_accepts_wizard_runs_and_keeps_one_device_lock(self):
+        from settings import REPOSITORY, CORE_SHA256
+        with tempfile.TemporaryDirectory() as tmp:
+            installation = Path(tmp)
+            (installation / "MaaCore.dll").write_bytes(b"configuration fixture")
+            raw = {"mode": "maa-live", "controller": "test", "token": "test", "installation": tmp, "hwnd": 1}
+            locks = []
+            for path in [REPOSITORY / ".artifacts/live", REPOSITORY / ".artifacts/live-wizard/run-config-test/data"]:
+                raw["data"] = str(path)
+                with patch.dict(os.environ, CHATMAA_ADAPTER_CONFIG=json.dumps(raw)), patch("settings.sys.platform", "win32"), patch("settings.hashlib.file_digest") as digest:
+                    digest.return_value.hexdigest.return_value = CORE_SHA256
+                    settings = Settings.from_env()
+                    self.assertEqual(settings.data, path.resolve())
+                    locks.append(settings.lock_paths())
+            self.assertEqual(locks[0], locks[1])
+            raw["data"] = str(REPOSITORY / ".artifacts/live-wizard/other/data")
+            with patch.dict(os.environ, CHATMAA_ADAPTER_CONFIG=json.dumps(raw)):
+                with self.assertRaises(ValueError): Settings.from_env()
 
     def test_resource_reload_across_two_independent_operations(self):
         # Model the observed loader boundary: definitions survive reload and an

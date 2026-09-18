@@ -31,8 +31,10 @@ class Settings:
         if result.mode not in ("maa-replay", "maa-live") or not result.controller or not result.token:
             raise ValueError("invalid Adapter configuration")
         if result.mode == "maa-live":
-            if sys.platform != "win32" or result.data != (REPOSITORY / ".artifacts/live").resolve():
-                raise ValueError("live requires Windows and the stable live data directory")
+            wizard_run = (result.data.name == "data" and result.data.parent.name.startswith("run-")
+                          and result.data.parent.parent == (REPOSITORY / ".artifacts/live-wizard").resolve())
+            if sys.platform != "win32" or not (result.data == (REPOSITORY / ".artifacts/live").resolve() or wizard_run):
+                raise ValueError("live requires Windows and the default or wizard run data directory")
             if not result.installation or type(result.hwnd) is not int or result.hwnd <= 0:
                 raise ValueError("live requires installation and hwnd")
             with (result.installation / "MaaCore.dll").open("rb") as stream:
