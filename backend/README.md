@@ -84,7 +84,7 @@ live 的参数请求、记录与受理流程已建立；固定范围正常实机
 ```mermaid
 flowchart LR
   CLI[确定参数客户端] --> App[app.ts：身份与 HTTP]
-  Agent[后续 Agent] -. 同进程 .-> Tasks[task-service.ts：共同业务规则]
+  Agent[Agent 请求核对与工具适配] --> Tasks[task-service.ts：共同业务规则]
   App --> Tasks
   Tasks --> Store[store.ts：业务 SQLite 与证据投影]
   Tasks -->|本机 HTTP| Adapter[Python Adapter：执行 SQLite 与工作线程]
@@ -93,7 +93,7 @@ flowchart LR
 
 `task-contract.ts` 定义输入与结果；`task-service.ts` 在发出执行前保存稳定 ID 和意图。超时只查询原 ID，未确认状态阻止冲突；停止不等待模型或进度事件。`store.ts` 在一个事务内保存证据、读取位置及结果，重复事件不重复计数，缺口保留下界。`host.ts` 管理自有 Python，关闭后端时交接最终证据；客户端退出不走此流程。
 
-`app.ts` 只做调用方身份与协议映射，业务检查仍在共同任务服务。后续 Agent 从已启动的宿主取得 `host.tasks`，使用同样的方法，例如：
+`app.ts` 只做调用方身份与协议映射，业务检查仍在共同任务服务。Agent 从已启动的宿主取得 `host.tasks`，使用同样的方法，例如：
 
 ```typescript
 await host.tasks.submit({ id: applicationOperationId,
@@ -102,7 +102,41 @@ const task = host.tasks.get(applicationOperationId);
 await host.tasks.stop(applicationOperationId);
 ```
 
-`applicationOperationId` 由可信应用在明确执行请求中确定，重试复用它；#9 负责把用户请求、参数和操作 ID 关联起来。身份令牌不是执行授权，模型不得自行声明授权或切换 live 模式。
+`applicationOperationId` 由可信应用在明确执行请求中确定，重试复用它；`agent/requests.ts` 把原指令、核对结论和操作 ID 关联起来。身份令牌不是执行授权，模型不得自行声明授权或切换 live 模式。
+
+## Agent 调试与接入
+
+2026-09-18：在 `be62348` 基础上增加 Agent 实现，当前验证为模型替身与正式回放 Adapter；真实 DeepSeek 四个固定样例的回放调用及回复审阅已通过，该证据限于真实模型与正式回放执行端，不代表真实游戏闭环。
+
+在本地环境设置 `DEEPSEEK_API_KEY` 后，执行 `npm --prefix backend start -- --agent`。普通 Backend 启动不需要模型凭据；密钥不写入业务库，也不传给 Python 子进程。模型固定为 DeepSeek `deepseek-flash`，通过 `@ai-sdk/openai` 的 Responses 接口请求 `https://api.deepseek.com/responses`。没有自动重试或备用模型。
+
+该终端是常驻 Backend 控制台：输入一条完整指令后，依次看到原文、核对结论、模型工具参数、应用摘要、工具返回和回复。模型返回后 Backend 继续执行与同步任务；关闭该终端、输入 `/exit` 或输入流结束会关闭宿主并执行既有退出交接。第二个终端中的独立 `client get/stop` 仍可使用，退出客户端不影响任务。
+
+| 调试输入 | 行为 |
+|---|---|
+| `帮我刷 1-7 十次`、`请刷1-7 10次，不吃药不碎石` | 完整匹配后允许模型提交相同参数；模型不调用则不会自动补执行 |
+| `/target TASK_ID` | 显式选定自然语言查询／停止的目标 |
+| `查询当前任务`、`停止当前任务` | 模型只能操作已选定任务，不能提供其他 ID |
+| `/get TASK_ID`、`/stop TASK_ID` | 绕过模型等待，直接查询／请求停止 |
+| `/read REQUEST_ID` | 读取原请求、工具记录和关联任务的当前事实，不重新执行模型 |
+| `/cancel` | 取消本轮模型及输出等待；已经受理的任务继续，停止须用独立入口 |
+| `/exit` | 关闭 Backend 并交接执行证据 |
+
+当前本地规则完整匹配少量直接命令，支持有效范围内的阿拉伯数字和一至九十九的规范中文数字（含“两”）。未覆盖的中文数字可改用阿拉伯数字重新给出完整指令；这不是执行次数上限。疑问、否定、引用、条件、多目标或未理解的附加要求均不执行，不删除条件后执行。模型参数还须逐项等于核对结果。
+
+主要代码入口：
+
+- `agent/policy.ts`：原指令允许什么；扩展表达时须同时增加误执行反例。
+- `agent/requests.ts`、`records.ts`：请求 ID、唯一操作 ID、原文、最小追踪、取消；记录使用原业务 SQLite。重放只读取，崩溃后不自动补做。
+- `agent/runtime.ts`、`provider.ts`：AI SDK 两步循环，一轮工具与一轮解释，第二轮禁用工具；默认总等待 60 秒、重试 0。固定规则使用 `system`，每轮携带完整当前输入与工具结果，禁用服务端存储。
+- `agent/tools.ts`：模型参数核对、一次变更预留、等待摘要展示完成，然后调用 `TaskService`。摘要或前置记录失败不提交；提交后的追踪失败不抹掉任务事实。
+- `agent/debug.ts`：终端适配。Web 尚未实现，HTTP 的 `Origin` 检查保持原样。
+
+下一阶段可直接创建 `new AgentRequests(host.tasks, model)`，调用 `handle({requestId, original, targetId?}, async event => ...)` 和 `read(requestId)`。同一次传输重试复用 `requestId`；独立新指令使用新 ID。事件为项目结构，不暴露 SDK 消息类型。`summary` 回调必须等展示完成才 resolve；浏览器接入需要实现这个顺序，不能把执行后的最终 HTTP 响应当作执行前摘要。模型与事件输出等待共同受取消和总超时约束，控制台最终结果输出也在同一等待期限内；取消等待不保证底层输出已经停止，但迟到的摘要完成不会触发执行。执行事实来自返回的 `task` 和独立任务接口，不能以模型回复代替；`task: null` 表示没有关联任务记录。
+
+真实模型验收是单独入口：`node backend/src/agent/verify.ts`。它需要本地密钥，会发送四条固定测试指令及工具结果，使用正式 `maa-replay`，不读取 live 配置、不操作游戏。结果写入忽略目录 `.artifacts/agent-verification/run-*/`；默认测试与 CI 不运行它。需逐条复查原文、工具参数、返回和解释；离线通过不替代该验收。
+
+可在仓库根目录的 `.env` 中本地配置 `DEEPSEEK_API_KEY`，从根目录执行 `node --env-file=.env backend/src/agent/verify.ts`；程序不会自动加载 `.env`，该文件已被 Git 忽略。新记录用 `automaticChecksPassed` 表示样例断言和退出交接检查结果，`replyReview: pending` 表示回复尚待逐条审阅，不能以自动检查成功替代整体验收。`verification.json` 附带语义审阅清单；旧记录中的 `passed` 同样只代表当时的自动断言。
 
 ## 结果怎样理解
 

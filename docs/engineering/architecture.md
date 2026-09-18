@@ -2,7 +2,7 @@
 
 定位：当前工程说明，持续维护。最近核对：2026-09-18；本次实现从 `273055d` 建立正式 Backend／Adapter，原型源码保留。本次能力历史从复用层逐步建立两端服务与验证支持。离线、native 边界替身与实机结果分别说明；重整历史没有重新操作游戏。
 
-目前已有独立的确定参数执行入口，尚无完整聊天应用。运行与检查见[Backend 说明](../../backend/README.md)，真实环境判据与限制见[Adapter 说明](../../adapter/maa/README.md)。本文区分目标职责、已有实现与未验证部分；不安排阶段授权。原型结论继续见[历史审阅总结](../archive/2026-09-prototype/prototype-review.md)。
+目前已有独立的确定参数执行入口及常驻 Backend 内的 Agent 调试链路，尚无 Web 聊天应用。2026-09-18 Agent 实现基于 `be62348`：模型替身与正式回放集成已验证，真实 DeepSeek 四个固定样例的回放调用及回复审阅已通过。运行与检查见[Backend 说明](../../backend/README.md)，真实环境判据与限制见[Adapter 说明](../../adapter/maa/README.md)。本文区分目标职责、已有实现与未验证部分；不安排阶段授权。原型结论继续见[历史审阅总结](../archive/2026-09-prototype/prototype-review.md)。
 
 正式 Backend 使用 npm 和 `backend/package-lock.json` 安装与检查；原型的历史工具与证据不随此调整重写。
 
@@ -15,6 +15,8 @@
 产品范围与验收以 [MVP Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1) 为准。项目方向见[项目定义](../overview/project-definition.md)，术语见 [CONTEXT.md](../../CONTEXT.md)。已接受的设计与已实现的能力在下文分别说明。
 
 ## 已验证范围
+
+2026-09-18 Agent 补充（代码基线 `de07573`）：DeepSeek `deepseek-flash` 经 Responses API，在四个固定样例中完成工具调用与回复检查。完整指令仅建立一个正式回放任务并确认十次完成；能力询问、缺次数、不支持资源条件均未执行，提示修正后的回复与参数边界一致。此前离线全量 Backend 29 项、Python 25 项及类型检查通过；提示修正后 Agent 13 项和类型检查通过。本分支远端 Windows CI 尚未运行。该证据不覆盖真实 Agent—MAA 游戏闭环或任意自然语言表达。
 
 2026-09-18，正式 Backend 与 Adapter 在同一服务周期内完成两个独立任务，各一次 1-7，不吃药、不碎石。四次执行前后识别通过，完成量均为 exact，设备就绪，最终退出交接完成；负责人确认两次现场结果通过。实机配置、原始日志与详细交接保留在本地，不随仓库发布。
 
@@ -54,8 +56,8 @@ flowchart TD
 |---|---|---|
 | 网页，React + Vite | 输入、任务展示、确认与停止入口 | 已选方向，尚未实现 |
 | 应用入口，Fastify | 接收消息与操作，交给对应模块 | 正式确定参数 HTTP 与命令行入口已建立；聊天接口待实现 |
-| Agent Runtime，AI SDK | 上下文、目标理解、澄清与工具调用 | 已选有界工具循环，即限制模型与工具往返的步数等；尚未接入模型 |
-| 任务管理，TypeScript | 参数与授权检查、防重、设备占用、状态协调 | 共同任务服务已有正式离线验证；自然语言授权关联属于后续 Agent 接入 |
+| Agent Runtime，AI SDK | 上下文、目标理解、澄清与工具调用 | 已接入 DeepSeek Responses 配置与两步 SDK 循环；离线验证通过，真实模型四个固定样例的回放调用与回复已验收 |
+| 任务管理，TypeScript | 参数与授权检查、防重、设备占用、状态协调 | 共同任务服务已有正式离线验证；Agent 增加原指令完整匹配及参数绑定 |
 | MAA Adapter，Python + FastAPI | 管住执行入口、调用 MaaCore、转换和保存证据 | 离线与 native 边界替身已检查；两个独立 1-7 任务各一次的正常实机流程已通过 |
 | 两份 SQLite | TS 保存业务记录，Python 保存最小执行证据 | 正式入口检查覆盖证据投影和交接；完整会话和历史功能待实现 |
 
@@ -71,7 +73,8 @@ Python 正式控制层沿用工作线程执行 MaaCore，让 HTTP 查询、停�
 | MaaCore 适配与结果解释 | [core.py](../../adapter/maa/core.py)、[native.py](../../adapter/maa/native.py)、[contract.py](../../adapter/maa/contract.py)、[readiness.py](../../adapter/maa/readiness.py) | 固定 live 配置、计数和只识别环境判据；固定范围正常实机流程已通过 |
 | 宿主与生命周期 | [host.ts](../../backend/src/host.ts)、[config.ts](../../backend/src/config.ts)、Python 控制层 | TS 管理自有执行端，续期和有界退出交接 |
 | 可控替身与实验驱动 | [替身服务](../../prototypes/lifecycle/adapter/service.py)、[实验目录](../../prototypes/lifecycle/experiments/) | 用于验证和观察，不是用户应用或产品兜底服务 |
-| Web 与 Agent Runtime | 尚无对应应用实现 | 已选技术方向不代表已接入模型和页面 |
+| Agent Runtime 与请求核对 | [requests.ts](../../backend/src/agent/requests.ts)、[policy.ts](../../backend/src/agent/policy.ts)、[runtime.ts](../../backend/src/agent/runtime.ts)、[tools.ts](../../backend/src/agent/tools.ts) | 同进程复用任务服务；最小请求记录进入原 TS SQLite；真实模型四个固定样例的回放调用及回复审阅已通过 |
+| Web | 尚无对应应用实现 | 后续接入 Agent 项目接口、摘要展示回调及独立任务查询／停止 |
 
 两个原型目录按验证工作组织，并非最终模块边界：`lifecycle` 的 TS 后端已被真实 HTTP 合并复用，而其 Python 替身仍用于离线验证；`maa` 同时包含真实适配、诊断和证据工具。
 
@@ -137,7 +140,7 @@ TS 统一启动和管理 Python；正常退出时先拒绝新执行、请求停�
 | AI SDK 有界工具循环，自有任务管理 | 复用模型调用流程，长任务独立运行 | 仍需适配上下文与工具，循环结束不能代替游戏停止。[ADR-0004](../adr/0004-agent-loop-boundary.md) |
 | React + Vite 独立前端 | 页面通过应用 API 与后端协作 | 页面、断线恢复与传输方案尚待实现和验证；选择依据见[架构讨论 Q12](../archive/2026-09-prototype/architecture-discussion.md#第五轮技术组合已确认) |
 
-Fastify、FastAPI、SQLite 和 MaaCore 已有固定版本集成证据，见[合并报告](../../prototypes/maa/HTTP-MERGE.md)与[环境记录](../../prototypes/maa/ENVIRONMENT.md)。AI SDK 的项目适配尚未验证；模型服务、UI 组件库和浏览器更新方式尚待确定。
+Fastify、FastAPI、SQLite 和 MaaCore 已有固定版本集成证据，见[合并报告](../../prototypes/maa/HTTP-MERGE.md)与[环境记录](../../prototypes/maa/ENVIRONMENT.md)。AI SDK 项目适配已有离线工具往返及 Responses 请求检查；模型服务固定为 DeepSeek `deepseek-flash`，真实模型四个固定样例的回放调用与回复已验收。UI 组件库和浏览器更新方式尚待确定。
 
 ## 7. 后续替换会影响哪里
 
@@ -160,7 +163,7 @@ Fastify、FastAPI、SQLite 和 MaaCore 已有固定版本集成证据，见[合�
 | 正式支持环境 | #1 仍以模拟器描述使用方式，实机原型验证官方桌面端；正式支持边界待确认，不能由原型成功自动改写规格 |
 | 真实环境核对与解锁 | 正常前后识别与第二任务已有固定范围实机证据；显式重新识别已实现并做离线／替身检查，不能以正常路径替代其完整验收；停止未确认、通用异常恢复及未知完成量交互尚未实现 |
 | 监督边界 | 怎样展示失联与人工处理；若扩大覆盖，再讨论监督组件 |
-| Agent 与页面 | 模型服务、上下文和工具适配、确认交互、任务更新方式 |
+| Agent 与页面 | DeepSeek 真实模型验收、浏览器摘要展示与任务更新接入；完整上下文仍未实现 |
 | 正式工程验证与后续维护 | 已有正式契约、双库、配置与检查入口；实机验收、长期记录保留和完整恢复仍需按各自范围落实 |
 
 #1 中部分框架、存储和通信“尚未定案”的文字属于规格制定时状态，后续技术选择见 ADR 与架构讨论记录；这不降低 #1 的产品行为要求。

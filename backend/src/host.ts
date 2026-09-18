@@ -16,12 +16,17 @@ const pause = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 type Ready = { instance: string; controller: string; port: number; pid: number };
 type Health = { retiring: boolean; storage_failed: boolean; active: string[] };
 
+export function adapterEnvironment(environment: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  return Object.fromEntries(Object.entries(environment).filter(([key]) => key.toUpperCase() !== 'DEEPSEEK_API_KEY'));
+}
+
 export async function startHost(config: Config) {
   mkdirSync(config.dataDir, { recursive: true });
   const controller = randomUUID(); const token = randomUUID();
   const runtime = pythonRuntime(config.python);
+  const childEnv = adapterEnvironment();
   const child: ChildProcess = spawn(runtime.executable, ['-S', '-u', resolve(repository, 'adapter/maa/main.py')], {
-    env: { ...process.env, PYTHONPATH: runtime.site, CHATMAA_ADAPTER_CONFIG: JSON.stringify({
+    env: { ...childEnv, PYTHONPATH: runtime.site, CHATMAA_ADAPTER_CONFIG: JSON.stringify({
       mode: config.mode, data: config.dataDir, controller, token, lease_ms: config.leaseMs,
       stop_deadline_ms: config.stopDeadlineMs, installation: config.installation, hwnd: config.hwnd,
     }) },

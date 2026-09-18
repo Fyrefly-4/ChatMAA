@@ -10,7 +10,7 @@ ChatMAA 是一个正在开发中的智能自动化应用，探索如何让 Agent
 
 截至 2026-09-18，项目已打通 **TypeScript 后端 → 本机 HTTP → Python Adapter → MaaCore** 的执行链路原型，在指定的 Windows 官方桌面端环境中验证了小次数的 1-7 执行、进度回传、指定阶段的停止及结果交接。同时，项目通过可控替身和离线实验检查了部分故障处理行为。
 
-独立的 Backend 与 Python Adapter 已建立，提供确定参数的命令行入口、共同任务服务和离线检查。正式入口已在固定 Windows 官方客户端环境完成两个独立 1-7 任务、各一次的实机验证，包含前后识别、设备就绪和退出交接；该结果不等于更大次数、异常恢复或完整产品验收。历史原型证据与正式工程验证分别保留。Web 页面与 Agent Runtime 尚未接入。完整应用的功能与验收要求记录在 [MVP Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1)，模块与验证边界见[工程说明](docs/engineering/architecture.md)。
+独立的 Backend 与 Python Adapter 已建立，提供确定参数的命令行入口、共同任务服务和离线检查。正式入口已在固定 Windows 官方客户端环境完成两个独立 1-7 任务、各一次的实机验证，包含前后识别、设备就绪和退出交接；该结果不等于更大次数、异常恢复或完整产品验收。历史原型证据与正式工程验证分别保留。Agent Runtime 已增加常驻调试入口、原指令核对与有界工具循环，模型替身和正式回放集成已验证；真实 DeepSeek 四个固定样例的回放调用及回复审阅已通过，Web 页面尚未接入。完整应用的功能与验收要求记录在 [MVP Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1)，模块与验证边界见[工程说明](docs/engineering/architecture.md)。
 
 ## 从这里开始
 
