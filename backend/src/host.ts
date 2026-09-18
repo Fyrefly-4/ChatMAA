@@ -89,6 +89,8 @@ export async function startHost(config: Config) {
       try {
         await call('/prepare-shutdown', 'POST');
         await polling;
+        // Reconcile stable history once at handoff, not on every periodic poll.
+        await service.poll(true);
         while (!exited && Date.now() < until) {
           await service.poll();
           const records = service.list().filter(t => t.state !== 'rejected');

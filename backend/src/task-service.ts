@@ -17,6 +17,7 @@ export class TaskService {
   private synchronizations = new Map<string, SyncStatus>();
   private stopIntents = new Set<string>();
   private rechecking = false;
+  private pendingRechecks = new Map<string, string>();
 
   constructor(store: Store, adapter: AdapterClient, source: string) {
     this.store = store; this.adapter = adapter; this.source = source;
@@ -50,6 +51,10 @@ export class TaskService {
       catch (error) { this.storageFailed = true; throw error; }
       this.synchronizations.set(id, { available: !this.exited, last_success_at: Date.now() / 1000,
         reason: this.exited ? 'executor_exited' : null });
+      const recheck = this.get(id).recheck;
+      if (recheck?.id === this.pendingRechecks.get(id) && recheck?.state === 'ended' && recheck.automation_stopped) {
+        this.pendingRechecks.delete(id);
+      }
       // A stop may precede the Adapter's acceptance (lost/slow submit response).
       if ((this.stopIntents.has(id) || this.get(id).stop_requested || this.get(id).evidence_conflict) &&
           !update.snapshot.automation_stopped && ['accepted', 'running'].includes(update.snapshot.state)) {
@@ -60,8 +65,12 @@ export class TaskService {
       throw error;
     }
   }
-  async poll() {
+  async poll(all = false) {
     for (const row of this.store.all()) {
+      const task = this.get(row.id);
+      if (!all && task.state === 'ended' && task.automation_stopped && task.sync.available &&
+          !task.gap && !task.evidence_conflict && !this.pendingRechecks.has(row.id) &&
+          (!task.recheck || (task.recheck.state === 'ended' && task.recheck.automation_stopped))) continue;
       try { await this.sync(row.id); } catch { /* get exposes the last known result and sync failure. */ }
     }
   }
@@ -119,11 +128,18 @@ export class TaskService {
     this.rechecking = true;
     try {
       await this.poll();
+      await this.sync(id);
       this.get(id);
       if (this.list().some(t => t.state !== 'rejected' && (t.state !== 'ended' || !t.automation_stopped || !t.sync.available || t.gap || t.evidence_conflict))) {
         throw new TaskError(409, 'automation_stop_unconfirmed');
       }
-      await this.adapter.call(`/executions/${id}/recheck`, 'POST', { id: recheckId });
+      // Keep polling even if acceptance is delayed or its response is lost.
+      this.pendingRechecks.set(id, recheckId);
+      try { await this.adapter.call(`/executions/${id}/recheck`, 'POST', { id: recheckId }); }
+      catch (error) {
+        if (error instanceof TaskError && [403, 404, 409, 422].includes(error.status)) this.pendingRechecks.delete(id);
+        throw error;
+      }
       await this.sync(id);
       return this.get(id);
     } finally { this.rechecking = false; }
