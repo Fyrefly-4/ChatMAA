@@ -52,7 +52,7 @@ npm --prefix web run dev
 
 ## 离线验证
 
-Issue #11（2026-09-19，基于 `4bcf381`）：Node 24.19.0／Python 3.12.14 下本地类型检查、构建与 Edge Chromium 浏览器 12 项通过。新增两种停止回执时序的展示检查使用 API 夹具，不表示真实游戏停止已验收。真实模型与游戏本轮均未运行。新基线远端 CI 尚未验证。
+Issue #11（2026-09-19，基于 `4bcf381`）：Node 24.19.0／Python 3.12.14 下本地类型检查、构建与 Edge Chromium 浏览器 12 项通过。新增两种停止回执时序的展示检查使用 API 夹具，不表示真实游戏停止已验收。真实模型与游戏本轮均未运行。`3608547` 的 [Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35379585646) 已在同一精确 Node／Python 基线使用配套 Chromium 通过全部 12 项。
 
 #10 后续修正的最终记录为 `40be2cc`：[Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35372689845) 浏览器 10 项及其他离线检查通过；见[阶段闭环](https://github.com/Fyrefly-4/ChatMAA/issues/10#issuecomment-5733757969)。文末 7 项与 `dccac38` 保留为较早一轮的证据。
 

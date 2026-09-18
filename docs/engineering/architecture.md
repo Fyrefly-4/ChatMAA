@@ -26,7 +26,7 @@
 
 ## 已验证范围
 
-2026-09-19 Issue #11：精确基线同步为 Node 24.19.0／Python 3.12.14；本地 Backend 39、Adapter 25、Edge Chromium 浏览器 12 项及两端类型检查／Web 构建通过。新增检查覆盖停止受理后延迟确认和回执迟到，保留完成量下界与环境待核对。正式 `--web` 在显式回放配置、无模型密钥下启动和 CLI 退出核对通过。未调用真实模型或游戏；新基线远端 Windows CI 及真实整链演示尚未验证。当前实现图与操作排查见 [Demo 入口](demo.md#模块协作与排查)，无职责、进程、API 或数据库调整。
+2026-09-19 Issue #11：精确基线同步为 Node 24.19.0／Python 3.12.14；本地 Backend 39、Adapter 25、Edge Chromium 浏览器 12 项及两端类型检查／Web 构建通过。新增检查覆盖停止受理后延迟确认和回执迟到，保留完成量下界与环境待核对。正式 `--web` 在显式回放配置、无模型密钥下启动和 CLI 退出核对通过。未调用真实模型或游戏；`3608547` 的 [Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35379585646) 已在相同精确版本下通过全部检查（配套 Chromium）；真实整链演示尚未验证。当前实现图与操作排查见 [Demo 入口](demo.md#模块协作与排查)，无职责、进程、API 或数据库调整。
 
 #10 的最终闭环基线为 `40be2cc`，包含摘要回执重试和同标签页启动令牌切换修正，Windows CI 的 Backend 39、Adapter 25、Web 10 项通过，已合并到 `4bcf381`。见[阶段 3 闭环记录](https://github.com/Fyrefly-4/ChatMAA/issues/10#issuecomment-5733757969)与[最终 CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35372689845)。上文 `dccac38` 和下文较早数字均是各轮历史证据。
 
