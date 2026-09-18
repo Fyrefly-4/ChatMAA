@@ -18,3 +18,7 @@ Track issues and specs in this repository's GitHub Issues. See `docs/agents/issu
 ### Domain docs
 
 Use the single-context domain documentation layout. See `docs/agents/domain.md`.
+
+### Documentation maintenance
+
+When creating, updating, or moving project documentation, or when engineering changes affect existing descriptions, read `docs/agents/documentation.md` for ownership, status, and migration checks.

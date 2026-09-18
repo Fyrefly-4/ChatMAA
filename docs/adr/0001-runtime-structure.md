@@ -4,6 +4,8 @@ status: accepted
 
 # TypeScript 模块同进程运行，Python 由应用统一管理启停
 
+定位：持久架构决定；状态沿用 `accepted`，不代表已完整实现。元信息核对：2026-09-18。确认依据：[架构讨论 Q1–Q12](../archive/2026-09-prototype/architecture-discussion.md)；独立确认日期尚未逐项核实，不以本次整理日期代填。正文中的待验证状态按原讨论时间理解，后续验证见有日期的补充及[当前工程说明](../engineering/architecture.md)。
+
 ChatMAA MVP 面向固定的单设备环境，需要清晰展示 Agent Runtime、任务管理与 MAA 接入之间的职责，同时控制启动、通信和排错成本。产品负责人在架构讨论第一轮选择 Q1=A、Q2=A：应用入口、Agent Runtime 和任务管理作为同一个 TypeScript 后端进程内的独立模块；Python 执行端由应用统一管理启停，首版不承诺 TS 后端退出后仍继续执行。
 
 当前放弃把 TS 模块拆成独立服务，以及让 Python 作为支持后端重启期间持续执行的独立服务，以减少进程协调和重新接入的工作。代价是 TS 模块共享进程故障，任务也不具备跨后端退出持续运行的保证；模块化仍需保留明确职责与接口，以支持理解、测试和后续调整。
@@ -12,7 +14,7 @@ ChatMAA MVP 面向固定的单设备环境，需要清晰展示 Agent Runtime、
 
 第三轮选择 Q5=A：退出或失联处理中，停止超过等待期限仍不能确认时，允许尝试强制终止本应用拥有的 Python 执行端。该兜底可能丢失最后反馈，因此必须保留未知部分并核对实际退出情况；不涉及模拟器、游戏或其他 MAA 实例，也不自动扩展到普通页面停止按钮。
 
-启动与通信方案见 [ADR-0002](0002-local-http-adapter.md)。失联判定机制、等待期限以及 TS 已退出时由谁实施强制终止仍待设计与验证；父进程退出不能直接当作执行端停止的证据。该方向不保证 Python 或 MaaCore 卡死时仍能正常停止，停止与恢复须满足 [MVP Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1)，后续设计见 [系统设计草案](../architecture.md)。
+启动与通信方案见 [ADR-0002](0002-local-http-adapter.md)。失联判定机制、等待期限以及 TS 已退出时由谁实施强制终止仍待设计与验证；父进程退出不能直接当作执行端停止的证据。该方向不保证 Python 或 MaaCore 卡死时仍能正常停止，停止与恢复须满足 [MVP Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1)，后续设计见 [当前工程说明](../engineering/architecture.md)。
 
 原型验证补充（2026-09-17）：替身已验证控制权租约、自停超时退出及 TS 终止自有执行端的有限覆盖；TS 已退出且 Python 整体挂起的组合故障无法由两者自行清理。Windows 默认 Node `spawn` 会在 TS 退出时直接结束子进程；原型使用 `detached: true` 留出正常停止窗口，但保留进程引用与统一启停，不引入常驻服务。此处记录验证结果，不新增全面故障兜底承诺；真实 MaaCore 行为与生产参数尚未验证，见 [实验报告](../../prototypes/lifecycle/REPORT.md)。
 

@@ -1,4 +1,8 @@
-# ChatMAA
+# ChatMAA 项目初衷与愿景
+
+定位：愿景与初始设想。原始入库版本：`ffd95a2`；状态标注核对于 2026-09-18。下文的 Phase、MVP、Demo 与 Roadmap 均保留早期语境，不作为当前阶段计划。当前实现见[工程说明](../engineering/architecture.md)。
+
+> 本文描述项目愿景与初始设想，不代表当前已实现能力。首版范围、行为和验收条件以 [MVP Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1) 为准。
 
 ChatMAA 是一个基于 Agent 架构的智能自动化应用。
 
@@ -317,7 +321,9 @@ Agent Runtime
 
 ---
 
-# MVP
+# 初始 MVP 设想
+
+> 本节保留早期设想，正式 MVP 范围与验收要求以 [MVP Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1) 为准。
 
 ## 目标
 
