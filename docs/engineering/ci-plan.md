@@ -86,4 +86,4 @@ npm --prefix web run test:e2e
 
 取舍、原按需方案的历史入口及首轮验证保留在 [实施方案归档](../archive/2026-09-ci/ci-plan.md)。基线 `126808c` 的 [Windows PR CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35347687701) 全部通过，单 job 用时 1 分 20 秒；本次文档整理不代表重新执行这些检查。
 
-2026-09-19 Web 接入：本地 actionlint、Backend／Web 类型检查、构建、Adapter 回归及 Edge Chromium 浏览器离线检查通过。模型替身与正式回放、独立展示夹具分别覆盖；没有使用真实模型或游戏。本分支未创建 PR 或触发 workflow_dispatch；分支推送不匹配现有 main push 条件，远端 Windows job 尚未验证。后续须核对实际运行提交和全部 Web steps，不能用本地结果替代远端结论。
+2026-09-19 Web 接入：本地 actionlint、Backend／Web 类型检查、构建、Adapter 回归及 Edge Chromium 浏览器离线检查通过。模型替身与正式回放、独立展示夹具分别覆盖；上述自动检查不使用真实模型或游戏。`b4b4033` 的 [Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35369557679) 通过，已核对 Web 安装、类型检查、构建和 Chromium 浏览器检查实际执行成功。后续 `96d3769` 的退出收尾修正及 `6f62232` 的测试路径修正已通过本地检查，最终远端复验尚未完成，不能用首轮结果替代最终提交的结论。

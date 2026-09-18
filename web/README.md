@@ -57,4 +57,4 @@ npm --prefix web run test:e2e
 
 本地已有 Edge 时可用 `$env:PLAYWRIGHT_CHANNEL='msedge'` 运行同一套检查；清除变量后恢复配套 Chromium。CI 固定使用配套 Chromium。浏览器离线回放、真实模型回放、真实游戏是不同证据；前者通过不代表后两者通过。
 
-2026-09-19 本地验证：Backend 38 项、Adapter 25 项、浏览器 7 项、类型检查、构建及 actionlint 通过。本地浏览器为 Edge Chromium。另经实际页面发送一次完整指令到真实 DeepSeek，摘要先展示，唯一 submit_task 参数一致，正式回放确认十次完成，宿主及 Python 正常交接退出。模型回复说明受理时快照，独立任务卡随后显示最终结果。未运行真实游戏；远端 Windows CI 尚未运行。
+2026-09-19 本地验证：Backend 39 项、Adapter 25 项、浏览器 7 项、类型检查、构建及 actionlint 通过。本地浏览器为 Edge Chromium。另经实际页面发送一次完整指令到真实 DeepSeek，摘要先展示，唯一 submit_task 参数一致，正式回放确认十次完成，宿主及 Python 正常交接退出。模型回复说明受理时快照，独立任务卡随后显示最终结果。未运行真实游戏；首轮远端 Windows CI（`b4b4033`）通过；后续收尾修正需以最终提交的 CI 结果为准。
