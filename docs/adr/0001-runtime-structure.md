@@ -15,3 +15,5 @@ ChatMAA MVP 面向固定的单设备环境，需要清晰展示 Agent Runtime、
 启动与通信方案见 [ADR-0002](0002-local-http-adapter.md)。失联判定机制、等待期限以及 TS 已退出时由谁实施强制终止仍待设计与验证；父进程退出不能直接当作执行端停止的证据。该方向不保证 Python 或 MaaCore 卡死时仍能正常停止，停止与恢复须满足 [MVP Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1)，后续设计见 [系统设计草案](../architecture.md)。
 
 原型验证补充（2026-09-17）：替身已验证控制权租约、自停超时退出及 TS 终止自有执行端的有限覆盖；TS 已退出且 Python 整体挂起的组合故障无法由两者自行清理。Windows 默认 Node `spawn` 会在 TS 退出时直接结束子进程；原型使用 `detached: true` 留出正常停止窗口，但保留进程引用与统一启停，不引入常驻服务。此处记录验证结果，不新增全面故障兜底承诺；真实 MaaCore 行为与生产参数尚未验证，见 [实验报告](../../prototypes/lifecycle/REPORT.md)。
+
+合并验证补充（2026-09-18）：真实普通停止、停止后的证据交接和两端退出已有现场确认；Python 使用有期限的退出交接阶段，让 TS 保存最终证据后再结束。运行中关闭、交接故障与失联兜底的覆盖仍以离线实验为限，不改变上述监督边界，见 [合并报告](../../prototypes/maa/HTTP-MERGE.md)。

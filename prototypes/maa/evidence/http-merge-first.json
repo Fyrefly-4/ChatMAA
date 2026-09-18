@@ -1,0 +1,286 @@
+{
+  "operation": "http-merge-first",
+  "mode": "live",
+  "source_revision": "8a93824",
+  "core_version": "v6.17.5",
+  "core_sha256": "295a7aa78f3245a2112924231119d81d65f0fc201f364fed8cf1fb1db62d4b9a",
+  "params": {
+    "stage": "1-7",
+    "times": 2,
+    "series": 1,
+    "medicine": 0,
+    "medicine_expire_days": 0,
+    "stone": 0,
+    "client_type": "",
+    "server": "CN",
+    "DrGrandet": false,
+    "report_to_penguin": false,
+    "report_to_yituliu": false
+  },
+  "home_probe": {
+    "home_recognized": true,
+    "matches": [
+      {
+        "rect": [
+          295,
+          390,
+          29,
+          24
+        ],
+        "score": 0.952344,
+        "template": "SwitchTheme@ToggleSettingsMenu.png"
+      }
+    ],
+    "task_chain_completed": true,
+    "errors": [],
+    "runtime_error": null,
+    "callback_error": null,
+    "battle_started": false,
+    "automation_stopped": true,
+    "destroy_returned": true
+  },
+  "native_result": {
+    "interpretation_version": 2,
+    "requested": 2,
+    "observed_successes": 1,
+    "stage_drop_evidence": [
+      {
+        "at": 1789689690.0805514,
+        "stage": {
+          "stageCode": "1-7",
+          "stageId": "main_01-07"
+        },
+        "stars": 3,
+        "cur_times": null,
+        "cycle": 1,
+        "usable": true,
+        "duplicate": false,
+        "basis": "observed single series + start + settlement"
+      }
+    ],
+    "started_cycles": 2,
+    "unsettled_cycles": 1,
+    "task_chain_completed": false,
+    "errors": [],
+    "count_unknown": false,
+    "matches_requested_evidence": false,
+    "onsite_verification": "pending",
+    "reason": "user_stop",
+    "start_accepted": true,
+    "callback_error": null,
+    "runtime_error": null,
+    "stop_error": null,
+    "asst_running_false_observed": true,
+    "destroy_returned": true,
+    "automation_stopped": true,
+    "finished_at": 1789689698.3953583
+  },
+  "native_timeline": [
+    {
+      "kind": "start_returned",
+      "at": 1789689589.952446,
+      "accepted": true
+    },
+    {
+      "kind": "observed_progress",
+      "at": 1789689589.953385,
+      "count": 0,
+      "requested": 2
+    },
+    {
+      "kind": "callback",
+      "at": 1789689606.6227434,
+      "message": 20003,
+      "node": null,
+      "what": "FightTimes",
+      "details": {
+        "series": 1,
+        "times_finished": 0
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 1789689608.363457,
+      "message": 20001,
+      "node": "StartButton2",
+      "what": null,
+      "details": {
+        "exec_times": 1
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 1789689609.5101764,
+      "message": 20002,
+      "node": "StartButton2",
+      "what": null,
+      "details": {
+        "exec_times": 1
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 1789689684.747862,
+      "message": 20001,
+      "node": "EndOfAction",
+      "what": null,
+      "details": {
+        "exec_times": 1
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 1789689690.0805514,
+      "message": 20003,
+      "node": null,
+      "what": "StageDrops",
+      "details": {
+        "stars": 3,
+        "stageCode": "1-7"
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 1789689690.0825527,
+      "message": 20002,
+      "node": "EndOfAction",
+      "what": null,
+      "details": {
+        "exec_times": 1
+      }
+    },
+    {
+      "kind": "observed_progress",
+      "at": 1789689690.1241543,
+      "count": 1,
+      "requested": 2
+    },
+    {
+      "kind": "callback",
+      "at": 1789689694.3148384,
+      "message": 20003,
+      "node": null,
+      "what": "FightTimes",
+      "details": {
+        "series": 1,
+        "times_finished": 1
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 1789689696.0238698,
+      "message": 20001,
+      "node": "StartButton2",
+      "what": null,
+      "details": {
+        "exec_times": 2
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 1789689697.1709213,
+      "message": 20002,
+      "node": "StartButton2",
+      "what": null,
+      "details": {
+        "exec_times": 2
+      }
+    },
+    {
+      "kind": "stop_requested",
+      "at": 1789689697.5731013,
+      "reason": "user_stop"
+    },
+    {
+      "kind": "stop_returned",
+      "at": 1789689697.575424,
+      "accepted": true
+    },
+    {
+      "kind": "automation_not_running",
+      "at": 1789689697.7775877,
+      "reason": "user_stop"
+    },
+    {
+      "kind": "destroy_returned",
+      "at": 1789689698.3933575
+    }
+  ],
+  "resource_related_nodes_observed": [],
+  "business": {
+    "snapshot": {
+      "id": "http-merge-first",
+      "seq": 8,
+      "state": "ended",
+      "confirmed": 1,
+      "certainty": "lower_bound",
+      "device": "needs_check",
+      "reason": "user_stop",
+      "automation_stopped": true,
+      "started_cycles": 2,
+      "unsettled_cycles": 1,
+      "updated_at": 1789689698.4349456,
+      "stop_requested": true
+    },
+    "cursor": 8,
+    "gap": false,
+    "quick_check": "ok",
+    "event_sequences": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ]
+  },
+  "executor": {
+    "snapshot": {
+      "id": "http-merge-first",
+      "seq": 8,
+      "state": "ended",
+      "confirmed": 1,
+      "certainty": "lower_bound",
+      "device": "needs_check",
+      "reason": "user_stop",
+      "automation_stopped": true,
+      "started_cycles": 2,
+      "unsettled_cycles": 1,
+      "updated_at": 1789689698.4349456
+    },
+    "cursor": null,
+    "gap": false,
+    "quick_check": "ok",
+    "event_sequences": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ]
+  },
+  "worker_entries": 1,
+  "checks": {
+    "live_mode": true,
+    "expected_stop_scenario": true,
+    "two_database_results_match": true,
+    "all_evidence_transferred": true,
+    "shutdown_handoff_complete": true,
+    "shutdown_confirmed_by_driver": true,
+    "python_exit_zero": true
+  },
+  "onsite_verification": {
+    "status": "confirmed",
+    "statement": "符合，已确认能手动接管"
+  },
+  "screenshot_review": "停止后截图为黑帧，不作为游戏战斗状态证据；使用回调及现场确认。",
+  "raw_sha256": {
+    "events.jsonl": "3bb56a7eafe498f7cc9b7e2cd4319a6d31417c80b93655d5fe4dda3e121740e2",
+    "result.json": "da1d320c64f8f38e229d6c9e261338867783e9956afbb7e1b3ea9e96d8b8d303"
+  }
+}
