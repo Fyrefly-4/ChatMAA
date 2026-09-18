@@ -108,6 +108,10 @@ await host.tasks.stop(applicationOperationId);
 
 `agent/policy.ts` 完整匹配有限的明确指令，保留次数及资源约束；疑问、缺项、否定、引用、条件与未理解的附加要求不授予执行权限。模型不能自行声明授权。此规则本身不提交任务。
 
+## Agent 模型适配
+
+`agent/provider.ts` 使用 DeepSeek `deepseek-flash` 的 Responses 接口；调用方在本地设置 `DEEPSEEK_API_KEY`。固定模型、完整工具往返和禁用服务端存储通过离线协议测试核对；密钥不传给 Python。当前尚未接入终端入口，普通 Backend 启动不需要模型凭据。
+
 ## 结果怎样理解
 
 HTTP 提供 `POST /tasks`、`GET /tasks/:id`、`POST /tasks/:id/stop`，并提供本地调试用的列表、健康和关闭入口。调用需要 `x-app-token`；拒绝带浏览器 `Origin` 的请求，Web 接入尚未实现。没有实验故障注入或自动核对解锁 API。
