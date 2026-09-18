@@ -1,0 +1,35 @@
+{
+  "requested": 3,
+  "observed_successes": 1,
+  "stage_drop_evidence": [
+    {
+      "at": 1789661228.4584439,
+      "stage": {
+        "stageCode": "1-7",
+        "stageId": "main_01-07"
+      },
+      "stars": 3,
+      "cur_times": null,
+      "cycle": 1,
+      "usable": true,
+      "duplicate": false,
+      "basis": "observed single series + start + settlement"
+    }
+  ],
+  "task_chain_completed": false,
+  "errors": [],
+  "count_unknown": false,
+  "matches_requested_evidence": false,
+  "onsite_verification": "user reported success; first battle screenshot also verified",
+  "reason": "stopped_by_v1_parser_after_one_success",
+  "start_accepted": true,
+  "callback_error": null,
+  "runtime_error": null,
+  "stop_error": null,
+  "asst_running_false_observed": true,
+  "destroy_returned": true,
+  "automation_stopped": true,
+  "finished_at": 1789661229.4598365,
+  "interpretation_version": 2,
+  "reinterpreted_from": "result.json and events.jsonl"
+}

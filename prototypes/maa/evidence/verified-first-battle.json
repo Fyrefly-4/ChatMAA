@@ -1,0 +1,96 @@
+{
+  "source": "verified-three raw callbacks; identifiers and drop item contents omitted",
+  "events": [
+    {
+      "kind": "callback",
+      "at": 1789661145.7775028,
+      "message": 20003,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 1,
+        "details": {
+          "series": 1,
+          "times_finished": 0
+        },
+        "what": "FightTimes"
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 1789661147.4822145,
+      "message": 20001,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 1,
+        "details": {
+          "task": "StartButton2",
+          "exec_times": 1,
+          "action": "ClickSelf",
+          "algorithm": "MatchTemplate"
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 1789661148.6380227,
+      "message": 20002,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 1,
+        "details": {
+          "task": "StartButton2",
+          "exec_times": 1,
+          "action": "ClickSelf",
+          "algorithm": "MatchTemplate"
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 1789661223.252158,
+      "message": 20001,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 1,
+        "details": {
+          "task": "EndOfAction",
+          "exec_times": 1,
+          "action": "DoNothing",
+          "algorithm": "MatchTemplate"
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 1789661228.4584439,
+      "message": 20003,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 1,
+        "details": {
+          "stage": {
+            "stageCode": "1-7",
+            "stageId": "main_01-07"
+          },
+          "stars": 3
+        },
+        "what": "StageDrops"
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 1789661228.4614434,
+      "message": 20002,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 1,
+        "details": {
+          "task": "EndOfAction",
+          "exec_times": 1,
+          "action": "DoNothing",
+          "algorithm": "MatchTemplate"
+        }
+      }
+    }
+  ]
+}

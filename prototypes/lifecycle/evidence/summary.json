@@ -1,0 +1,681 @@
+{
+  "runId": "2026-09-17T15-11-17.705Z",
+  "platform": "win32",
+  "os_release": "10.0.26200",
+  "arch": "x64",
+  "node": "v24.18.0",
+  "node_sqlite": "3.53.1",
+  "python": {
+    "python": "3.12.14",
+    "sqlite": "3.53.1",
+    "fastapi": "0.141.1",
+    "uvicorn": "0.53.0"
+  },
+  "dependencies": {
+    "fastify": "5.12.5"
+  },
+  "config": {
+    "lease_ms": 1500,
+    "stop_deadline_ms": 900,
+    "poll_ms": 150,
+    "http_timeout_ms": 450
+  },
+  "real_maa_invoked": false,
+  "meaning": "passed 表示该实验的断言成立；known_gap 和 comparison 实验验证限制，不表示已经提供相应故障兜底。",
+  "experiments": [
+    {
+      "name": "01_normal_and_stop",
+      "status": "passed",
+      "duration_ms": 2578,
+      "start_observations": 2,
+      "success_observations": 3,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 5,
+          "gap": false,
+          "seq": 5,
+          "state": "ended",
+          "confirmed": 1,
+          "certainty": "exact",
+          "device": "ready",
+          "reason": "stopped",
+          "updated_at": 1789657879.1273513
+        },
+        {
+          "database": 0,
+          "id": "next",
+          "cursor": 5,
+          "gap": false,
+          "seq": 5,
+          "state": "ended",
+          "confirmed": 2,
+          "certainty": "exact",
+          "device": "ready",
+          "reason": "target_reached",
+          "updated_at": 1789657879.751296
+        }
+      ]
+    },
+    {
+      "name": "02_identity_concurrency_and_validation",
+      "status": "passed",
+      "duration_ms": 1536,
+      "start_observations": 1,
+      "success_observations": 1,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 2,
+          "gap": false,
+          "seq": 2,
+          "state": "unknown",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "executor_exited",
+          "updated_at": 1789657881.0331542
+        }
+      ]
+    },
+    {
+      "name": "03_lost_submission_response",
+      "status": "passed",
+      "duration_ms": 1951,
+      "start_observations": 1,
+      "success_observations": 3,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 4,
+          "gap": false,
+          "seq": 4,
+          "state": "unknown",
+          "confirmed": 2,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "executor_exited",
+          "updated_at": 1789657882.9290874
+        }
+      ]
+    },
+    {
+      "name": "04_second_instance",
+      "status": "passed",
+      "duration_ms": 2690,
+      "start_observations": 1,
+      "success_observations": 7,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 8,
+          "gap": false,
+          "seq": 8,
+          "state": "unknown",
+          "confirmed": 6,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "executor_exited",
+          "updated_at": 1789657885.655029
+        }
+      ]
+    },
+    {
+      "name": "05_duplicate_events",
+      "status": "passed",
+      "duration_ms": 1708,
+      "start_observations": 1,
+      "success_observations": 2,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 5,
+          "gap": false,
+          "seq": 5,
+          "state": "ended",
+          "confirmed": 2,
+          "certainty": "exact",
+          "device": "ready",
+          "reason": "target_reached",
+          "updated_at": 1789657887.6041179
+        }
+      ]
+    },
+    {
+      "name": "06_event_gap_and_new_explicit_task",
+      "status": "passed",
+      "duration_ms": 1830,
+      "start_observations": 2,
+      "success_observations": 3,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 5,
+          "gap": true,
+          "seq": 5,
+          "state": "ended",
+          "confirmed": 2,
+          "certainty": "lower_bound",
+          "device": "ready",
+          "reason": "target_reached",
+          "updated_at": 1789657889.2527432
+        },
+        {
+          "database": 0,
+          "id": "new-explicit",
+          "cursor": 4,
+          "gap": true,
+          "seq": 4,
+          "state": "ended",
+          "confirmed": 1,
+          "certainty": "lower_bound",
+          "device": "ready",
+          "reason": "target_reached",
+          "updated_at": 1789657889.529001
+        }
+      ]
+    },
+    {
+      "name": "07_python_crash_before_accept",
+      "status": "passed",
+      "duration_ms": 2368,
+      "start_observations": 1,
+      "success_observations": 1,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 0,
+          "gap": false,
+          "seq": 0,
+          "state": "ended",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "ready",
+          "reason": "fake_environment_checked_no_record"
+        },
+        {
+          "database": 0,
+          "id": "explicit-new",
+          "cursor": 4,
+          "gap": false,
+          "seq": 4,
+          "state": "ended",
+          "confirmed": 1,
+          "certainty": "exact",
+          "device": "ready",
+          "reason": "target_reached",
+          "updated_at": 1789657891.9445477
+        }
+      ]
+    },
+    {
+      "name": "07_python_crash_after_accept",
+      "status": "passed",
+      "duration_ms": 2457,
+      "start_observations": 1,
+      "success_observations": 1,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 3,
+          "gap": false,
+          "seq": 3,
+          "state": "ended",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "ready",
+          "reason": "reconciled_unknown_count",
+          "updated_at": 1789657894.0302572
+        },
+        {
+          "database": 0,
+          "id": "explicit-new",
+          "cursor": 4,
+          "gap": false,
+          "seq": 4,
+          "state": "ended",
+          "confirmed": 1,
+          "certainty": "exact",
+          "device": "ready",
+          "reason": "target_reached",
+          "updated_at": 1789657894.3069737
+        }
+      ]
+    },
+    {
+      "name": "07_python_crash_before_start",
+      "status": "passed",
+      "duration_ms": 2342,
+      "start_observations": 1,
+      "success_observations": 1,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 3,
+          "gap": false,
+          "seq": 3,
+          "state": "ended",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "ready",
+          "reason": "reconciled_unknown_count",
+          "updated_at": 1789657896.5107145
+        },
+        {
+          "database": 0,
+          "id": "explicit-new",
+          "cursor": 4,
+          "gap": false,
+          "seq": 4,
+          "state": "ended",
+          "confirmed": 1,
+          "certainty": "exact",
+          "device": "ready",
+          "reason": "target_reached",
+          "updated_at": 1789657896.8188386
+        }
+      ]
+    },
+    {
+      "name": "07_python_crash_after_start",
+      "status": "passed",
+      "duration_ms": 2360,
+      "start_observations": 2,
+      "success_observations": 1,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 3,
+          "gap": false,
+          "seq": 3,
+          "state": "ended",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "ready",
+          "reason": "reconciled_unknown_count",
+          "updated_at": 1789657898.805872
+        },
+        {
+          "database": 0,
+          "id": "explicit-new",
+          "cursor": 4,
+          "gap": false,
+          "seq": 4,
+          "state": "ended",
+          "confirmed": 1,
+          "certainty": "exact",
+          "device": "ready",
+          "reason": "target_reached",
+          "updated_at": 1789657899.0980885
+        }
+      ]
+    },
+    {
+      "name": "07_python_crash_before_success_record",
+      "status": "passed",
+      "duration_ms": 2505,
+      "start_observations": 2,
+      "success_observations": 2,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 4,
+          "gap": false,
+          "seq": 4,
+          "state": "ended",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "ready",
+          "reason": "reconciled_unknown_count",
+          "updated_at": 1789657901.3698354
+        },
+        {
+          "database": 0,
+          "id": "explicit-new",
+          "cursor": 4,
+          "gap": false,
+          "seq": 4,
+          "state": "ended",
+          "confirmed": 1,
+          "certainty": "exact",
+          "device": "ready",
+          "reason": "target_reached",
+          "updated_at": 1789657901.6700864
+        }
+      ]
+    },
+    {
+      "name": "07_python_crash_after_success_record",
+      "status": "passed",
+      "duration_ms": 2688,
+      "start_observations": 2,
+      "success_observations": 2,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 5,
+          "gap": false,
+          "seq": 5,
+          "state": "ended",
+          "confirmed": 1,
+          "certainty": "lower_bound",
+          "device": "ready",
+          "reason": "reconciled_unknown_count",
+          "updated_at": 1789657903.9412565
+        },
+        {
+          "database": 0,
+          "id": "explicit-new",
+          "cursor": 4,
+          "gap": false,
+          "seq": 4,
+          "state": "ended",
+          "confirmed": 1,
+          "certainty": "exact",
+          "device": "ready",
+          "reason": "target_reached",
+          "updated_at": 1789657904.2038558
+        }
+      ]
+    },
+    {
+      "name": "08_ts_crash_after_intent",
+      "status": "passed",
+      "duration_ms": 3133,
+      "start_observations": 0,
+      "success_observations": 0,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 0,
+          "gap": false,
+          "seq": 0,
+          "state": "ended",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "ready",
+          "reason": "fake_environment_checked_no_record"
+        }
+      ]
+    },
+    {
+      "name": "08_ts_crash_before_projection_commit",
+      "status": "passed",
+      "duration_ms": 4064,
+      "start_observations": 1,
+      "success_observations": 9,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 13,
+          "gap": false,
+          "seq": 13,
+          "state": "ended",
+          "confirmed": 9,
+          "certainty": "exact",
+          "device": "ready",
+          "reason": "stopped",
+          "updated_at": 1789657910.792651
+        }
+      ]
+    },
+    {
+      "name": "08_ts_crash_after_projection_commit",
+      "status": "passed",
+      "duration_ms": 4099,
+      "start_observations": 1,
+      "success_observations": 9,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 13,
+          "gap": false,
+          "seq": 13,
+          "state": "ended",
+          "confirmed": 9,
+          "certainty": "exact",
+          "device": "ready",
+          "reason": "stopped",
+          "updated_at": 1789657914.8690615
+        }
+      ]
+    },
+    {
+      "name": "09_ts_hung_lease_expires",
+      "status": "passed",
+      "duration_ms": 2942,
+      "start_observations": 1,
+      "success_observations": 7,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 1,
+          "gap": false,
+          "seq": 1,
+          "state": "unknown",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "executor_exited",
+          "updated_at": 1789657916.7451427
+        }
+      ]
+    },
+    {
+      "name": "10_no_progress_is_not_control_loss",
+      "status": "passed",
+      "duration_ms": 4031,
+      "start_observations": 1,
+      "success_observations": 0,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 2,
+          "gap": false,
+          "seq": 2,
+          "state": "unknown",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "executor_exited",
+          "updated_at": 1789657919.7067003
+        }
+      ]
+    },
+    {
+      "name": "11_stop_blocked_parent_alive",
+      "status": "passed",
+      "duration_ms": 3221,
+      "start_observations": 1,
+      "success_observations": 11,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 8,
+          "gap": false,
+          "seq": 8,
+          "state": "unknown",
+          "confirmed": 5,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "executor_exited",
+          "updated_at": 1789657924.6871388
+        }
+      ]
+    },
+    {
+      "name": "12_stop_blocked_parent_dead",
+      "status": "passed",
+      "duration_ms": 3271,
+      "start_observations": 1,
+      "success_observations": 12,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 1,
+          "gap": false,
+          "seq": 1,
+          "state": "accepted",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "occupied",
+          "reason": null,
+          "updated_at": 1789657926.955863
+        }
+      ]
+    },
+    {
+      "name": "13_whole_python_hung_parent_alive",
+      "status": "passed",
+      "duration_ms": 3706,
+      "start_observations": 1,
+      "success_observations": 0,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 2,
+          "gap": false,
+          "seq": 2,
+          "state": "unknown",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "executor_exited",
+          "updated_at": 1789657930.2351804
+        }
+      ]
+    },
+    {
+      "name": "14_both_unresponsive_known_gap",
+      "status": "passed",
+      "duration_ms": 5326,
+      "limitation": "TS 已死且整个 Python 挂起时，双进程结构不能保证终止；实验驱动恢复它才可清理。",
+      "start_observations": 1,
+      "success_observations": 1,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 1,
+          "gap": false,
+          "seq": 1,
+          "state": "accepted",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "occupied",
+          "reason": null,
+          "updated_at": 1789657933.9326596
+        }
+      ]
+    },
+    {
+      "name": "15_python_storage_failure_stop_still_reaches",
+      "status": "passed",
+      "duration_ms": 2072,
+      "start_observations": 1,
+      "success_observations": 0,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 2,
+          "gap": false,
+          "seq": 2,
+          "state": "unknown",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "needs_check",
+          "reason": "executor_exited",
+          "updated_at": 1789657939.2634292
+        }
+      ]
+    },
+    {
+      "name": "16_ts_storage_failure_stop_still_reaches",
+      "status": "passed",
+      "duration_ms": 1527,
+      "start_observations": 1,
+      "success_observations": 0,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 1,
+          "gap": false,
+          "seq": 1,
+          "state": "accepted",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "occupied",
+          "reason": null,
+          "updated_at": 1789657941.3398108
+        }
+      ]
+    },
+    {
+      "name": "17_failure_does_not_retry",
+      "status": "passed",
+      "duration_ms": 2149,
+      "start_observations": 1,
+      "success_observations": 2,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 5,
+          "gap": false,
+          "seq": 5,
+          "state": "ended",
+          "confirmed": 2,
+          "certainty": "exact",
+          "device": "ready",
+          "reason": "simulated_failure",
+          "updated_at": 1789657943.272269
+        }
+      ]
+    },
+    {
+      "name": "18_windows_default_spawn_comparison",
+      "status": "passed",
+      "duration_ms": 987,
+      "limitation": "默认 spawn 的 Windows Job 在 TS 退出时立即终止子进程；不能把这种清理当作先正常停止。",
+      "start_observations": 1,
+      "success_observations": 0,
+      "final_tasks": [
+        {
+          "database": 0,
+          "id": "op",
+          "cursor": 1,
+          "gap": false,
+          "seq": 1,
+          "state": "accepted",
+          "confirmed": 0,
+          "certainty": "lower_bound",
+          "device": "occupied",
+          "reason": null,
+          "updated_at": 1789657945.0299819
+        }
+      ]
+    }
+  ]
+}

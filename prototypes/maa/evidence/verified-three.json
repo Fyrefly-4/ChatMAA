@@ -1,0 +1,188 @@
+{
+  "run": "verified-three",
+  "continues": null,
+  "local_date": "2026-09-18",
+  "core_version": "v6.17.5",
+  "core_sha256": "295a7aa78f3245a2112924231119d81d65f0fc201f364fed8cf1fb1db62d4b9a",
+  "params": {
+    "stage": "1-7",
+    "times": 3,
+    "series": 1,
+    "medicine": 0,
+    "medicine_expire_days": 0,
+    "stone": 0,
+    "client_type": "",
+    "server": "CN",
+    "DrGrandet": false,
+    "report_to_penguin": false,
+    "report_to_yituliu": false
+  },
+  "result_source": "result-reinterpreted.json",
+  "selected_events": [
+    {
+      "elapsed_seconds": 0.0,
+      "kind": "host_runtime",
+      "dpi_awareness_before": 0,
+      "dpi_awareness_after": 1,
+      "system_dpi": 120,
+      "resource_layers": [
+        "base",
+        "cache"
+      ]
+    },
+    {
+      "elapsed_seconds": 0.156,
+      "kind": "start_returned",
+      "accepted": true
+    },
+    {
+      "elapsed_seconds": 0.156,
+      "kind": "callback",
+      "message": 10001,
+      "taskid": 1,
+      "taskchain": "Fight",
+      "details": {}
+    },
+    {
+      "elapsed_seconds": 24.328,
+      "kind": "callback",
+      "message": 20003,
+      "taskid": 1,
+      "taskchain": "Fight",
+      "what": "FightTimes",
+      "details": {
+        "series": 1,
+        "times_finished": 0
+      }
+    },
+    {
+      "elapsed_seconds": 26.031,
+      "kind": "callback",
+      "message": 20001,
+      "taskid": 1,
+      "taskchain": "Fight",
+      "task": "StartButton2",
+      "details": {
+        "exec_times": 1
+      }
+    },
+    {
+      "elapsed_seconds": 27.187,
+      "kind": "callback",
+      "message": 20002,
+      "taskid": 1,
+      "taskchain": "Fight",
+      "task": "StartButton2",
+      "details": {
+        "exec_times": 1
+      }
+    },
+    {
+      "elapsed_seconds": 101.797,
+      "kind": "callback",
+      "message": 20001,
+      "taskid": 1,
+      "taskchain": "Fight",
+      "task": "EndOfAction",
+      "details": {
+        "exec_times": 1
+      }
+    },
+    {
+      "elapsed_seconds": 107.015,
+      "kind": "callback",
+      "message": 20003,
+      "taskid": 1,
+      "taskchain": "Fight",
+      "what": "StageDrops",
+      "details": {
+        "stage": {
+          "stageCode": "1-7",
+          "stageId": "main_01-07"
+        },
+        "stars": 3
+      }
+    },
+    {
+      "elapsed_seconds": 107.015,
+      "kind": "callback",
+      "message": 20002,
+      "taskid": 1,
+      "taskchain": "Fight",
+      "task": "EndOfAction",
+      "details": {
+        "exec_times": 1
+      }
+    },
+    {
+      "elapsed_seconds": 107.109,
+      "kind": "stop_requested",
+      "reason": "execution_or_evidence_error"
+    },
+    {
+      "elapsed_seconds": 107.109,
+      "kind": "stop_returned",
+      "accepted": true
+    },
+    {
+      "elapsed_seconds": 107.531,
+      "kind": "callback",
+      "message": 10004,
+      "taskid": 1,
+      "taskchain": "Fight",
+      "details": {}
+    },
+    {
+      "elapsed_seconds": 107.609,
+      "kind": "automation_not_running",
+      "reason": "execution_or_evidence_error"
+    },
+    {
+      "elapsed_seconds": 107.984,
+      "kind": "callback",
+      "message": 5,
+      "taskid": null,
+      "taskchain": null,
+      "details": {}
+    },
+    {
+      "elapsed_seconds": 108.015,
+      "kind": "destroy_returned"
+    }
+  ],
+  "result": {
+    "requested": 3,
+    "observed_successes": 1,
+    "stage_drop_evidence": [
+      {
+        "at": 1789661228.4584439,
+        "stage": {
+          "stageCode": "1-7",
+          "stageId": "main_01-07"
+        },
+        "stars": 3,
+        "cur_times": null,
+        "cycle": 1,
+        "usable": true,
+        "duplicate": false,
+        "basis": "observed single series + start + settlement"
+      }
+    ],
+    "task_chain_completed": false,
+    "errors": [],
+    "count_unknown": false,
+    "matches_requested_evidence": false,
+    "onsite_verification": "user reported success; first battle screenshot also verified",
+    "reason": "stopped_by_v1_parser_after_one_success",
+    "start_accepted": true,
+    "callback_error": null,
+    "runtime_error": null,
+    "stop_error": null,
+    "asst_running_false_observed": true,
+    "destroy_returned": true,
+    "automation_stopped": true,
+    "finished_at": 1789661229.4598365,
+    "interpretation_version": 2,
+    "reinterpreted_from": "result.json and events.jsonl"
+  }
+}
