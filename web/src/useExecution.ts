@@ -24,6 +24,7 @@ export function useExecution() {
   const stopLock = useRef(false);
   const generation = useRef(0);
   const taskValue = useRef<TaskView | undefined>(undefined);
+  const receiptNotice = useRef("");
   function selectTask(value: TaskView) {
     if (value.state === "rejected") return;
     const old = taskValue.current;
@@ -68,6 +69,13 @@ export function useExecution() {
           );
           if (alive && id === requestId.current) {
             setRequest(value);
+            if (
+              receiptNotice.current === id &&
+              (!value.pendingSummary || value.record.status !== "running")
+            ) {
+              receiptNotice.current = "";
+              setNotice("");
+            }
             if (value.task && value.task.id !== taskId.current)
               selectTask(value.task);
           }
@@ -140,15 +148,38 @@ export function useExecution() {
       setSending(false);
     }
   }
-  async function displayed(id: string, receipt: Receipt) {
-    if (eligible.current !== id) return;
+  async function displayed(
+    id: string,
+    receipt: Receipt,
+  ): Promise<"done" | "retry"> {
+    if (eligible.current !== id) return "done";
     try {
+      // Reconcile before retry: an accepted receipt can have lost its HTTP response.
+      const current = await api<RequestView>(
+        `/requests/${encodeURIComponent(id)}`,
+      );
+      if (
+        eligible.current !== id ||
+        current.record.status !== "running" ||
+        current.pendingSummary?.receiptId !== receipt.receiptId ||
+        current.pendingSummary.operationId !== receipt.operationId
+      )
+        return "done";
+      if (document.visibilityState !== "visible") return "retry";
       await api(
         `/requests/${encodeURIComponent(id)}/summary-displayed`,
         receipt,
       );
+      if (eligible.current === id) {
+        receiptNotice.current = "";
+        setNotice("");
+      }
+      return "done";
     } catch (error) {
+      if (eligible.current !== id) return "done";
+      receiptNotice.current = id;
       setNotice(errorText(error));
+      return error instanceof ApiError && error.status < 500 ? "done" : "retry";
     }
   }
   async function stop() {

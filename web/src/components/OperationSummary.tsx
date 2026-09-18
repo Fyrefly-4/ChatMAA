@@ -12,7 +12,7 @@ export function OperationSummary({
   requestId: string;
   receipt: Receipt | null;
   eligible: boolean;
-  displayed: (id: string, receipt: Receipt) => Promise<void>;
+  displayed: (id: string, receipt: Receipt) => Promise<"done" | "retry">;
 }) {
   const element = useRef<HTMLElement>(null);
   const receiptId = receipt?.receiptId;
@@ -22,8 +22,19 @@ export function OperationSummary({
     let frame = 0;
     let cancelled = false;
     let sent = false;
+    let inFlight = false;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const deadline = Date.now() + 60000;
     function schedule() {
-      if (document.visibilityState !== "visible" || cancelled || sent) return;
+      if (
+        document.visibilityState !== "visible" ||
+        cancelled ||
+        sent ||
+        inFlight ||
+        Date.now() >= deadline
+      )
+        return;
+      clearTimeout(retry);
       cancelAnimationFrame(frame);
       element.current?.scrollIntoView({ block: "nearest" });
       // Two frames give the committed visible summary a paint opportunity.
@@ -38,10 +49,15 @@ export function OperationSummary({
             bounds.top >= innerHeight
           )
             return;
-          sent = true;
+          inFlight = true;
           void displayed(requestId, {
             receiptId: receiptId!,
             operationId: operationId!,
+          }).then((result) => {
+            inFlight = false;
+            if (cancelled) return;
+            sent = result === "done";
+            if (!sent) retry = setTimeout(schedule, 1000);
           });
         });
       });
@@ -51,9 +67,10 @@ export function OperationSummary({
     return () => {
       cancelled = true;
       cancelAnimationFrame(frame);
+      clearTimeout(retry);
       document.removeEventListener("visibilitychange", schedule);
     };
-    // Only a new receipt may schedule another acknowledgement, not an unrelated render.
+    // Retry only this receipt; polling removes it when accepted or expired.
   }, [requestId, receiptId, operationId, eligible]);
   return (
     <section ref={element} className="summary" aria-label="操作摘要">
