@@ -15,14 +15,14 @@ from contract import fight_params, MAX_COUNT, summarize
 from core import ResourceLoadError
 from native import execute_native
 from readiness import fresh, interpret_probe, write_readiness_overlay
-from types import SimpleNamespace
-from settings import Settings
+from service import Controller, Submission
+from settings import Settings, DeviceLocks
 
 FIXTURE = json.loads((Path(__file__).resolve().parents[1] / "fixtures/verified-first-battle.json").read_text(encoding="utf-8"))["events"]
 
 
 def request(count=10, identity="op"):
-    return SimpleNamespace(model_dump=lambda: {"id": identity, "params": {"stage": "1-7", "count": count, "medicine": 0, "premium": 0}})
+    return Submission(id=identity, params={"stage": "1-7", "count": count, "medicine": 0, "premium": 0})
 
 
 class NativeHarness:
@@ -160,7 +160,16 @@ class ExecutionTest(unittest.TestCase):
                 self.assertTrue(result["environment"]["error"])
                 saved = json.loads((Path(tmp) / "battle/result.json").read_text())
                 self.assertEqual(saved["observed_successes"], 1)
-
+                control = Controller(settings, worker=lambda *a: None)
+                control.submit(request(count=1))
+                control.inbox.put(("op", "finished", result)); control.drain()
+                view = control.read("op")
+                self.assertEqual(view["confirmed"], 1)
+                self.assertEqual(view["certainty"], "exact")
+                self.assertEqual(view["state"], "ended" if load_failure else "unknown")
+                self.assertEqual(view["device"], "needs_check")
+                with self.assertRaises(Exception): control.submit(request(identity="blocked"))
+                control.db.close()
 
     def test_home_probe_uses_existing_resource_and_missing_template_prevents_fight(self):
         def missing_template(output):
@@ -186,6 +195,20 @@ class ExecutionTest(unittest.TestCase):
 
 
 
+    def test_parameters_and_evidence(self):
+        for count in [0, -1, True, "10", 1.2, MAX_COUNT + 1]:
+            with self.assertRaises(ValueError):
+                fight_params(count)
+            with self.assertRaises(ValueError):
+                request(count)
+        self.assertEqual(fight_params(10)["times"], 10)
+        self.assertEqual(fight_params(MAX_COUNT)["times"], MAX_COUNT)
+        self.assertEqual(summarize(FIXTURE + FIXTURE, 1, 10)["observed_successes"], 1)
+        self.assertEqual(summarize(FIXTURE, 2, 10)["observed_successes"], 0)
+        incomplete = [e for e in FIXTURE if e["details"].get("what") != "FightTimes"]
+        self.assertTrue(summarize(incomplete, 1, 10)["count_unknown"])
+        self.assertFalse(summarize([{"kind": "callback", "message": 10002,
+                                     "details": {"taskchain": "Fight", "taskid": 1}}], 1, 10)["matches_requested_evidence"])
 
     def test_recognition_is_not_navigation_and_requires_current_matching_evidence(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -239,8 +262,59 @@ class ExecutionTest(unittest.TestCase):
             self.assertFalse(result["environment"]["ready"])
             self.assertEqual(harness.active_cores, 0)
 
+    def test_controller_storage_failure_still_signals_worker_and_restart_is_uncertain(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            settings = Settings("maa-replay", Path(tmp), "controller", "token")
+            control = Controller(settings, worker=lambda *args: None)
+            try:
+                control.submit(request())
+                stop = control.active["op"]["stop"]
+                control.db.execute("PRAGMA query_only=ON")
+                control.request_stop("op")
+                self.assertTrue(stop.is_set())
+                self.assertTrue(control.storage_failed)
+                self.assertEqual(control.query("op")["snapshot"]["state"], "unknown")
+            finally:
+                control.db.close()
+            recovered = Controller(settings, worker=lambda *args: self.fail("must not restart worker"))
+            try:
+                self.assertEqual(recovered.read("op")["state"], "unknown")
+                with self.assertRaises(Exception):
+                    recovered.submit(request(identity="new"))
+            finally:
+                recovered.db.close()
 
+    def test_device_lock_is_exclusive(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "device.lock"
+            first = DeviceLocks([path])
+            try:
+                with self.assertRaises(OSError):
+                    DeviceLocks([path])
+            finally:
+                first.close()
+            second = DeviceLocks([path])
+            second.close()
 
+    def test_formal_and_preserved_cli_share_a_lock_without_loading_game_code(self):
+        if sys.platform != "win32":
+            self.skipTest("historical CLI is Windows-only")
+        import msvcrt
+        with tempfile.TemporaryDirectory() as tmp, patch("settings.REPOSITORY", Path(tmp)):
+            legacy = Path(tmp) / "prototypes/maa"
+            legacy.mkdir(parents=True)
+            settings = Settings("maa-live", Path(tmp) / ".artifacts/live", "controller", "token")
+            paths = settings.lock_paths()
+            self.assertEqual(paths, [Path(tmp) / ".artifacts/device.lock", legacy / ".artifacts/device.lock"])
+            held = DeviceLocks(paths)
+            try:
+                # Same path and byte-range algorithm as the preserved CLI; no native import/execution.
+                with paths[1].open("a+b") as stream:
+                    stream.seek(0)
+                    with self.assertRaises(OSError):
+                        msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+            finally:
+                held.close()
 
 
 if __name__ == "__main__":

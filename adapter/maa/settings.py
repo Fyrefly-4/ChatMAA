@@ -50,3 +50,31 @@ class Settings:
         if legacy.is_dir():
             paths.append(legacy / ".artifacts/device.lock")
         return paths
+
+
+class DeviceLocks:
+    def __init__(self, paths):
+        self.files = []
+        try:
+            for path in paths:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                stream = path.open("a+b")
+                self.files.append(stream)
+                if os.fstat(stream.fileno()).st_size == 0:
+                    stream.write(b"0")
+                    stream.flush()
+                stream.seek(0)
+                if sys.platform == "win32":
+                    import msvcrt
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BaseException:
+            self.close()
+            raise
+
+    def close(self):
+        for stream in self.files:
+            stream.close()
+        self.files.clear()
