@@ -1,6 +1,6 @@
 # CI 使用与接入
 
-最近核对：2026-09-18；配置基线：`126808c`。本文是日常运行和新增检查的维护入口；路径沿用 `ci-plan.md`，实施过程见 [归档方案](../archive/2026-09-ci/ci-plan.md)。
+最近核对：2026-09-19；原配置基线：`126808c`，本次在 Issue #10 分支增加 Web 检查。本文是日常运行和新增检查的维护入口；路径沿用 `ci-plan.md`，实施过程见 [归档方案](../archive/2026-09-ci/ci-plan.md)。
 
 ## 当前如何运行
 
@@ -12,7 +12,7 @@
 | `main` push | 检查合并后的状态 |
 | 手动 `workflow_dispatch` | 无参数运行全套；workflow 进入默认分支后可从 Actions 页面选择分支运行 |
 
-同一 PR 的新运行取消旧运行；main 和手动运行各自使用 run ID，不互相取消。Node、Python 和两端依赖各准备一次，然后依次执行 Backend 类型检查、Backend 集成测试、Adapter 单元测试。
+同一 PR 的新运行取消旧运行；main 和手动运行各自使用 run ID，不互相取消。Node、Python 和两端依赖各准备一次，增加 Web 依赖及配套 Chromium 准备，然后执行 Backend 类型检查、Backend 集成测试、Adapter 单元测试、Web 类型检查、构建和浏览器检查。Web 准备失败不阻止已准备好的 Backend／Adapter 检查；Web 构建失败时不运行浏览器检查。
 
 环境准备失败时跳过检查；准备成功后，一项检查失败仍继续后续检查，除非运行被取消。任何检查失败都使 job 失败。排错时查看对应 step 的日志，可在 Actions 页面重跑失败的 job；由于只有一个 job，重跑会重新准备环境并执行全套检查。
 
@@ -37,12 +37,17 @@ $pipVersion = (Get-Content .pip-version -Raw).Trim()
 
 Backend 集成测试也会启动 Python Adapter，不能省略 Python 准备。已有 venv 应与指定 Python 版本一致。CI 的环境准备实现见 [setup-node](../../.github/actions/setup-node/action.yml) 和 [setup-python](../../.github/actions/setup-python/action.yml)。
 
-分别执行三项检查，并检查各自的退出状态：
+另安装 Web 依赖和浏览器，再执行各项检查，并检查各自的退出状态：
 
 ```powershell
+npm --prefix web ci --registry=https://registry.npmjs.org
+node web/node_modules/playwright/cli.js install chromium
 npm --prefix backend run check
 npm --prefix backend test
 & ./adapter/maa/.venv/Scripts/python.exe -m unittest discover -s adapter/maa/tests -v
+npm --prefix web run check
+npm --prefix web run build
+npm --prefix web run test:e2e
 ```
 
 ## 后续如何接入
@@ -80,3 +85,5 @@ npm --prefix backend test
 ## 历史与证据
 
 取舍、原按需方案的历史入口及首轮验证保留在 [实施方案归档](../archive/2026-09-ci/ci-plan.md)。基线 `126808c` 的 [Windows PR CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35347687701) 全部通过，单 job 用时 1 分 20 秒；本次文档整理不代表重新执行这些检查。
+
+2026-09-19 Web 接入：本地 actionlint、Backend／Web 类型检查、构建、Adapter 回归及 Edge Chromium 浏览器离线检查通过。模型替身与正式回放、独立展示夹具分别覆盖；没有使用真实模型或游戏。本分支未创建 PR 或触发 workflow_dispatch；分支推送不匹配现有 main push 条件，远端 Windows job 尚未验证。后续须核对实际运行提交和全部 Web steps，不能用本地结果替代远端结论。

@@ -27,6 +27,12 @@ jobs:
         id: node
       - uses: ./.github/actions/setup-python
         id: python
+      - name: Web 依赖与浏览器
+        id: web
+        run: |
+          npm --prefix web ci --registry=https://registry.npmjs.org
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node web/node_modules/playwright/cli.js install chromium
       # Continue after a failed check, but never after failed setup or cancellation.
       - name: Backend 类型检查
         if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.python.outcome == 'success' }}
@@ -37,3 +43,13 @@ jobs:
       - name: Adapter 单元测试
         if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.python.outcome == 'success' }}
         run: '& ./adapter/maa/.venv/Scripts/python.exe -m unittest discover -s adapter/maa/tests -v'
+      - name: Web 类型检查
+        if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.web.outcome == 'success' }}
+        run: npm --prefix web run check
+      - name: Web 构建
+        id: web-build
+        if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.web.outcome == 'success' }}
+        run: npm --prefix web run build
+      - name: Web 浏览器检查
+        if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.python.outcome == 'success' && steps.web.outcome == 'success' && steps.web-build.outcome == 'success' }}
+        run: npm --prefix web run test:e2e

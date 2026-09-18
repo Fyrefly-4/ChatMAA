@@ -2,7 +2,7 @@
 
 定位：当前工程说明，持续维护。最近核对：2026-09-18；本次实现从 `273055d` 建立正式 Backend／Adapter，原型源码保留。本次能力历史从复用层逐步建立两端服务与验证支持。离线、native 边界替身与实机结果分别说明；重整历史没有重新操作游戏。
 
-目前已有独立的确定参数执行入口及常驻 Backend 内的 Agent 调试链路，尚无 Web 聊天应用。2026-09-18 Agent 实现基于 `be62348`：模型替身与正式回放集成已验证，真实 DeepSeek 四个固定样例的回放调用及回复审阅已通过。运行与检查见[Backend 说明](../../backend/README.md)，真实环境判据与限制见[Adapter 说明](../../adapter/maa/README.md)。本文区分目标职责、已有实现与未验证部分；不安排阶段授权。原型结论继续见[历史审阅总结](../archive/2026-09-prototype/prototype-review.md)。
+目前已有独立的确定参数执行入口、常驻 Backend 内的 Agent 调试链路和最小 Web 执行台。2026-09-18 Agent 实现基于 `be62348`：模型替身与正式回放集成已验证，真实 DeepSeek 四个固定样例的回放调用及回复审阅已通过。运行与检查见[Backend 说明](../../backend/README.md)，真实环境判据与限制见[Adapter 说明](../../adapter/maa/README.md)。本文区分目标职责、已有实现与未验证部分；不安排阶段授权。原型结论继续见[历史审阅总结](../archive/2026-09-prototype/prototype-review.md)。
 
 正式 Backend 使用 npm 和 `backend/package-lock.json` 安装与检查；原型的历史工具与证据不随此调整重写。
 
@@ -13,6 +13,16 @@
 2026-09-18 当前实现补充：Adapter 分别保留战斗结果与战后识别结果，资源初始化失败不抹掉已确认完成量，但仍阻止再次执行；Backend 的退出交接提供最终任务快照供本地报告使用。见 [Adapter 的记录说明](../../adapter/maa/README.md#记录与设备锁)及 [Backend 实机入口](../../backend/README.md#live-verification)。上述修正已包含在本次固定范围实机运行的工作区代码中；重整后生产源码与该工作区核对一致。职责与两库归属不变。
 
 产品范围与验收以 [MVP Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1) 为准。项目方向见[项目定义](../overview/project-definition.md)，术语见 [CONTEXT.md](../../CONTEXT.md)。已接受的设计与已实现的能力在下文分别说明。
+
+## Web 接入补充（2026-09-19）
+
+本次从 `06f8d04` 接入最小 Web，Backend 入口提交为 `2889a95`，后续页面及验证见当前分支提交历史。React + TypeScript + Vite 构建产物由原 Fastify 同源提供；开发模式使用固定本机 Vite 代理。没有新增进程职责、数据库、队列或完整会话系统。运行和代码修改入口见 [Web 说明](../../web/README.md)，HTTP 边界见 [Backend 说明](../../backend/README.md#浏览器入口)。
+
+浏览器协调层复用一个常驻 `AgentRequests`，立即受理并轮询请求记录；仅匹配当前请求／操作的摘要展示回执释放工具调用。页面的可见摘要经历绘制机会后自动回执，不增加第二次用户确认。刷新后的摘要只读，模型结束和网页关闭都不停止已受理任务。直接任务查询与停止不经过模型。退出取消并等待模型处理收敛后，继续既有宿主的执行停止和两库证据交接；关闭后的 SDK 迟到事件不再写请求记录。
+
+浏览器与 CLI 使用独立令牌，浏览器接口检查 Host／Origin，原 CLI 继续拒绝浏览器来源；静态文件只来自构建目录。页面不接触模型凭据、Python 或 SQLite。任务卡独立解释完成量、可信程度、停止证据、环境与两段连接状态，工具详情保留调用时快照。
+
+本地已完成浏览器离线回放和受控故障展示检查，一次真实 DeepSeek 通过网页调用的回放检查通过：摘要展示后仅受理一次 1-7 十次任务，最终确认十次完成并正常退出交接；真实游戏完整链路未验证。本地使用 Edge Chromium，CI 配置使用 Playwright 配套 Chromium；本分支远端 Windows CI 尚未运行。以下较早验证记录保留其原时间范围，不把历史状态当作当前验收结论。
 
 ## 已验证范围
 
@@ -54,8 +64,8 @@ flowchart TD
 
 | 部分 | 职责 | 当前进度 |
 |---|---|---|
-| 网页，React + Vite | 输入、任务展示、确认与停止入口 | 已选方向，尚未实现 |
-| 应用入口，Fastify | 接收消息与操作，交给对应模块 | 正式确定参数 HTTP 与命令行入口已建立；聊天接口待实现 |
+| 网页，React + Vite | 输入、摘要展示、任务事实与停止入口 | 单页已实现；HTTP 轮询与展示回执，离线浏览器回放通过 |
+| 应用入口，Fastify | 接收消息与操作，交给对应模块 | 确定参数 CLI 与受控浏览器 API 已建立；浏览器只提交原文，不直接提交执行参数 |
 | Agent Runtime，AI SDK | 上下文、目标理解、澄清与工具调用 | 已接入 DeepSeek Responses 配置与两步 SDK 循环；离线验证通过，真实模型四个固定样例的回放调用与回复已验收 |
 | 任务管理，TypeScript | 参数与授权检查、防重、设备占用、状态协调 | 共同任务服务已有正式离线验证；Agent 增加原指令完整匹配及参数绑定 |
 | MAA Adapter，Python + FastAPI | 管住执行入口、调用 MaaCore、转换和保存证据 | 离线与 native 边界替身已检查；两个独立 1-7 任务各一次的正常实机流程已通过 |
@@ -74,7 +84,7 @@ Python 正式控制层沿用工作线程执行 MaaCore，让 HTTP 查询、停�
 | 宿主与生命周期 | [host.ts](../../backend/src/host.ts)、[config.ts](../../backend/src/config.ts)、Python 控制层 | TS 管理自有执行端，续期和有界退出交接 |
 | 可控替身与实验驱动 | [替身服务](../../prototypes/lifecycle/adapter/service.py)、[实验目录](../../prototypes/lifecycle/experiments/) | 用于验证和观察，不是用户应用或产品兜底服务 |
 | Agent Runtime 与请求核对 | [requests.ts](../../backend/src/agent/requests.ts)、[policy.ts](../../backend/src/agent/policy.ts)、[runtime.ts](../../backend/src/agent/runtime.ts)、[tools.ts](../../backend/src/agent/tools.ts) | 同进程复用任务服务；最小请求记录进入原 TS SQLite；真实模型四个固定样例的回放调用及回复审阅已通过 |
-| Web | 尚无对应应用实现 | 后续接入 Agent 项目接口、摘要展示回调及独立任务查询／停止 |
+| Web | [web/src](../../web/src)、[浏览器协调层](../../backend/src/browser/requests.ts) | 输入与工具记录、可见摘要回执、独立任务卡及停止；刷新只读恢复 ID，不重发执行 |
 
 两个原型目录按验证工作组织，并非最终模块边界：`lifecycle` 的 TS 后端已被真实 HTTP 合并复用，而其 Python 替身仍用于离线验证；`maa` 同时包含真实适配、诊断和证据工具。
 
