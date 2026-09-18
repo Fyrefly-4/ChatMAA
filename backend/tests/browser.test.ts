@@ -124,3 +124,29 @@ test('missing model prevents new work but keeps stored requests readable', async
   assert.throws(() => unavailable.submit({ requestId: 'new', original: '刷1-7十次' }), /model_unavailable/);
   assert.equal(x.audit().length, 0);
 });
+
+test('closing waits for an already issued task operation before storage handoff', async t => {
+  const x = await setup('pending-submit'); t.after(x.close);
+  const original = x.host.tasks.submit.bind(x.host.tasks);
+  let release!: () => void;
+  let issued = false;
+  x.host.tasks.submit = async value => {
+    issued = true;
+    const task = await original(value);
+    await new Promise<void>(resolve => { release = resolve; });
+    // Model cancellation must not let the owner close this database first.
+    return x.host.tasks.get(task.id);
+  };
+  x.requests.submit({ requestId: 'one', original: '刷1-7十次' });
+  await until(() => !!x.requests.read('one').pendingSummary);
+  x.requests.acknowledge('one', x.requests.read('one').pendingSummary);
+  await until(() => issued && !!release);
+  let closed = false;
+  const closing = x.requests.close().then(() => { closed = true; });
+  await new Promise(resolve => setTimeout(resolve, 30));
+  assert.equal(closed, false);
+  release(); await closing;
+  assert.equal(closed, true);
+  assert.equal(x.requests.read('one').record.status, 'failed');
+  assert.equal(x.audit().length, 1);
+});

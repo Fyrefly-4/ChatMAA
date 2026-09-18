@@ -19,6 +19,7 @@ export function startDebug(tasks: TaskService, model: LanguageModel, shutdown: (
   let targetId: string | undefined;
   let busy = false;
   let active: AbortController | undefined;
+  let requestWork: Promise<unknown> | undefined;
   void write({ kind: 'debug_ready', message: '这是常驻 Backend 控制台；关闭它将关闭后端。普通文本发送模型；/target ID 选定任务；/get ID、/stop ID 独立控制；/read REQUEST_ID 读记录；/cancel 取消模型；/exit 退出宿主。' }).catch(() => {});
   lines.on('line', line => {
     void (async () => {
@@ -36,11 +37,13 @@ export function startDebug(tasks: TaskService, model: LanguageModel, shutdown: (
       active = new AbortController();
       const signal = AbortSignal.any([active.signal, AbortSignal.timeout(timeoutMs)]);
       try {
-        const result = await agent.handle({ requestId: randomUUID(), original: line, targetId }, event => write(event, signal), { signal, timeoutMs });
+        const work = agent.handle({ requestId: randomUUID(), original: line, targetId }, event => write(event, signal), { signal, timeoutMs });
+        requestWork = work;
+        const result = await work;
         await write({ kind: 'request_result', ...result }, signal);
-      } finally { busy = false; active = undefined; }
+      } finally { busy = false; active = undefined; requestWork = undefined; }
     })().catch(() => { void write({ kind: 'debug_error', message: '操作失败，请检查任务 ID 或独立任务入口。' }).catch(() => {}); });
   });
   lines.on('close', () => { void shutdown(); });
-  return { close() { active?.abort(); agent.cancelAll(); lines.close(); input.destroy(); } };
+  return { async close() { active?.abort(); agent.cancelAll(); lines.close(); input.destroy(); await requestWork; } };
 }

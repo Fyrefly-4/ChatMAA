@@ -40,12 +40,13 @@ const app = createApp(host.tasks, token, () => { void shutdown(); }, browser ? {
 async function shutdown() {
   if (closing) return;
   closing = true;
-  debug?.close();
+  await debug?.close();
   // Cancel and settle bounded model/output work before host.close closes its SQLite.
   await browser?.close();
+  // Drain direct HTTP task operations before the host closes their shared storage.
+  await app.close();
   const result = await host.close();
   console.log(JSON.stringify({ kind: 'shutdown', ...result }));
-  await app.close();
   process.exitCode = result.childExited && result.handoffComplete ? 0 : 1;
 }
 process.on('SIGINT', () => { void shutdown(); });

@@ -50,6 +50,12 @@ export class AgentRequests {
       ...(options.signal ? [options.signal] : [])]);
     let open = true;
     let toolsOpen = true;
+    const operations = new Set<Promise<unknown>>();
+    const trackOperation = <T>(operation: Promise<T>) => {
+      operations.add(operation);
+      void operation.then(() => operations.delete(operation), () => operations.delete(operation));
+      return operation;
+    };
     const emit: EventSink = async event => {
       // SDK callbacks can arrive after the bounded request has settled and storage has closed.
       if (!open) throw new Error('request_closed');
@@ -65,7 +71,8 @@ export class AgentRequests {
     try {
       await emit({ kind: 'request', data: record });
       signal.throwIfAborted();
-      const tools = boundTools({ record, records: this.records, tasks: this.tasks, signal, emit, isOpen: () => open && toolsOpen });
+      const tools = boundTools({ record, records: this.records, tasks: this.tasks, signal, emit,
+        isOpen: () => open && toolsOpen, trackOperation });
       // 即使 provider 忽略 abort，handle 也有界退出；迟到的工具回调受 signal/open 阻止。
       const reply = await new Promise<string>((resolve, reject) => {
         const abort = () => reject(new Error('model_cancelled_or_timed_out'));
@@ -83,7 +90,11 @@ export class AgentRequests {
       try { this.records.save(record); await emit({ kind: 'error', data: { code: record.error, operationId: record.operationId } }); }
       catch { /* 执行事实仍由独立任务入口读取；不因追踪失败重发。 */ }
     } finally {
-      open = false; this.active.delete(record.requestId);
+      open = false;
+      // A cancelled model can leave a bounded TaskService HTTP operation in flight.
+      // Drain that work before the owner is allowed to close the business database.
+      await Promise.allSettled(operations);
+      this.active.delete(record.requestId);
     }
     try { return this.read(record.requestId); }
     catch { return { record, events: [], task: null, traceUnavailable: true }; }
