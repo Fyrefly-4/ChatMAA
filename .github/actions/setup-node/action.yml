@@ -1,0 +1,26 @@
+name: 固定 Node 环境
+description: 安装版本文件指定的 Node，校验范围并可选安装 Backend 依赖
+inputs:
+  install-dependencies:
+    description: 是否安装 Backend 依赖
+    default: 'true'
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version-file: .node-version
+        architecture: x64
+        cache: npm
+        cache-dependency-path: |
+          .node-version
+          backend/package-lock.json
+    - shell: pwsh
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        node scripts/ci/check-node.mjs
+        npm --version
+        Write-Output "Runner: $env:ImageOS / $env:ImageVersion"
+    - if: inputs.install-dependencies == 'true'
+      shell: pwsh
+      run: npm --prefix backend ci --registry=https://registry.npmjs.org

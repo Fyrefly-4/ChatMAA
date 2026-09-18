@@ -1,0 +1,86 @@
+name: CI 手动检查
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 检查范围
+        type: choice
+        options: [full, custom]
+        default: full
+      backend-types:
+        description: Backend 类型检查（custom）
+        type: boolean
+        default: false
+      backend-tests:
+        description: Backend 集成测试（custom）
+        type: boolean
+        default: false
+      adapter-tests:
+        description: Adapter 测试（custom）
+        type: boolean
+        default: false
+permissions:
+  contents: read
+# Manual runs never cancel automatic PR checks or each other.
+concurrency:
+  group: ci-manual-${{ github.run_id }}
+  cancel-in-progress: false
+jobs:
+  plan:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    outputs:
+      plan: ${{ steps.select.outputs.plan }}
+      backend-types: ${{ steps.select.outputs.backend-types }}
+      backend-tests: ${{ steps.select.outputs.backend-tests }}
+      adapter-tests: ${{ steps.select.outputs.adapter-tests }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node
+        with:
+          install-dependencies: 'false'
+      - name: 验证调度和门禁
+        shell: pwsh
+        run: node --test scripts/ci/ci.test.mjs
+      - name: 选择检查范围
+        id: select
+        shell: pwsh
+        run: node scripts/ci/plan.mjs
+  backend-types:
+    needs: plan
+    if: needs.plan.outputs.backend-types == 'true'
+    uses: ./.github/workflows/check-backend-types.yml
+  backend-tests:
+    needs: plan
+    if: needs.plan.outputs.backend-tests == 'true'
+    uses: ./.github/workflows/check-backend-tests.yml
+  adapter-tests:
+    needs: plan
+    if: needs.plan.outputs.adapter-tests == 'true'
+    uses: ./.github/workflows/check-adapter-tests.yml
+  manual-result:
+    name: manual-result
+    needs: [plan, backend-types, backend-tests, adapter-tests]
+    if: always()
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node
+        with:
+          install-dependencies: 'false'
+      - name: 取消的运行不能通过
+        if: cancelled()
+        shell: pwsh
+        run: exit 1
+      - name: 核对计划与结果
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        env:
+          CI_NEEDS: ${{ toJSON(needs) }}
+        run: node scripts/ci/gate.mjs
