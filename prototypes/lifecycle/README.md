@@ -1,8 +1,10 @@
 # 本机执行链路原型（仅替身）
 
-对应 [issue #3](https://github.com/Fyrefly-4/ChatMAA/issues/3) 和 [设计审阅](../../docs/design-review.md) 的原型 B。本目录验证进程、HTTP、SQLite 和故障行为；不包含聊天页面、模型、MaaCore、ADB 或真实游戏调用。
+> 状态核对：2026-09-18。本文属于受限原型阶段资料，代码收尾基线为 `b99b917`（后合入 `4ca2d56`）；实际运行版本、环境和验证范围以正文及证据为准。本轮原型与约定 HTTP 合并已交付，完整 MVP 未验收。原文中的实验计划按当时时间理解；新增真实 MAA 操作仍须另行交接。当前模块与未决事项见[工程说明](../../docs/engineering/architecture.md)。
 
-先读 [实验报告](REPORT.md)。真实 MAA 接入停在 [下一阶段说明](../maa/README.md)，等待产品负责人指令。
+对应 [issue #3](https://github.com/Fyrefly-4/ChatMAA/issues/3) 和 [设计审阅](../../docs/archive/2026-09-prototype/prototype-review.md) 的原型 B。原始替身实验验证进程、HTTP、SQLite 和故障行为，不调用真实游戏。本目录的 TS 后端后来被真实 HTTP 合并复用，`live-merge.ts` 属于实机实验驱动；真实 MaaCore 适配位于相邻的 `maa` 目录。聊天页面与模型尚未实现。
+
+先读 [实验报告](REPORT.md)。后续真实 MAA 与约定 HTTP 合并已交付，见[真实原型说明](../maa/README.md)。
 
 ## 如何理解这套原型
 
@@ -90,4 +92,4 @@ Python 在控制权过期后拒绝迟到续期和新命令，先请求停止，�
 
 本轮采用 150 ms 轮询/续期、1500 ms 控制租约、900 ms 停止等待和 450 ms 单次 HTTP 超时。这些是实验配置，不是通过性能优化得出的生产建议。挂起使用 Windows native API，仅作故障注入；不作为产品 API 依赖。
 
-原型 A 后续已经完成累计三次实机成功及正常收尾，详情见 [MAA 报告](../maa/REPORT.md)。当前又补充了 [HTTP 合并准备](../maa/HTTP-MERGE.md)：通过 `LAB_BACKEND` 选择原替身、离线回调或受限 live 入口，默认仍为原替身。停止意图会在 TS 中保留，避免较早发起的轮询覆盖它。替身和离线回放不能替代真实合并验证或 [MVP Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1) 的完整验收。
+原型 A 后续已经完成累计三次实机成功及正常收尾，详情见 [MAA 报告](../maa/REPORT.md)。后续 [HTTP 合并验证](../maa/HTTP-MERGE.md)也已交付：通过 `LAB_BACKEND` 选择原替身、离线回调或受限 live 入口，默认仍为原替身。停止意图会在 TS 中保留，避免较早发起的轮询覆盖它。替身和离线回放不能替代真实合并验证或 [MVP Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1) 的完整验收。

@@ -1,5 +1,7 @@
 # HTTP 合并验证
 
+> 状态核对：2026-09-18。本文属于受限原型阶段资料，代码收尾基线为 `b99b917`（后合入 `4ca2d56`）；实际运行版本、环境和验证范围以正文及证据为准。本轮原型与约定 HTTP 合并已交付，完整 MVP 未验收。原文中的实验计划按当时时间理解；新增真实 MAA 操作仍须另行交接。当前模块与未决事项见[工程说明](../../docs/engineering/architecture.md)。
+
 关联 [Issue #4](https://github.com/Fyrefly-4/ChatMAA/issues/4)。原型 A 已完成累计三次实机成功；本文是之后的合并准备，不把回放结果计为新增实机成功。
 
 当前结果：2026-09-18 用户恢复测试并手动启动管理员入口，本轮真实 HTTP 合并验证达到预期，现场确认「符合，已确认能手动接管」。第一局成功，第二局启动后经 HTTP 停止自动化；两端记录一致，进程均已退出。见 [脱敏实机证据](evidence/http-merge-first.json)。
@@ -69,7 +71,7 @@ flowchart LR
 | `http_service.py` | 受理、防重、同一设备锁、执行证据落库、租约及停止；不直接调用 MaaCore |
 | `http_worker.py` | 工作线程桥接；`maa-replay` 重放脱敏回调，`maa-live` 才进入原来的执行入口 |
 | `../lifecycle/experiments/merge.ts` | 离线 HTTP、线程与双库实验 |
-| `../lifecycle/experiments/live-merge.ts` | 即将交接的操作驱动，也可用 `--replay` 离线演练 |
+| `../lifecycle/experiments/live-merge.ts` | 本轮已使用的操作驱动，也可用 `--replay` 离线演练 |
 | `verify-http-admin.ps1` | 一次性管理员入口：核对旧任务、识别主界面、启动约定实验 |
 
 ## 已做的离线验证
