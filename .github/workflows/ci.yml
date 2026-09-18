@@ -5,67 +5,35 @@ on:
     types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: ci-auto-${{ github.event.pull_request.number || github.run_id }}
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  plan:
+  offline-checks:
+    name: offline-checks
     runs-on: windows-2025
-    timeout-minutes: 10
-    outputs:
-      plan: ${{ steps.select.outputs.plan }}
-      backend-types: ${{ steps.select.outputs.backend-types }}
-      backend-tests: ${{ steps.select.outputs.backend-tests }}
-      adapter-tests: ${{ steps.select.outputs.adapter-tests }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: ./.github/actions/setup-node
-        with:
-          install-dependencies: 'false'
-      - name: 验证调度和门禁
+    timeout-minutes: 20
+    defaults:
+      run:
         shell: pwsh
-        run: node --test scripts/ci/ci.test.mjs
-      - name: 选择检查范围
-        id: select
-        shell: pwsh
-        run: node scripts/ci/plan.mjs
-  backend-types:
-    needs: plan
-    if: needs.plan.outputs.backend-types == 'true'
-    uses: ./.github/workflows/check-backend-types.yml
-  backend-tests:
-    needs: plan
-    if: needs.plan.outputs.backend-tests == 'true'
-    uses: ./.github/workflows/check-backend-tests.yml
-  adapter-tests:
-    needs: plan
-    if: needs.plan.outputs.adapter-tests == 'true'
-    uses: ./.github/workflows/check-adapter-tests.yml
-  ci-gate:
-    name: ci-gate
-    needs: [plan, backend-types, backend-tests, adapter-tests]
-    if: always()
-    runs-on: windows-2025
-    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-node
-        with:
-          install-dependencies: 'false'
-      - name: 取消的运行不能通过
-        if: cancelled()
-        shell: pwsh
-        run: exit 1
-      - name: 核对计划与结果
-        if: ${{ !cancelled() }}
-        shell: pwsh
-        env:
-          CI_NEEDS: ${{ toJSON(needs) }}
-        run: node scripts/ci/gate.mjs
+        id: node
+      - uses: ./.github/actions/setup-python
+        id: python
+      # Continue after a failed check, but never after failed setup or cancellation.
+      - name: Backend 类型检查
+        if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.python.outcome == 'success' }}
+        run: npm --prefix backend run check
+      - name: Backend 集成测试
+        if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.python.outcome == 'success' }}
+        run: npm --prefix backend test
+      - name: Adapter 单元测试
+        if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.python.outcome == 'success' }}
+        run: '& ./adapter/maa/.venv/Scripts/python.exe -m unittest discover -s adapter/maa/tests -v'

@@ -1,9 +1,5 @@
 name: 固定 Node 环境
-description: 安装版本文件指定的 Node，校验范围并可选安装 Backend 依赖
-inputs:
-  install-dependencies:
-    description: 是否安装 Backend 依赖
-    default: 'true'
+description: 安装版本文件指定的 Node，校验范围并安装 Backend 依赖
 runs:
   using: composite
   steps:
@@ -21,6 +17,5 @@ runs:
         node scripts/ci/check-node.mjs
         npm --version
         Write-Output "Runner: $env:ImageOS / $env:ImageVersion"
-    - if: inputs.install-dependencies == 'true'
-      shell: pwsh
+    - shell: pwsh
       run: npm --prefix backend ci --registry=https://registry.npmjs.org

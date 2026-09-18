@@ -1,30 +1,27 @@
 # CI 运行与维护
 
-实施状态、验收和启用门禁的时机见[CI 方案](../../docs/engineering/ci-plan.md)。本目录不控制实机执行。
+当前方案、取舍和验证记录见 [CI 方案](../../docs/engineering/ci-plan.md)。
 
-## 检查入口
+## 运行入口
 
-- 自动入口：`.github/workflows/ci.yml`。Draft／Ready PR 按完整差异选择，默认分支提交全套。`edited` 事件也运行，以覆盖目标分支调整；标题／描述修改因此也可能触发一次检查。
-- 手动入口：`.github/workflows/ci-manual.yml`，选择 `full` 或 `custom`；后者至少勾选一项。工作流合入默认分支后可从 Actions 页面选择分支并运行。结果名称为 `manual-result`，不替代 `ci-gate`。
-- 调度自检：仓库根目录执行 `node --test scripts/ci/ci.test.mjs`，无 npm 依赖。自动／手动调度均先执行自检。
-- 类型：`npm --prefix backend run check`；Backend 测试：`npm --prefix backend test`；Adapter：使用 venv 的 Python 执行 `-m unittest discover -s adapter/maa/tests -v`。
+`.github/workflows/ci.yml` 在面向 main 的 PR、main push 和手动触发时运行全套离线检查，纯文档变更也运行。手动入口无参数，工作流进入默认分支后可用。同一 PR 更新取消旧运行，main 和手动运行不会互相取消。
 
-先按根目录 `.node-version`、`.python-version` 准备解释器，按 `.pip-version` 安装 pip。Backend 测试需要 `adapter/maa/.venv/Scripts/python.exe`；环境准备见 `.github/actions/`，不要依赖全局 Python 或跨 job 共享环境。
+单个 Windows `offline-checks` job 共用一次环境准备，依次执行：
 
-## 范围与门禁
+```powershell
+npm --prefix backend run check
+npm --prefix backend test
+& ./adapter/maa/.venv/Scripts/python.exe -m unittest discover -s adapter/maa/tests -v
+```
 
-`policy.json` 集中列出检查名、纯文档清单和代码规则。文档例外先匹配，其他规则取并集；未分类文件全套。只有指定文档目录中的 `.md` 和精确列出的文档文件可跳过；例如 `backend/prompts/system.md` 仍视为代码输入。`docs/agents/`、新目录、公共 CI 配置与版本文件均走全套。
+本地先按 `.node-version`、`.python-version` 准备解释器；`npm --prefix backend ci` 安装 Backend 依赖。Python 在 `adapter/maa/.venv` 创建环境，按 `.pip-version` 安装 pip，再安装 `adapter/maa/requirements.lock` 并执行 `pip check`。完整准备命令见 `.github/actions/`。Backend 测试也依赖该 Python 环境。
 
-`plan.mjs` 用 Git merge-base 与 PR head 计算完整差异，按 NUL 格式解析，保留删除和重命名旧／新路径；失败回退全套。检查执行仍使用 Actions 默认 PR merge checkout，以验证合并结果。空差异同样保守全套。
+环境准备失败时停止；准备成功后，一项检查失败不阻止后续检查，取消除外。任何检查失败仍使 job 失败。Actions 日志按三个 step 分别查看；无路径调度、custom 模式或独立门禁汇总。目前不启用强制检查，未来 required 名称需核对 `offline-checks`。
 
-`gate.mjs` 验证调度成功、计划结构完整，以及每项实际结果与计划相符。必要检查的失败、取消、缺失和意外跳过均失败。工作流摘要显示选择原因与汇总结论。检查失败时可在 Actions 重跑失败项；更新 PR 会取消旧运行。不要用自动重试掩盖测试问题。
+## 修改与扩展
 
-## 新增检查
+现有命令自动发现的新测试无需额外配置 CI。新增检查命令时，在 job 中增加 step；若要在前一检查失败后仍执行，沿用已有的准备成功与未取消条件，不使用 `continue-on-error`。环境准备步骤保持默认成功条件。
 
-1. 增加可本地运行的检查命令，以及固定环境的 `check-*.yml` reusable workflow。
-2. 在 `policy.json` 增加检查名、路径规则和依赖联动；公共契约必须覆盖调用方。
-3. 在自动及手动 workflow 中增加计划输出、条件调用、汇总 `needs`，手动入口增加布尔选项。
-4. 调整本目录测试覆盖新检查组合，验证相关修改触发、无关修改跳过、失败不能放行。
-5. 使用 actionlint 核对工作流；记录代表性 Actions 运行。不改变唯一 required 名称 `ci-gate`。
+修改工作流后执行 actionlint；版本和准备逻辑变化后运行完整本地检查并验证远端 Windows job。保留锁文件、精确版本、Actions SHA、下载缓存、只读权限和超时。不要引入真实游戏、配置、secrets 或部署步骤。
 
-版本或共享准备逻辑变更运行全套。检查模块使用只读权限与完整 Actions SHA，不引入部署、模型凭据或游戏环境。
+仅当耗时或模块独立性带来实际需求时再拆 job、增加路径选择或提取 reusable workflow，具体条件见 CI 方案。
