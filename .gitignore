@@ -33,6 +33,7 @@ htmlcov/
 
 # Formal runtime records and local configuration
 /.artifacts/
+/backend/config.local.json
 
 # Operating system files
 .DS_Store

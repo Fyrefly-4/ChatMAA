@@ -1,11 +1,49 @@
-# MAA Adapter 持久化执行服务
+# MAA Adapter
 
-Python 控制层在单进程中提供本机 HTTP 受理、查询、停止及退出交接。MaaCore 在工作线程执行，控制线程统一写 `executor.sqlite`；工作线程只发反馈，不直接写执行库。执行函数与环境识别见 `native.py`、`readiness.py`。
+正式执行端由 [Backend](../../backend/README.md) 启动，承担受理、防重、设备占用、MaaCore 工作线程和执行证据。控制线程写 `executor.sqlite`，工作线程只发反馈；不加载原型脚本或实验 grant。启动不连接游戏，只有明确的 live 提交才进入 native 路径。
 
-同一 ID 和参数返回原记录，不重复执行；ID 参数冲突拒绝。稳定序号支持增量查询，重启后未知状态不自动恢复。实例身份、控制者租约、设备锁及有界退出约束执行权；普通停止不因持久化失败而丢失停止信号。启动不连接游戏，只有显式 live 提交才调用 MaaCore；离线模式使用正式控制层和 SQLite，仅替换游戏执行。
+## 能力与证据边界
 
-`settings.py` 接收 `CHATMAA_ADAPTER_CONFIG`：mode、data、controller、token 及可选租约/退出窗口；live 还要求 installation、hwnd。live 使用固定 `.artifacts/live/` 并持有仓库设备锁；原型目录存在时兼容持有其锁。`main.py` 绑定 loopback 随机高端口并报告实例身份，上层宿主管理协议将在 Backend 中接入。不可用新目录或新 ID 猜测恢复旧执行。
+目前建立了正式调用路径和离线检查；完整实机验收尚未完成。`maa-replay` 只回放脱敏回调，显示 `offline_callback_replay` 来源，不代表真实游戏成功。
 
-准备：`py -3.12 -m venv adapter/maa/.venv`，然后 `adapter/maa/.venv/Scripts/python.exe -m pip install -r adapter/maa/requirements.lock`。
+`1-7` 的次数须为正整数，不吃药、不碎石、`series=1`。最大值 `2147483647` 来自固定 [MaaCore v6.17.5 的 Fight 参数解析](https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/v6.17.5/src/MaaCore/Task/Interface/FightTask.cpp)，是表示能力边界，不是实机次数承诺。真实执行保留失败即停和已确认下界，不自动补刷。原型 1200 秒总时限不再作为所有目标的隐含预算；普通停止等待执行端证据，失联／后端退出采用配置中的有限等待，超时处理仅限自有 Python 进程。
 
-验证：在仓库根目录运行 `adapter/maa/.venv/Scripts/python.exe -m unittest discover -s adapter/maa/tests -v`。覆盖参数与执行替身、控制层记录失败、重启保守恢复及设备锁。依赖固定在 requirements.lock；检查不操作游戏。真实行为不能由离线检查推定。
+## 正常再次执行的依据
+
+不能从 `AsstRunning=false`、销毁完成或计数满足目标直接推断环境可用。`readiness.py` 生成两种只识别的 Custom 节点：主界面沿用 `Fight` 模板，关卡入口沿用 `StartButton1` 的 OCR；两者的动作均为 Stop，清空导航、子任务和所有后继。只有匹配、Custom 完成、识别自动化停止且无错误，才记录环境依据。
+
+静态依据为本机固定版本资源及上述 FightTask：指定关卡通过 `StageBegin` 导航，能从主界面或关卡入口重新选关。这解释了为什么检查这些界面，但不能代替识别准确性、正常战后界面和导航的实机验证。每次 live 执行前重新识别，依据最长使用 5 秒；过期、不匹配或取消时不启动 Fight。正常目标完成后另外识别当前界面，才将设备标为可再次检查执行。设备状态是有时间戳的观测，新请求仍需重新识别；用户需遵守运行期间不同时操作游戏的单设备条件。
+
+2026-09-18 修正：主界面自定义节点显式引用固定版本 `Fight` 所用的 `SwitchTheme@ToggleSettingsMenu.png`。实际日志表明，只设置 `baseTask` 会查找不存在的 `ChatMAAReadyHome.png`。已核对安装资源中的模板文件，并增加主界面识别成功／模板缺失不得启动 Fight 的替身回归；修复后的实机有效性仍待验证。
+
+
+
+## 记录与设备锁
+
+2026-09-18 代码修正：失败即停的 `Fight@` 节点显式指定识别算法及原模板／OCR 文本，避免连续阶段加载资源时回退到带前缀的模板名。战斗结束后先保存 `battle/result.json`，再进行独立战后识别；战后资源初始化失败保留已确认完成量与战斗停止证据，设备仍为 `needs_check`。只有确定失败发生在自动化实例创建前，或识别实例正常收尾，才声明整体停止；未确认的停止仍为未知。连续阶段和异常分支使用 native 边界替身验证，修正后的完整实机流程仍需另行验证；历史记录不自动改写。
+
+live 使用仓库根目录下固定的 `.artifacts/live/`；更换配置不创建另一份 live 数据库来绕过未解决状态。每个操作使用 `operations/<ID 的 SHA-256>/`，目录内 `request.json` 保留原 ID，避免 Windows 保留名和大小写路径冲突；已有目录不覆盖，重试同 ID 不再启动工作线程。不要删除数据库或证据目录来解除占用。
+
+正式 live 实例固定持有 `.artifacts/device.lock`。当历史 `prototypes/maa/` 还存在时，还持有其 `.artifacts/device.lock`，与保留的旧 CLI 互斥；这只是共存期的锁兼容，不读取原型配置或调用原型代码。锁只约束本仓库入口，不能阻止官方 MAA 或手工操作，使用时须确保没有其他执行方。离线使用自身数据目录的测试锁，不占用真实设备。旧控制者过期后不接受续期或新操作；后端退出先请求停止、接收最终证据，再确认执行端退出。
+
+## 实现与来源
+
+| 文件 | 职责／承接关系 |
+|---|---|
+| `main.py`、`settings.py` | 正式配置、固定版本检查、设备锁及 HTTP 启动 |
+| `service.py` | 执行记录、受理、查询、停止、续期和最终证据交接；改编原型 `http_service.py`，移除单次实验限制和故障 API |
+| `worker.py`、`replay.py` | 每操作记录、独立工作线程调用观测和离线回调回放；改编原型 `http_worker.py` |
+| `core.py`、`contract.py` | 选择性承接原型 native 封装及计数解释；次数规则按正式契约调整 |
+| `native.py`、`readiness.py` | 将原型 `run.py` 的停止／收尾整理为业务调用；新增正常环境识别，不再借用实验 CLI |
+| `fixtures/verified-first-battle.json` | 从原型同名脱敏证据迁入；合成多个周期时不宣称新增实机证据 |
+
+来源基线为 `273055d`。原型实现和历史证据保持原样，正式源码不要求与原型长期同步。
+
+离线检查在仓库根目录执行：
+
+```powershell
+.\adapter\maa\.venv\Scripts\python.exe -m pip check
+.\adapter\maa\.venv\Scripts\python.exe -m unittest discover -s adapter/maa/tests -v
+```
+
+这些检查使用真实控制层与 SQLite，在游戏／native 边界提供替身，不需要 MAA、模型凭据或管理员游戏环境。
