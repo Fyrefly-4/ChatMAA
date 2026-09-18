@@ -37,16 +37,19 @@ Backend 提供明确参数的提交、查询、停止和结果读取；不解析
 
 ## 准备与离线使用
 
-环境基线为 Windows、Node `>=24.18.0 <25`、随 Node 安装的 npm、Python `3.12`。正式 Backend 使用 `package-lock.json` 锁定依赖，无需额外安装包管理器。在仓库根目录准备正式工程自己的依赖：
+环境基线为 Windows，Node 支持范围为 `>=24.18.0 <25`；离线验证的精确 Node／Python 版本分别见根目录 [.node-version](../.node-version)、[.python-version](../.python-version)，npm 使用对应 Node 官方发行版随附版本。Python 基线已改为 3.13 系列并通过 Windows 离线 CI；历史实机结论没有随版本升级重新验证。正式 Backend 使用 `package-lock.json` 锁定依赖，无需额外安装包管理器。在仓库根目录准备正式工程自己的依赖：
 
 ```powershell
-py -3.12 -m venv adapter/maa/.venv
+py -3.13 -m venv adapter/maa/.venv
+.\adapter\maa\.venv\Scripts\python.exe -c "import pathlib,platform; assert platform.python_version()==pathlib.Path('.python-version').read_text().strip(), 'Python 版本与基线不一致'"
+$pipVersion = (Get-Content .pip-version -Raw).Trim()
+.\adapter\maa\.venv\Scripts\python.exe -m pip install "pip==$pipVersion"
 .\adapter\maa\.venv\Scripts\python.exe -m pip install -r adapter/maa/requirements.lock
 npm --prefix backend ci
 npm --prefix backend start
 ```
 
-没有 `py` 启动器时，用可用 Python 3.12 的绝对路径替代创建环境命令。默认 Python 位置为 `adapter/maa/.venv/Scripts/python.exe`，无需安装真实 MAA。后端打印就绪地址，连接信息保存于被忽略的 `.artifacts/replay/connection.json`。在另一个终端独立操作：
+没有 `py` 启动器时，用版本文件指定的 Python 的绝对路径替代创建环境命令。默认 Python 位置为 `adapter/maa/.venv/Scripts/python.exe`，无需安装真实 MAA。后端打印就绪地址，连接信息保存于被忽略的 `.artifacts/replay/connection.json`。在另一个终端独立操作：
 
 ```powershell
 npm --prefix backend run client -- submit 10 demo-normal

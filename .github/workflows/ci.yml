@@ -1,0 +1,39 @@
+name: CI
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  offline-checks:
+    name: offline-checks
+    runs-on: windows-2025
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-node
+        id: node
+      - uses: ./.github/actions/setup-python
+        id: python
+      # Continue after a failed check, but never after failed setup or cancellation.
+      - name: Backend 类型检查
+        if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.python.outcome == 'success' }}
+        run: npm --prefix backend run check
+      - name: Backend 集成测试
+        if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.python.outcome == 'success' }}
+        run: npm --prefix backend test
+      - name: Adapter 单元测试
+        if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.python.outcome == 'success' }}
+        run: '& ./adapter/maa/.venv/Scripts/python.exe -m unittest discover -s adapter/maa/tests -v'
