@@ -13,6 +13,8 @@
 
 入口检查 Node／Python 精确版本、x64 Python 依赖、Backend 依赖和前端构建。缺项或源码比构建新时，显示具体修复命令并退出，不自动安装。默认找到工程 venv；首次找不到时询问解释器路径。真实模式首次询问 MAA v6.17.5 安装目录，以后复用；每次重新查找标题为“明日方舟”的窗口，只有多个候选时要求选择，不复用旧窗口句柄。窗口查找是只读过程，不证明游戏现场已准备好。
 
+MAA 安装目录应包含 `MaaCore.dll` 和 `resource/tasks/tasks.json`。2026-09-19 修正了启动预检误写成 `resource/tasks.json` 的问题；无需移动资源文件或重新安装 MAA。路径预检只检查必要文件，实际资源加载与版本校验仍由 Adapter 执行。
+
 配置分别保存在忽略目录 `.artifacts/demo/live.json` 和 `replay.json`。真实数据默认复用 `.artifacts/live/`，回放复用 `.artifacts/replay/`，不自动清记录或建立新轮次。原数据存在未知任务时仍阻止冲突执行，不能为了演示顺利换目录绕过。启动入口不读取 `backend/config.local.json` 或 `CHATMAA_CONFIG` 作为默认配置，避免模式被其他入口意外改变。
 
 根目录 `.env` 自动加载到 Backend；也可沿用当前进程的 `DEEPSEEK_API_KEY`。密钥不会出现在配置提示中。终端显示本次模式、窗口与数据目录，Backend 就绪后自动打开默认浏览器；不自动提交刷图任务。自动打开失败时，可使用终端 `web_ready.url` 手动打开。

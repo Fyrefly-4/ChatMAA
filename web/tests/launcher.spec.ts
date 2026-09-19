@@ -41,13 +41,17 @@ test('root command fails without starting a host when the explicit mode is wrong
 
 test('launcher selects current windows and preserves explicit config and data without starting live execution', async () => {
   const run = resolve(repository, '.artifacts/checks', `demo config ${randomUUID()}`);
-  mkdirSync(resolve(run, 'maa/resource'), { recursive: true });
+  mkdirSync(resolve(run, 'maa/resource/tasks'), { recursive: true });
   writeFileSync(resolve(run, 'maa/MaaCore.dll'), 'fixture only, never loaded');
+  // The old, incorrect flat layout must not pass the fixed-version preflight.
   writeFileSync(resolve(run, 'maa/resource/tasks.json'), '{}');
   const file = resolve(run, 'live.json');
   const dataDir = resolve(repository, '.artifacts/live');
   writeFileSync(file, JSON.stringify({ mode: 'maa-live', installation: './maa', dataDir, hwnd: 999 }));
   const windows = [{ Id: 1, ProcessName: 'fixture-one', hwnd: 11 }, { Id: 2, ProcessName: 'fixture-two', hwnd: 22 }];
+  await expect(prepareDemo({ replay: false, configFile: file, windows: () => windows, ask: async () => '2' })).rejects.toThrow('resource/tasks/tasks.json');
+  // Fixed v6.17.5 layout, also used by adapter/maa/contract.py resource patches.
+  writeFileSync(resolve(run, 'maa/resource/tasks/tasks.json'), '{}');
   const config = await prepareDemo({ replay: false, configFile: file, windows: () => windows, ask: async () => '2' });
   expect(config.hwnd).toBe(22);
   expect(config.dataDir).toBe(dataDir);

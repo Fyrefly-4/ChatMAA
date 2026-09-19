@@ -89,8 +89,8 @@ export async function prepareDemo(options: { replay: boolean; configFile?: strin
       if (!answer) throw new Error('未提供 MAA 安装目录，未启动 Backend。');
       installation = resolve(answer);
     }
-    if (!existsSync(resolve(installation, 'MaaCore.dll')) || !existsSync(resolve(installation, 'resource/tasks.json'))) {
-      throw new Error('MAA 安装不完整：需要 MaaCore.dll 和 resource/tasks.json。');
+    if (!existsSync(resolve(installation, 'MaaCore.dll')) || !existsSync(resolve(installation, 'resource/tasks/tasks.json'))) {
+      throw new Error('MAA 安装不完整：需要 MaaCore.dll 和 resource/tasks/tasks.json。');
     }
     raw.installation = installation;
     const window = await selectWindow((options.windows ?? gameWindows)(), ask);
