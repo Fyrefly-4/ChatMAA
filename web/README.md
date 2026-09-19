@@ -76,3 +76,5 @@ npm --prefix web run test:e2e
 ## 历史阻塞入口（2026-09-19）
 
 基于 `8ec496e` 增补：`RecoveryPanel.tsx` 展示 `/api/status.device` 中的阻塞和核对结果；人工勾选后提交一次 `/api/takeovers`。刷新仅查询，不重放核对或任务。核对期间禁用新指令，原任务卡保留未知事实；成功后由用户发送新指令。`TaskCard.tsx` 单独标注接管凭据，`useExecution.ts` 允许已放行历史卡切换到新任务。业务准入和识别判据仍由 Backend／Adapter 决定。操作流程见 [Demo 说明](../docs/engineering/demo.md#处理历史阻塞)。
+
+2026-09-19 后续实机补充：真实网页 → DeepSeek → MaaCore 已完成同一服务内正常执行及页面中途停止，现场观察通过。任务结果、停止下界和退出证据范围见[工程说明](../docs/engineering/architecture.md#issue-11-真实整链验证2026-09-19)；前述“本轮未运行”保留为各次离线检查当时的范围。
