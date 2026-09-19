@@ -3,6 +3,7 @@ import { CommandPanel } from "./components/CommandPanel";
 import { OperationSummary } from "./components/OperationSummary";
 import { TaskCard } from "./components/TaskCard";
 import { ToolDetails } from "./components/ToolDetails";
+import { RecoveryPanel } from "./components/RecoveryPanel";
 export default function App() {
   const state = useExecution();
   return (
@@ -45,11 +46,16 @@ export default function App() {
       )}
       <div className="workspace">
         <div className="request-column">
+          <RecoveryPanel status={state.status} />
           <CommandPanel
             request={state.request}
             send={state.send}
             disabled={
               state.sending ||
+              !state.status?.device ||
+              !!state.status.device.blockers.length ||
+              !!state.status.conflictingTaskIds.length ||
+              state.status.device.recovery?.state === "running" ||
               !state.status?.modelAvailable ||
               state.status.closing ||
               !!state.status.busy ||

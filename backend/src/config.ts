@@ -7,10 +7,10 @@ export type Config = {
   pollMs: number; httpTimeoutMs: number; leaseMs: number; stopDeadlineMs: number;
   installation?: string; hwnd?: number;
 };
-export function loadConfig(path = process.env.CHATMAA_CONFIG): Config {
+export function loadConfig(path = process.env.CHATMAA_CONFIG, values?: unknown): Config {
   const local = resolve(repository, 'backend/config.local.json');
   const file = path ? resolve(path) : existsSync(local) ? local : undefined;
-  const raw = file ? JSON.parse(readFileSync(file, 'utf8')) : {};
+  const raw = values ?? (file ? JSON.parse(readFileSync(file, 'utf8')) : {});
   const base = file ? dirname(file) : resolve(repository, 'backend');
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('配置必须是 JSON 对象');
   const allowed = ['mode', 'python', 'dataDir', 'port', 'pollMs', 'httpTimeoutMs', 'leaseMs', 'stopDeadlineMs', 'installation', 'hwnd'];

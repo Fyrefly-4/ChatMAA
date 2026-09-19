@@ -40,12 +40,13 @@ export function TaskCard({
       <button
         className="stop"
         onClick={() => void stop()}
-        disabled={stopping || task.automation_stopped}
+        disabled={stopping || task.automation_stopped || task.takeover?.released}
       >
         {" "}
         {stopping ? "正在请求停止…" : "停止当前任务"}{" "}
       </button>
       {stopState && <p role="status">{stopState}</p>}
+      {task.takeover?.released && <p className="positive">已人工接管并核对当前环境，解除此记录的准入阻塞。上述次数、停止状态和未知部分仍是旧任务的历史证据。</p>}
       {!task.sync.available && (
         <p className="warning">
           Backend 暂时无法同步执行事实：{task.sync.reason ?? "原因未知"}

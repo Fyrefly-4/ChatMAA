@@ -48,6 +48,7 @@ export class AgentRequests {
     this.active.set(record.requestId, controller);
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(options.timeoutMs ?? 60000),
       ...(options.signal ? [options.signal] : [])]);
+    let deviceBlocked = false;
     let open = true;
     let toolsOpen = true;
     const operations = new Set<Promise<unknown>>();
@@ -57,6 +58,7 @@ export class AgentRequests {
       return operation;
     };
     const emit: EventSink = async event => {
+      if (event.kind === 'tool_result' && (event.data as { result?: { error?: string } })?.result?.error === 'device_busy_or_uncertain') deviceBlocked = true;
       // SDK callbacks can arrive after the bounded request has settled and storage has closed.
       if (!open) throw new Error('request_closed');
       try {
@@ -74,13 +76,14 @@ export class AgentRequests {
       const tools = boundTools({ record, records: this.records, tasks: this.tasks, signal, emit,
         isOpen: () => open && toolsOpen, trackOperation });
       // 即使 provider 忽略 abort，handle 也有界退出；迟到的工具回调受 signal/open 阻止。
-      const reply = await new Promise<string>((resolve, reject) => {
+      let reply = await new Promise<string>((resolve, reject) => {
         const abort = () => reject(new Error('model_cancelled_or_timed_out'));
         signal.addEventListener('abort', abort, { once: true });
         if (signal.aborted) { abort(); return; }
         runModel(model, input.original, tools, signal, () => { toolsOpen = false; }, emit).then(resolve, reject)
           .finally(() => signal.removeEventListener('abort', abort));
       });
+      if (deviceBlocked) reply = '本条任务未受理，没有开始执行。设备存在执行中或历史未核对的任务，请查看页面的阻塞说明；历史阻塞需先人工接管并核对环境。修改次数、换用新 ID 或重复发送不能解除阻塞。恢复后由你重新发送原指令，不会自动补刷。';
       record.reply = reply; record.status = 'finished';
       this.records.save(record);
       await emit({ kind: 'reply', data: { text: reply, operationId: record.operationId,

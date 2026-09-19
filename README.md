@@ -28,6 +28,10 @@ ChatMAA 是一个正在开发中的智能自动化应用，探索如何让 Agent
 
 ## 运行与验证
 
+完成首次依赖准备后，在仓库根目录执行 `.\start-demo.ps1` 启动真实 Demo；`.\start-demo.ps1 -Replay` 使用回放执行端。入口复用本地配置、查找当前窗口、打开网页，Ctrl+C 走现有退出交接。完全离线检查入口可加 `-NoModel`，不调用模型。
+
+完整网页演示从 [Demo 运行入口](docs/engineering/demo.md)开始：准备版本与依赖、显式选择回放或真实配置、打开网页、执行／停止及退出核对。当前精确基线为 Node 24.19.0、Python 3.12.14；固定 Windows 官方桌面端的真实网页到游戏链路已完成正常执行与中途停止验证；具体证据范围见[工程说明](docs/engineering/architecture.md#issue-11-真实整链验证2026-09-19)。
+
 浏览器使用与前端排查见 [Web 执行台](web/README.md)。日常开发和独立操作从[正式 Backend 入口](backend/README.md)开始，默认离线，包含安装、提交、查询、停止及检查命令。[Adapter 说明](adapter/maa/README.md)解释真实接入、环境依据和记录边界。
 
 原型继续保留为实验与历史证据：

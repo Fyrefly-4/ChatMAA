@@ -101,8 +101,8 @@ export async function startHost(config: Config) {
           const records = service.list().filter(t => t.state !== 'rejected');
           const health = await call('/health') as Health;
           if (!service.storageFailed && !health.storage_failed && !health.active.length && health.retiring &&
-              records.every(t => t.sync.available && t.state === 'ended' && t.automation_stopped &&
-                (!t.recheck || t.recheck.automation_stopped))) {
+              records.every(t => t.sync.available && !t.gap && !t.evidence_conflict && (t.takeover?.released ||
+                (t.state === 'ended' && t.automation_stopped && (!t.recheck || t.recheck.automation_stopped))))) {
             handoffComplete = true; break;
           }
           if (service.storageFailed) break;

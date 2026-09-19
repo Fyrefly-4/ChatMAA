@@ -8,12 +8,23 @@ export type Snapshot = {
   device: string; reason: string | null; updated_at?: number; stop_requested?: boolean;
   automation_stopped: boolean; started_cycles: number; unsettled_cycles: number;
   evidence_source: string; environment?: EnvironmentEvidence; evidence_conflict?: boolean;
+  takeover?: { id: string; released: boolean; environment: EnvironmentEvidence };
   recheck?: { id: string; state: string; automation_stopped: boolean; ready: boolean; environment?: EnvironmentEvidence };
 };
 export type Evidence = { id: string; seq: number; kind: string; source_instance: string; snapshot: Snapshot };
 export type Update = { snapshot: Snapshot; events: Evidence[]; instance: string };
 export type SyncStatus = { available: boolean; last_success_at: number | null; reason: string | null };
 export type TaskView = Snapshot & { params: Params; cursor: number; gap: boolean; sync: SyncStatus };
+export function blocksExecution(t: Snapshot & { gap?: boolean; sync?: SyncStatus }) {
+  if (t.takeover?.released && (t.gap || t.evidence_conflict || t.sync?.available === false)) return true;
+  return t.state !== 'rejected' && (!t.takeover?.released || t.evidence_conflict) &&
+    (t.state !== 'ended' || !t.automation_stopped || t.device !== 'ready');
+}
+export type DeviceStatus = {
+  blockers: { id: string; seq: number; confirmed: number; certainty: string; reason: string | null; kind: 'current' | 'historical' }[];
+  recoverable: boolean;
+  recovery: null | { id: string; state: string; reason: string | null; automation_stopped: boolean };
+};
 
 export class TaskError extends Error {
   status: number;

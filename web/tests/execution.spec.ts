@@ -109,11 +109,8 @@ test("a second execution cannot replace the current task card", async ({
     .locator(".identifier")
     .innerText();
   await page.getByLabel("完整指令").fill("刷1-7十次");
-  await page.getByRole("button", { name: "发送指令" }).click();
-  await expect(
-    page.getByText("请求已交给任务服务，请查看执行事实。"),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: "发送指令" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "发送指令" })).toBeDisabled();
+  await expect(page.getByRole("heading", { name: "设备暂不能接受新任务" })).toBeVisible();
   await expect(
     page.getByRole("region", { name: "当前任务" }).locator(".identifier"),
   ).toHaveText(first);
