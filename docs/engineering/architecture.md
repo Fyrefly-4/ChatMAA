@@ -193,3 +193,5 @@ Fastify、FastAPI、SQLite 和 MaaCore 已有固定版本集成证据，见[合�
 基于 `8ec496e` 增补人工接管入口。Web 新增 `RecoveryPanel.tsx`；Backend 通过原身份边界提供设备状态与接管 API，Agent 对设备阻塞使用确定性指引；Adapter 的 `takeover.py` 负责核对意图、防重、活动执行限制与成功事务。复用原工作线程、探针、设备锁及两份数据库，不增加进程或自动恢复机制。
 
 执行库新增 `takeovers` 表保存核对记录；成功接管作为 `manual_takeover` 事件同步到业务库。`takeover.released` 是独立准入依据，旧任务未知结果保持原样。该记录归属遵循 ADR-0003。固定数据目录中的历史未知不再永久封锁整个 Demo；当前执行仍不可绕过。使用和限制见 [Demo 说明](demo.md#处理历史阻塞)。
+
+2026-09-19 历史阻塞修复验证：实现提交 `b4edb2d` 的 [Windows 离线 CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35421146264) 全部通过，无跳过检查；Backend 41、Adapter 33、浏览器 17 项以及类型检查、Web 构建通过。本地浏览器使用 Edge，CI 使用配套 Chromium。真实模型、游戏刷取及 live 人工接管核对均未在本轮执行。
