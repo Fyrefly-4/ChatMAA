@@ -1,6 +1,6 @@
 import { Store } from './store.ts';
-import { submission, taskId, TaskError } from './task-contract.ts';
-import type { Update, SyncStatus, TaskView } from './task-contract.ts';
+import { submission, taskId, TaskError, blocksExecution } from './task-contract.ts';
+import type { Update, SyncStatus, TaskView, DeviceStatus } from './task-contract.ts';
 
 export interface AdapterClient {
   instance: string;
@@ -34,6 +34,26 @@ export class TaskService {
     return result;
   }
   list() { return this.store.all().map(t => this.get(t.id)); }
+  async device(): Promise<DeviceStatus> {
+    return await this.adapter.call('/device') as DeviceStatus;
+  }
+  async takeover(input: unknown) {
+    if (this.closing || this.exited || this.storageFailed || this.rechecking) throw new TaskError(503, 'service_unavailable');
+    this.rechecking = true;
+    try {
+      await this.poll(true);
+      const targets = (input as { targets?: { id: string }[] } | null)?.targets;
+      if (!Array.isArray(targets) || targets.some(t => !t || !this.store.get(t.id))) {
+        throw new TaskError(409, 'recovery_evidence_unavailable');
+      }
+      if (this.list().some(t => t.state !== 'rejected' && (!t.sync.available || t.gap || t.evidence_conflict))) {
+        throw new TaskError(409, 'recovery_evidence_unavailable');
+      }
+      const result = await this.adapter.call('/takeovers', 'POST', input);
+      await this.poll(true);
+      return result;
+    } finally { this.rechecking = false; }
+  }
   private unavailable(id: string, reason: string) {
     const prior = this.synchronizations.get(id) ?? this.store.view(id)?.sync;
     this.synchronizations.set(id, { available: false, last_success_at: prior?.last_success_at ?? null, reason });
@@ -44,7 +64,7 @@ export class TaskService {
     try {
       const update = await this.adapter.call(`/executions/${id}?after=${row.cursor}`) as Update;
       if (update.instance !== this.adapter.instance) throw new Error('wrong_adapter_instance');
-      if (this.exited && update.snapshot.state !== 'ended') {
+      if (this.exited && update.snapshot.state !== 'ended' && !update.snapshot.takeover?.released) {
         update.snapshot = { ...update.snapshot, state: 'unknown', certainty: 'lower_bound', device: 'needs_check', reason: 'executor_exited' };
       }
       try { this.store.apply(id, update); }
@@ -82,8 +102,7 @@ export class TaskService {
       return this.get(id); // Never resend an uncertain operation, including after restart.
     }
     if (this.closing || this.exited || this.storageFailed || this.rechecking) throw new TaskError(503, 'service_unavailable');
-    if (this.list().some(t => t.state !== 'rejected' && (!['ended'].includes(t.state) ||
-        !t.automation_stopped || t.device !== 'ready'))) throw new TaskError(409, 'device_busy_or_uncertain');
+    if (this.list().some(blocksExecution)) throw new TaskError(409, 'device_busy_or_uncertain');
     // Reserve synchronously before the first await, so concurrent callers cannot both pass admission.
     try { this.store.prepare(id, params, this.source); }
     catch { this.storageFailed = true; throw new TaskError(503, 'storage_unavailable'); }
@@ -102,6 +121,7 @@ export class TaskService {
   async stop(id: string) {
     taskId(id);
     const known = this.get(id);
+    if (known.takeover?.released) return { id, stop_requested: false, confirmed: false, historically_released: true };
     // A repeated stop must not erase terminal evidence, even after the Adapter exits.
     if (['ended', 'rejected'].includes(known.state) && !['running', 'stopping'].includes(known.recheck?.state ?? '')) {
       return { id, stop_requested: false, confirmed: known.automation_stopped && (!known.recheck || known.recheck.automation_stopped) };
@@ -148,7 +168,7 @@ export class TaskService {
     this.exited = true;
     for (const row of this.store.all()) {
       this.unavailable(row.id, 'executor_exited');
-      if (!['ended', 'rejected'].includes(this.get(row.id).state)) {
+      if (!['ended', 'rejected'].includes(this.get(row.id).state) && !this.get(row.id).takeover?.released) {
         try { this.store.mark(row.id, { state: 'unknown', certainty: 'lower_bound', device: 'needs_check', reason: 'executor_exited' }); }
         catch { this.storageFailed = true; }
       }

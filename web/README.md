@@ -29,7 +29,7 @@ npm --prefix web run dev
 
 然后打开 Backend 打印的 `http://127.0.0.1:5173/#token=...`。Vite 固定监听该地址与端口，端口占用时失败，不自动换端口。代理只改变目标 Host，保留浏览器 Origin，也不注入 CLI 令牌。正式运行使用构建产物，不用开发服务器或 `vite preview`。
 
-页面关闭或刷新不会停止已受理任务。退出应用使用 Backend 终端 Ctrl+C，或原 CLI `shutdown`；`--web` 不依赖标准输入存活。任务与请求留在原业务库，页面没有历史列表、解锁、重试或继续入口。
+页面关闭或刷新不会停止已受理任务。退出应用使用 Backend 终端 Ctrl+C，或原 CLI `shutdown`；`--web` 不依赖标准输入存活。任务与请求留在原业务库，页面没有完整历史列表、自动重试或继续入口；历史阻塞可通过明确的人工接管和环境核对处理。
 
 ## 页面和状态从哪里修改
 
@@ -72,3 +72,7 @@ npm --prefix web run test:e2e
 本地已有 Edge 时可用 `$env:PLAYWRIGHT_CHANNEL='msedge'` 运行同一套检查；清除变量后恢复配套 Chromium。CI 固定使用配套 Chromium。浏览器离线回放、真实模型回放、真实游戏是不同证据；前者通过不代表后两者通过。
 
 2026-09-19 本地验证：Backend 39 项、Adapter 25 项、浏览器 7 项、类型检查、构建及 actionlint 通过。本地浏览器为 Edge Chromium。另经实际页面发送一次完整指令到真实 DeepSeek，摘要先展示，唯一 submit_task 参数一致，正式回放确认十次完成，宿主及 Python 正常交接退出。模型回复说明受理时快照，独立任务卡随后显示最终结果。未运行真实游戏；包含收尾修正的 `dccac38` 已通过 [Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35370371623)，使用配套 Chromium。真实模型检查早于退出修正，未重复调用；该修正由新增离线回归及最终 CI 验证。
+
+## 历史阻塞入口（2026-09-19）
+
+基于 `8ec496e` 增补：`RecoveryPanel.tsx` 展示 `/api/status.device` 中的阻塞和核对结果；人工勾选后提交一次 `/api/takeovers`。刷新仅查询，不重放核对或任务。核对期间禁用新指令，原任务卡保留未知事实；成功后由用户发送新指令。`TaskCard.tsx` 单独标注接管凭据，`useExecution.ts` 允许已放行历史卡切换到新任务。业务准入和识别判据仍由 Backend／Adapter 决定。操作流程见 [Demo 说明](../docs/engineering/demo.md#处理历史阻塞)。

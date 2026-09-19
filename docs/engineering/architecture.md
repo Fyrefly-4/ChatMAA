@@ -187,3 +187,9 @@ Fastify、FastAPI、SQLite 和 MaaCore 已有固定版本集成证据，见[合�
 产品负责人参与模块边界、运行方式、数据归属和产品承诺的取舍；常规实现按已接受规则推进。讨论按主题集中说明选择及影响，未回复的建议保持待定。改变既有决定时更新或取代对应 ADR。
 
 实验结论见[设计审阅](../archive/2026-09-prototype/prototype-review.md)。Q1–Q12 选项、原始推荐与资料核对保留在[架构讨论历史](../archive/2026-09-prototype/architecture-discussion.md)，历史措辞不表示当前状态。
+
+## 历史阻塞修复补充（2026-09-19）
+
+基于 `8ec496e` 增补人工接管入口。Web 新增 `RecoveryPanel.tsx`；Backend 通过原身份边界提供设备状态与接管 API，Agent 对设备阻塞使用确定性指引；Adapter 的 `takeover.py` 负责核对意图、防重、活动执行限制与成功事务。复用原工作线程、探针、设备锁及两份数据库，不增加进程或自动恢复机制。
+
+执行库新增 `takeovers` 表保存核对记录；成功接管作为 `manual_takeover` 事件同步到业务库。`takeover.released` 是独立准入依据，旧任务未知结果保持原样。该记录归属遵循 ADR-0003。固定数据目录中的历史未知不再永久封锁整个 Demo；当前执行仍不可绕过。使用和限制见 [Demo 说明](demo.md#处理历史阻塞)。

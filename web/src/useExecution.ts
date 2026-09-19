@@ -31,6 +31,7 @@ export function useExecution() {
     if (
       old &&
       old.id !== value.id &&
+      !old.takeover?.released &&
       (old.state !== "ended" ||
         !old.automation_stopped ||
         old.device !== "ready")

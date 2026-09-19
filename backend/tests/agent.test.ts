@@ -11,8 +11,22 @@ import { authorize } from '../src/agent/policy.ts';
 import type { AgentEvent } from '../src/agent/records.ts';
 import { DatabaseSync } from 'node:sqlite';
 import type { TaskService } from '../src/task-service.ts';
+import { TaskError } from '../src/task-contract.ts';
 
 const run = resolve(repository, '.artifacts/checks', `agent-${Date.now()}`);
+test('device blocker produces deterministic guidance even when model suggests resending', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const tasks = { store: { db, get: () => undefined }, submit: async () => {
+      throw new TaskError(409, 'device_busy_or_uncertain');
+    } } as unknown as TaskService;
+    const agent = new AgentRequests(tasks, mock(calls(params()), result([{ type: 'text', text: '请换成十次重新发送' }])));
+    const answer = await agent.handle({ requestId: 'blocked', original: '刷1-7十次' }, async () => {});
+    assert.match(answer.record.reply!, /本条任务未受理/);
+    assert.match(answer.record.reply!, /重复发送不能解除阻塞/);
+    assert.doesNotMatch(answer.record.reply!, /请换成十次/);
+  } finally { db.close(); }
+});
 test('stalled request, reply and error output settle on timeout or cancellation', async () => {
   for (const kind of ['request', 'reply', 'error'] as const) {
     for (const cancel of [false, true]) {

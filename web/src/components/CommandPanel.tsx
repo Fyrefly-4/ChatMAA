@@ -17,7 +17,7 @@ export function CommandPanel({
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          void send(text);
+          if (!disabled) void send(text);
         }}
       >
         <label htmlFor="command">完整指令</label>

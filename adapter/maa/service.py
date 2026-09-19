@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from contract import MAX_COUNT
 from readiness import fresh
 from worker import execute, recheck
+from takeover import Takeovers, TakeoverRequest, blocked, released
 
 
 def environment_view(evidence):
@@ -64,8 +65,11 @@ class Controller:
         self.awaiting_ack = False
         self.retire_at = None
         self.last_lease = time.monotonic()
+        self.takeovers = Takeovers(self)
         for row in self.db.execute("SELECT id, snapshot FROM executions").fetchall():
             snap = json.loads(row["snapshot"])
+            if released(snap):
+                continue
             if snap.get("recheck", {}).get("state") in ("running", "stopping"):
                 self.record(row["id"], "recheck_interrupted", device="needs_check",
                             recheck={**snap["recheck"], "state": "unknown", "automation_stopped": False})
@@ -90,6 +94,7 @@ class Controller:
 
     def record(self, execution_id, kind, detail=None, **changes):
         snap = self.read(execution_id)
+        snap.pop("takeover", None)
         snap.update(changes)
         snap.update(seq=snap["seq"] + 1, updated_at=time.time())
         evidence = {"id": execution_id, "seq": snap["seq"], "kind": kind,
@@ -111,6 +116,8 @@ class Controller:
         if control:
             control["stop"].set()  # Signal first, even when persistence is broken.
             try:
+                if control.get("kind") == "takeover":
+                    return
                 if control.get("kind") == "recheck":
                     self.record(execution_id, "recheck_stop_requested", recheck={**self.read(execution_id)["recheck"], "state": "stopping"})
                 else:
@@ -128,6 +135,9 @@ class Controller:
 
     def receive(self, execution_id, kind, value):
         control = self.active[execution_id]
+        if control.get("kind") == "takeover":
+            self.takeovers.finish(value)
+            return
         if kind == "recheck_finished":
             stopped = value.get("automation_stopped") is True
             environment = environment_view(value.get("environment", {}))
@@ -190,6 +200,7 @@ class Controller:
         if self.active or any(s["state"] != "ended" or not s["automation_stopped"] or
                               (s.get("recheck") and not s["recheck"].get("automation_stopped")) for s in snapshots):
             raise HTTPException(409, "automation_stop_unconfirmed")
+        self.takeovers.owned.add(execution_id)
         self.record(execution_id, "recheck_requested", detail={"recheck_id": body.id}, device="occupied",
                     recheck={"id": body.id, "state": "running", "automation_stopped": False, "ready": False})
         stop = threading.Event()
@@ -212,12 +223,13 @@ class Controller:
         if self.storage_failed:
             raise HTTPException(503, "storage_unavailable")
         snapshots = [json.loads(r[0]) for r in self.db.execute("SELECT snapshot FROM executions")]
-        if self.active or any(s["state"] != "ended" or not s["automation_stopped"] or s["device"] != "ready" for s in snapshots):
+        if self.active or self.takeovers.uncertain_probe or any(blocked(s) for s in snapshots):
             raise HTTPException(409, "device_busy_or_uncertain")
         snap = {"id": body.id, "seq": 0, "state": "accepted", "confirmed": 0, "certainty": "lower_bound",
                 "device": "occupied", "reason": None, "automation_stopped": False, "started_cycles": 0,
                 "unsettled_cycles": 0, "evidence_source": "offline_callback_replay" if self.settings.mode == "maa-replay" else "MaaCore_v6.17.5"}
         self.db.execute("INSERT INTO executions VALUES(?,?,?)", (body.id, canonical, json.dumps(snap)))
+        self.takeovers.owned.add(body.id)
         self.record(body.id, "accepted")
         stop = threading.Event()
         self.active[body.id] = {"stop": stop}
@@ -281,6 +293,14 @@ def create_app(control, port):
     @app.get("/health")
     async def health():
         return {"retiring": control.retiring, "storage_failed": control.storage_failed, "active": list(control.active)}
+
+    @app.get("/device")
+    async def device():
+        return control.takeovers.status()
+
+    @app.post("/takeovers", status_code=202)
+    async def takeover(body: TakeoverRequest):
+        return control.takeovers.start(body)
 
     @app.post("/lease")
     async def lease():

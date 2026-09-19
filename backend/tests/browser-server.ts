@@ -9,9 +9,11 @@ import { createApp } from "../src/app.ts";
 import { BrowserRequests } from "../src/browser/requests.ts";
 import { authorize } from "../src/agent/policy.ts";
 import { randomUUID } from "node:crypto";
+import { seedUncertain } from './takeover-fixture.ts';
 
 const dataDir = resolve(repository, ".artifacts/checks", `web-${randomUUID()}`);
 mkdirSync(dataDir, { recursive: true });
+if (process.env.TEST_MODEL_MODE === 'history') seedUncertain(dataDir);
 const host = await startHost({
   mode: "maa-replay",
   dataDir,
