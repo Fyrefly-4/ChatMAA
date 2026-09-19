@@ -86,6 +86,8 @@ npm --prefix web run test:e2e
 
 ## 历史与证据
 
+2026-09-19 根目录启动入口补充（基于 `084bb43`）：本地 Backend 39、Adapter 25、Web 浏览器 16 项及两端类型检查／构建通过。新增 `web/tests/launcher.spec.ts` 在构建完成后验证缺失／过期构建、错误模式、窗口选择、带空格路径和真实 PowerShell 脚本到回放 Backend 的退出交接。窗口与 MAA 安装使用夹具，未运行游戏；根目录命令使用 `-Replay -NoModel -NoBrowser`，不读密钥文件或调用模型。另在本机 PowerShell PTY 验证实际 Ctrl+C 正常交接退出；浏览器自动打开与真实窗口仍需日常现场核对。后续远端结果按实际运行记录，不沿用旧版本绿灯。
+
 Issue #11 首次远端运行 `5e061ba` 的 [Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35379014326) 在 Python 准备失败：`actions/setup-python` 找不到 Windows x64 3.12.14，后续检查全部跳过，不能记为测试通过。随后准备步骤改用上述固定发布包；`3608547` 的 [修正后 Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35379585646) 已通过：日志确认 Node 24.19.0、Python 3.12.14、pip 26.2.1，所有准备和检查步骤实际成功，Backend 39、Adapter 25、Chromium 浏览器 12 项及两端类型检查／构建通过。随后只回写验证说明，未改变代码、测试或 CI 配置。
 
 2026-09-19 Issue #11（基于 `4bcf381`）：Node 24.19.0、Python 3.12.14 x64、npm 12.0.2，锁定依赖安装及 `pip check` 通过；pip 已对齐 `.pip-version` 的 26.2.1。本地 Backend 39、Adapter 25、Web 12 项及两端类型检查／构建通过，浏览器为 Edge Chromium。显式回放配置的正式 `--web` 启动、静态页面、无模型状态及 CLI 关闭交接另行通过。没有真实模型或游戏调用。新基线远端结果见上段，不用下述旧基线 CI 替代；当前 workflow 不因普通分支 push 自动运行，需面向 main 的 PR 或单独授权手动调度。

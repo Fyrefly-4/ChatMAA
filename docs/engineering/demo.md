@@ -2,6 +2,31 @@
 
 最近核对：2026-09-19，Issue #11 在 `4bcf381` 上收敛入口与停止展示。本文描述现有命令和可复用操作流程；真实网页 → 模型 → 游戏的整链验收尚未完成。历史模型回放、正式实机和离线检查分别见[工程说明](architecture.md#已验证范围)，不可相互代替。
 
+## 日常启动：一条命令
+
+完成下面的首次准备后，在仓库根目录的 PowerShell 7 执行：
+
+```powershell
+.\start-demo.ps1          # 真实 Demo：先由用户准备并登录游戏
+.\start-demo.ps1 -Replay  # 回放执行端；仍可能调用真实模型
+```
+
+入口检查 Node／Python 精确版本、x64 Python 依赖、Backend 依赖和前端构建。缺项或源码比构建新时，显示具体修复命令并退出，不自动安装。默认找到工程 venv；首次找不到时询问解释器路径。真实模式首次询问 MAA v6.17.5 安装目录，以后复用；每次重新查找标题为“明日方舟”的窗口，只有多个候选时要求选择，不复用旧窗口句柄。窗口查找是只读过程，不证明游戏现场已准备好。
+
+配置分别保存在忽略目录 `.artifacts/demo/live.json` 和 `replay.json`。真实数据默认复用 `.artifacts/live/`，回放复用 `.artifacts/replay/`，不自动清记录或建立新轮次。原数据存在未知任务时仍阻止冲突执行，不能为了演示顺利换目录绕过。启动入口不读取 `backend/config.local.json` 或 `CHATMAA_CONFIG` 作为默认配置，避免模式被其他入口意外改变。
+
+根目录 `.env` 自动加载到 Backend；也可沿用当前进程的 `DEEPSEEK_API_KEY`。密钥不会出现在配置提示中。终端显示本次模式、窗口与数据目录，Backend 就绪后自动打开默认浏览器；不自动提交刷图任务。自动打开失败时，可使用终端 `web_ready.url` 手动打开。
+
+保留终端，按 **Ctrl+C** 请求原有停止与证据交接。输入控制在当前 Backend 内处理，Python 仍由原宿主管理；没有额外常驻管理进程。先显示 Python／证据交接结果，再由 PowerShell 显示 Backend 已退出。关闭网页不会退出应用，直接关闭终端也不能证明正常交接。
+
+| 可选参数 | 用途 |
+|---|---|
+| `-NoModel` | 不加载 `.env`，不装配模型；页面仍可查看与停止已有任务。完全离线入口检查用 `-Replay -NoModel` |
+| `-NoBrowser` | 保留启动地址但不自动打开浏览器 |
+| `-Config '本地配置路径'` | 使用并保存该份显式配置。模式必须与 `-Replay` 一致；相对配置值仍以文件目录为基准，真实窗口句柄每次更新 |
+
+独立实机验收轮次可显式使用已准备好的 `run-*/data` 配置，通过 `-Config` 交给同一入口；必须先完成旧服务退出及现场准备，不能把新配置当作解锁按钮。日常无需编辑 JSON、复制窗口句柄或手工启动多个服务。
+
 ## 首次准备
 
 固定 Windows 官方桌面端，Node **24.19.0**、Python **3.12.14 x64**；精确版本由仓库版本文件维护，Node 支持范围仍为 `>=24.18.0 <25`。使用对应 Node 发行版的 npm，先检查 `node --version`、`npm --version`。若 PATH 没有 npm，补齐 Node 工具链；也可用 `node <npm安装目录>/bin/npm-cli.js` 代替下列 npm 命令。不要因 `py` 可用就默认它指向正确 Python。
@@ -29,9 +54,9 @@ npm --prefix web run build
 
 正式运行由 Backend 提供 `web/dist`，不需要 Vite 开发服务器。修改前端后重新构建再刷新。全套离线检查及 CI 命令见[CI 说明](ci-plan.md#本地运行相同检查)。测试使用模型替身和正式回放，既不读取 live 配置，也不调用真实模型。
 
-## 本次准备：显式选择模式
+## 手动排查：显式选择模式
 
-Backend 按 `CHATMAA_CONFIG` → `backend/config.local.json` → 默认配置读取。为避免误读已有 live 配置，每次显式指定配置文件；配置中的相对路径以**配置文件所在目录**为基准。以下生成绝对路径，配置与记录均位于 Git 忽略目录。
+下面保留不经过启动脚本的底层命令，供排查和独立验证；日常使用上面的一条命令即可。直接运行 Backend 时按 `CHATMAA_CONFIG` → `backend/config.local.json` → 默认配置读取。为避免误读已有 live 配置，每次显式指定配置文件；配置中的相对路径以**配置文件所在目录**为基准。以下生成绝对路径，配置与记录均位于 Git 忽略目录。
 
 ### 回放入口
 
@@ -78,7 +103,7 @@ $env:CHATMAA_CONFIG = Join-Path $run 'config.json'
 
 ## 打开网页与执行
 
-模型固定为 DeepSeek `deepseek-flash`。Backend 读取 `DEEPSEEK_API_KEY`，程序不会自动加载 `.env`。可在当前终端设置环境变量后运行 `node backend/src/main.ts --web`；或将密钥保存在仓库根目录本地 `.env` 中（`DEEPSEEK_API_KEY=实际密钥`），使用：
+模型固定为 DeepSeek `deepseek-flash`。Backend 读取 `DEEPSEEK_API_KEY`；根目录 Demo 入口自动加载 `.env`，直接运行底层 `main.ts --web` 则需显式加载。可在当前终端设置环境变量后运行 `node backend/src/main.ts --web`；或将密钥保存在仓库根目录本地 `.env` 中（`DEEPSEEK_API_KEY=实际密钥`），使用：
 
 ```powershell
 node --env-file=.env backend/src/main.ts --web
@@ -119,6 +144,7 @@ flowchart LR
 
 | 现象 | 入口与判断 |
 |---|---|
+| 根目录命令失败或需要调整启动行为 | `start-demo.ps1`、`backend/src/demo-entry.ts`、`demo.ts`；分别负责参数传递、导入前依赖检查、配置／窗口／构建预检与终端控制。先处理打印的缺项，不提交任务探测 |
 | 页面或配置启动失败 | `backend/src/main.ts`、`config.ts`；检查显式配置、Python 路径、`web/dist`、终端错误，不发送任务探测 |
 | 摘要不推进 | Web `OperationSummary.tsx`、`useExecution.ts`；检查页面可见性、同一请求的摘要回执，刷新不恢复执行资格 |
 | 指令未执行／参数不符 | Agent `policy.ts`、`tools.ts`；原文完整匹配、范围及参数绑定优先，模型无权放宽业务规则 |

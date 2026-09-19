@@ -6,6 +6,8 @@
 
 正式 Backend 使用 npm 和 `backend/package-lock.json` 安装与检查；原型的历史工具与证据不随此调整重写。
 
+2026-09-19 启动体验补充（基于 `084bb43`）：根目录 `start-demo.ps1` 进入 `backend/src/demo-entry.ts`，先检查依赖再加载现有 `main.ts`。`demo.ts` 负责版本／构建检查、本地配置复用、当前窗口发现和浏览器打开；`main.ts` 在同一 Backend 内把 Ctrl+C 输入接到原退出交接。没有新增常驻监督进程、数据库或业务接口。默认真实模式，`-Replay` 显式回放，`-NoModel` 可禁用模型；日常固定数据目录不自动重建，未知任务的受理限制不变。使用与首次准备见 [Demo 入口](demo.md#日常启动一条命令)。
+
 2026-09-18 CI 简化补充：采用单 workflow、单 Windows job，全量执行 Backend 类型检查、Backend 集成测试与 Adapter 单元测试；保留固定环境和锁定依赖，移除按需调度及独立门禁。简化结构的本地完整检查和远端 Windows PR 检查均已通过，未启用强制门禁。Python 3.13.15 的既有离线结论不扩大为实机结论。日常运行、后续检查接入及验证边界见 [CI 使用与接入](ci-plan.md)，实施过程见 [归档方案](../archive/2026-09-ci/ci-plan.md)。
 
 本地验证向导按轮次保存 live 数据，两端配置均允许 `.artifacts/live-wizard/run-*/data/`，默认手动入口仍为 `.artifacts/live/`。各轮次共用仓库设备锁；上一轮服务退出与上一轮验收通过分开判断，历史记录原样保留。配置校验失败会报告“执行端未启动”，不要求对未启动的执行端做收尾。

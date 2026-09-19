@@ -6,6 +6,8 @@
 
 完整准备、显式配置及收尾步骤以 [Demo 运行入口](../docs/engineering/demo.md)为准；下面保留模块开发命令。
 
+日常演示执行根目录 `.\start-demo.ps1`，回放加 `-Replay`；自动打开浏览器。前端修改后先重新构建，入口会拒绝明显过期的构建。Ctrl+C 在宿主终端请求收尾，关闭网页仍不停止任务。
+
 先按 [Backend 准备说明](../backend/README.md#准备与离线使用)安装固定 Node、Python 和 Backend 依赖。仓库根目录执行：
 
 ```powershell
@@ -51,6 +53,8 @@ npm --prefix web run dev
 停止原因 `user_stop`／`user_stop_before_start` 解释请求发生的阶段；停止确认仍读取 `automation_stopped`。`useExecution.ts` 对外返回的操作提示优先使用当前任务证据，即使受理回执迟到也不会覆盖已确认停止。未知原因保留原码，完成量和环境状态不因文案变化而放宽。
 
 ## 离线验证
+
+2026-09-19 根目录入口补充：本地浏览器检查扩为 16 项，新增配置／构建预检和实际 PowerShell 脚本启动回放、Ctrl+C 输入交接。`launcher.spec.ts` 需要先构建 Web，与现有 CI 顺序一致；窗口选择使用夹具，真实模型及游戏未调用。
 
 Issue #11（2026-09-19，基于 `4bcf381`）：Node 24.19.0／Python 3.12.14 下本地类型检查、构建与 Edge Chromium 浏览器 12 项通过。新增两种停止回执时序的展示检查使用 API 夹具，不表示真实游戏停止已验收。真实模型与游戏本轮均未运行。`3608547` 的 [Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35379585646) 已在同一精确 Node／Python 基线使用配套 Chromium 通过全部 12 项。
 
