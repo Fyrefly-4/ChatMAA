@@ -3,6 +3,39 @@ import { readFileSync } from 'node:fs';
 import { posix, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+function inlineDestinations(line) {
+  const destinations = [];
+  for (const match of line.matchAll(/\]\(\s*/g)) {
+    let cursor = match.index + match[0].length;
+    const angled = line[cursor] === '<';
+    if (angled) cursor++;
+    const start = cursor;
+    let depth = 0;
+    for (; cursor < line.length; cursor++) {
+      const char = line[cursor];
+      if (char === '\\' && /[!"#$%&'()*+,\-./:;<=>?@[\]\\^_`{|}~]/.test(line[cursor + 1] ?? '')) {
+        cursor++;
+        continue;
+      }
+      if (angled) {
+        if (char === '>') break;
+      } else {
+        if (char === '(') depth++;
+        else if (char === ')') {
+          if (depth === 0) break;
+          depth--;
+        } else if (/\s/.test(char)) break;
+      }
+    }
+    if (depth !== 0 || (angled && line[cursor] !== '>')) continue;
+    const tail = line.slice(cursor + (angled ? 1 : 0));
+    if (/^(?:\s+(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\((?:\\.|[^)\\])*\)))?\s*\)/.test(tail)) {
+      destinations.push(line.slice(start, cursor));
+    }
+  }
+  return destinations;
+}
+
 // Check local file/directory destinations, not remote URLs or heading anchors.
 export function checkLinks(files, read) {
   const tracked = new Set(files);
@@ -19,11 +52,11 @@ export function checkLinks(files, read) {
       }
       if (fence) continue;
       const line = lines[i].replace(/(`+).*?\1/g, '');
-      const destinations = [...line.matchAll(/\]\(\s*(?:<([^>]+)>|([^\s)]+))(?:\s+"[^"]*")?\s*\)/g)]
-        .map(match => match[1] ?? match[2]);
+      const destinations = inlineDestinations(line);
       const reference = /^\s{0,3}\[[^\]]+\]:\s*(?:<([^>]+)>|(\S+))/.exec(line);
       if (reference) destinations.push(reference[1] ?? reference[2]);
-      for (const destination of destinations) {
+      for (const rawDestination of destinations) {
+        const destination = rawDestination.replace(/\\([!"#$%&'()*+,\-./:;<=>?@[\]\\^_`{|}~])/g, '$1');
         if (/^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i.test(destination)) continue;
         let path;
         try { path = decodeURIComponent(destination.split(/[?#]/, 1)[0]); }

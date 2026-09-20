@@ -164,4 +164,4 @@ flowchart LR
 | 停止提示或完成量不符 | Web `task-presentation.ts`、`useExecution.ts`、`TaskCard.tsx`；比较当前任务 API 与工具调用时快照，分别检查完成量、停止、环境和同步 |
 | 执行未知／退出异常 | Backend `task-service.ts`、`host.ts` 及 Adapter 执行记录；保留原 ID、两库及现场，不以清空记录恢复 |
 
-Demo 仅覆盖固定官方桌面端、1-7 明确次数、不吃药不碎石、同设备单任务。无多轮补全、完整历史、完整刷新恢复、自动核对解锁与“继续”、自动队列或重试；不承诺其他环境与全部故障兜底。完整 MVP 要求仍见 [Spec #1](https://github.com/Fyrefly-4/ChatMAA/issues/1)，整体 Demo 标准见 [#7](https://github.com/Fyrefly-4/ChatMAA/issues/7)。本说明可复用不表示必须追加游戏操作。
+Demo 仅覆盖固定官方桌面端、1-7 明确次数、不吃药不碎石、同设备单任务。无多轮补全、完整历史、完整刷新恢复、自动核对解锁与“继续”、自动队列或重试；不承诺其他环境与全部故障兜底。当前完整 MVP 要求见 [Spec #18](https://github.com/Fyrefly-4/ChatMAA/issues/18)，开发路线见 [#19](https://github.com/Fyrefly-4/ChatMAA/issues/19)，整体 Demo 标准见 [#7](https://github.com/Fyrefly-4/ChatMAA/issues/7)。2026-09-20 同步规格入口：#18 已替代旧 #1，本文的 Demo 行为与验证保留原范围，不代表新规格已实现。本说明可复用不表示必须追加游戏操作。

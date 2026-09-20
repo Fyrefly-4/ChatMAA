@@ -17,3 +17,19 @@ test('reports missing and untracked targets with source line; ignores code examp
   assert.match(errors[2], /docs\/index.md:7:.*x.png/);
   assert.match(errors[3], /docs\/index.md:8: invalid URL encoding/);
 });
+
+test('accepts balanced, nested, escaped and angle-wrapped parentheses with optional titles', () => {
+  const files = ['index.md', 'guide(v2).md', 'guide(v2(draft)).md', 'a (v2).md', 'plot(v2).png'];
+  const content = String.raw`[plain](guide(v2).md) [nested](guide(v2(draft)).md "Guide")
+[escaped](guide\(v2\).md 'Guide') [angle](<a (v2).md> (Guide))
+![image](plot(v2).png) [encoded](guide%28v2%29.md)
+[reference]: guide\(v2\).md`;
+  assert.deepEqual(checkLinks(files, file => file === 'index.md' ? content : ''), []);
+});
+
+test('reports the full missing parenthesized path and still checks the following link', () => {
+  const errors = checkLinks(['index.md'], () => '[bad](missing(v2(draft)).md "Title") [next](other.md)');
+  assert.equal(errors.length, 2);
+  assert.match(errors[0], /missing\(v2\(draft\)\)\.md$/);
+  assert.match(errors[1], /other\.md$/);
+});
