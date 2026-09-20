@@ -1,5 +1,6 @@
 import { Store } from './store.ts';
-import { submission, taskId, TaskError, blocksExecution } from './task-contract.ts';
+import { taskId, TaskError, blocksExecution, uncertainEvidence } from './task-contract.ts';
+import { executionSubmission } from './execution-contract.ts';
 import type { Update, SyncStatus, TaskView, DeviceStatus } from './task-contract.ts';
 
 export interface AdapterClient {
@@ -24,9 +25,10 @@ export class TaskService {
   }
   get(id: string): TaskView {
     taskId(id);
-    const result = this.store.view(id, this.synchronizations.get(id));
+    let result = this.store.view(id, this.synchronizations.get(id));
     if (!result) throw new TaskError(404, 'unknown_task');
     if (this.storageFailed) {
+      result = { ...result, ...uncertainEvidence(result, 'storage_unavailable') };
       result.sync = { ...result.sync, available: false, reason: 'storage_unavailable' };
       result.certainty = 'lower_bound'; result.device = 'needs_check';
       if (!['ended', 'rejected'].includes(result.state)) result.state = 'unknown';
@@ -95,7 +97,7 @@ export class TaskService {
     }
   }
   async submit(input: unknown) {
-    const { id, params } = submission(input);
+    const { id, params } = executionSubmission(input);
     const existing = this.store.get(id);
     if (existing) {
       if (existing.params !== JSON.stringify(params)) throw new TaskError(409, 'id_parameter_conflict');
@@ -169,7 +171,7 @@ export class TaskService {
     for (const row of this.store.all()) {
       this.unavailable(row.id, 'executor_exited');
       if (!['ended', 'rejected'].includes(this.get(row.id).state) && !this.get(row.id).takeover?.released) {
-        try { this.store.mark(row.id, { state: 'unknown', certainty: 'lower_bound', device: 'needs_check', reason: 'executor_exited' }); }
+        try { this.store.mark(row.id, { ...uncertainEvidence(this.get(row.id), 'executor_exited'), state: 'unknown', device: 'needs_check', reason: 'executor_exited' }); }
         catch { this.storageFailed = true; }
       }
     }

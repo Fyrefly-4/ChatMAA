@@ -1,5 +1,7 @@
 # MAA Adapter
 
+2026-09-20 D2 开发补充：新增 MuMu/ADB 连接、v2 库存／次数／材料操作及独立结果解释，见 [D2 执行契约](../../docs/engineering/d2-adapter.md)。当前为离线实现与替身验证，尚无 MuMu 实机验收结论；下文桌面 Demo 证据保持原范围。
+
 正式执行端由 [Backend](../../backend/README.md) 启动，承担受理、防重、设备占用、MaaCore 工作线程和执行证据。控制线程写 `executor.sqlite`，工作线程只发反馈；不加载原型脚本或实验 grant。启动不连接游戏，只有明确的 live 提交才进入 native 路径。
 
 ## 能力与证据边界
@@ -61,5 +63,3 @@ live 默认使用仓库根目录下的 `.artifacts/live/`；本地验证向导�
 核对复用 `worker.recheck` 的只识别探针，不运行 Fight。执行库新增 `takeovers` 表记录意图、失败或成功结果；成功事务一次性保存所有目标的 `manual_takeover` 事件与 `takeover` 凭据。旧快照的执行状态、次数、可信度、停止、原因和环境字段不改写。后续执行事件使旧接管凭据失效。相同核对 ID 永不再次调用探针；启动将未完成核对标为 interrupted，等待明确的新人工操作。核对停止无法确认时当前进程继续封锁准入。
 
 上述协议已有离线覆盖；后续固定环境实机还验证了核对失败不放行、显式核对成功后保留旧未知结果并接收新任务，见[工程说明](../../docs/engineering/architecture.md#issue-11-真实整链验证2026-09-19)。响应丢失、重启等其他故障仍只有离线证据。现场步骤见 [Demo 说明](../../docs/engineering/demo.md#处理历史阻塞)。
-
-D2 执行已接入：显式 MuMu ADB 配置与旧桌面窗口配置互斥；三类操作经原控制线程、工作线程、设备锁和 SQLite 留证，复用停止与环境核对。资源按平台加载并记录摘要，扫描后允许有限返回。v2 离线反馈标记 synthetic_d2_callbacks，不等同真实识别。验证：Adapter 全套单元检查，native 边界使用替身、不操作游戏。

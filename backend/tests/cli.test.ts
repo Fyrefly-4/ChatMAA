@@ -82,6 +82,15 @@ test('separate CLI processes submit, query and stop; host shutdown hands off evi
     let normal;
     do { await pause(50); normal = await query('normal'); } while (normal.state !== 'ended' && Date.now() < deadline);
     assert.equal(normal.confirmed, 1); assert.equal(normal.device, 'ready');
+    const operationFile = resolve(data, 'scan-request.json');
+    writeFileSync(operationFile, JSON.stringify({ id: 'scan-cli', params: { version: 2, kind: 'scan_inventory' } }));
+    await client('submit-file', operationFile);
+    await client('submit-file', operationFile);
+    let inventory;
+    do { await pause(50); inventory = await query('scan-cli'); } while (inventory.state !== 'ended' && Date.now() < deadline);
+    assert.equal(inventory.inventory_result.complete, true);
+    assert.equal(inventory.inventory_result.items['30012'], 72);
+    assert.equal(inventory.evidence_source, 'synthetic_d2_callbacks');
     await client('submit', '100', 'stop');
     let running;
     do { await pause(50); running = await query('stop'); } while (running.confirmed < 1 && Date.now() < deadline);
@@ -97,7 +106,7 @@ test('separate CLI processes submit, query and stop; host shutdown hands off evi
     assert(exited, 'backend did not exit');
     assert.equal(server.exitCode, 0, errors);
     assert(output.includes('"handoffComplete":true'));
-    assert.equal(readFileSync(resolve(data, 'worker-audit.jsonl'), 'utf8').trim().split('\n').length, 2);
+    assert.equal(readFileSync(resolve(data, 'worker-audit.jsonl'), 'utf8').trim().split('\n').length, 3);
   } finally {
     if (!exited && existsSync(resolve(data, 'connection.json'))) await client('shutdown').catch(() => {});
     const end = Date.now() + 6000;

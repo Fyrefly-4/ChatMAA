@@ -3,19 +3,25 @@ import { resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { loadConfig } from './config.ts';
 import { submission, taskId } from './task-contract.ts';
+import { executionSubmission } from './execution-contract.ts';
 
 const [command, ...args] = process.argv.slice(2);
-if (!['submit', 'get', 'stop', 'list', 'shutdown'].includes(command ?? '')) {
-  throw new Error('用法：client submit <次数> [操作ID] | get <ID> | stop <ID> | list | shutdown');
+if (!['submit', 'submit-file', 'get', 'stop', 'list', 'shutdown'].includes(command ?? '')) {
+  throw new Error('用法：client submit <次数> [操作ID] | submit-file <确定参数JSON> | get <ID> | stop <ID> | list | shutdown');
 }
 const config = loadConfig();
 const connection = JSON.parse(readFileSync(resolve(config.dataDir, 'connection.json'), 'utf8'));
 const url = new URL(connection.address);
 if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1') throw new Error('只连接本机 Backend');
 let path = '/tasks'; let method = 'GET'; let body;
-if (command === 'submit') {
-  if (!args[0] || !/^[1-9][0-9]*$/.test(args[0]) || args.length > 2) throw new Error('需要明确的正整数次数');
-  body = submission({ id: args[1] ?? randomUUID(), params: { stage: '1-7', count: Number(args[0]), medicine: 0, premium: 0 } });
+if (command === 'submit' || command === 'submit-file') {
+  if (command === 'submit-file') {
+    if (args.length !== 1) throw new Error('需要一份含稳定 id 的确定参数 JSON 文件');
+    body = executionSubmission(JSON.parse(readFileSync(resolve(args[0]), 'utf8')));
+  } else {
+    if (!args[0] || !/^[1-9][0-9]*$/.test(args[0]) || args.length > 2) throw new Error('需要明确的正整数次数');
+    body = submission({ id: args[1] ?? randomUUID(), params: { stage: '1-7', count: Number(args[0]), medicine: 0, premium: 0 } });
+  }
   // Persist before the network call: after uncertainty, get/reuse this ID instead of creating another task.
   const directory = resolve(config.dataDir, 'requests'); mkdirSync(directory, { recursive: true });
   const file = resolve(directory, `${createHash('sha256').update(body.id).digest('hex')}.json`);
@@ -23,7 +29,9 @@ if (command === 'submit') {
   catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'EEXIST' || readFileSync(file, 'utf8') !== JSON.stringify(body, null, 2)) throw error;
   }
-  console.log(`操作 ${body.id}：1-7 / ${body.params.count} 次 / 不吃药不碎石；模式 ${connection.mode}`);
+  console.log(command === 'submit' && 'count' in body.params
+    ? `操作 ${body.id}：1-7 / ${body.params.count} 次 / 不吃药不碎石；模式 ${connection.mode}`
+    : `操作 ${body.id}：${JSON.stringify(body.params)}；模式 ${connection.mode}`);
   method = 'POST';
 } else if (command === 'get' || command === 'stop') {
   if (args.length !== 1) throw new Error('需要一个操作 ID');

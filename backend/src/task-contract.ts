@@ -1,5 +1,6 @@
 // MaaCore v6.17.5 FightTask::set_params reads times as a signed int.
 export const MAX_COUNT = 2_147_483_647;
+import type { AnyParams } from './execution-contract.ts';
 export type Params = { stage: '1-7'; count: number; medicine: 0; premium: 0 };
 export type Submission = { id: string; params: Params };
 export type EnvironmentEvidence = { ready: boolean; observed_at: number; basis: string; error?: string | null; automation_stopped?: boolean };
@@ -8,13 +9,30 @@ export type Snapshot = {
   device: string; reason: string | null; updated_at?: number; stop_requested?: boolean;
   automation_stopped: boolean; started_cycles: number; unsettled_cycles: number;
   evidence_source: string; environment?: EnvironmentEvidence; evidence_conflict?: boolean;
+  operation?: 'scan_inventory' | 'fight_count' | 'fight_material'; contract_version?: number; interpretation_version?: number;
+  count_result?: { value: number; certainty: string; issues: string[] };
+  material_result?: { items: Record<string, number>; certainty: string; issues: string[] };
+  inventory_result?: { items: Record<string, number>; complete: boolean; certainty: string; missing_items: 'unknown'; observed_at: number | null; issues: string[] };
+  threshold_reached?: boolean;
+  resource_digest?: string;
   takeover?: { id: string; released: boolean; environment: EnvironmentEvidence };
   recheck?: { id: string; state: string; automation_stopped: boolean; ready: boolean; environment?: EnvironmentEvidence };
 };
 export type Evidence = { id: string; seq: number; kind: string; source_instance: string; snapshot: Snapshot };
 export type Update = { snapshot: Snapshot; events: Evidence[]; instance: string };
 export type SyncStatus = { available: boolean; last_success_at: number | null; reason: string | null };
-export type TaskView = Snapshot & { params: Params; cursor: number; gap: boolean; sync: SyncStatus };
+export type TaskView = Snapshot & { params: AnyParams; cursor: number; gap: boolean; sync: SyncStatus };
+export function uncertainEvidence(snapshot: Snapshot, issue: string, conflict = false): Snapshot {
+  const result = { ...snapshot, certainty: 'lower_bound' };
+  if (snapshot.count_result) result.count_result = { ...snapshot.count_result,
+    certainty: conflict || snapshot.count_result.certainty === 'unknown' ? 'unknown' : 'lower_bound', issues: [...new Set([...snapshot.count_result.issues, issue])] };
+  if (snapshot.material_result) result.material_result = { ...snapshot.material_result,
+    certainty: conflict || snapshot.material_result.certainty === 'unknown' ? 'unknown' : 'lower_bound', issues: [...new Set([...snapshot.material_result.issues, issue])] };
+  if (snapshot.inventory_result) result.inventory_result = { ...snapshot.inventory_result,
+    complete: false, certainty: 'unknown', issues: [...new Set([...snapshot.inventory_result.issues, issue])] };
+  if (conflict) result.threshold_reached = false;
+  return result;
+}
 export function blocksExecution(t: Snapshot & { gap?: boolean; sync?: SyncStatus }) {
   if (t.takeover?.released && (t.gap || t.evidence_conflict || t.sync?.available === false)) return true;
   return t.state !== 'rejected' && (!t.takeover?.released || t.evidence_conflict) &&

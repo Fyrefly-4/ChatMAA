@@ -27,11 +27,11 @@ export function TaskCard({
   return (
     <section className="card task-card" aria-label="当前任务">
       <div className="card-heading">
-        <span className="eyebrow">执行事实 · 1-7</span>
+        <span className="eyebrow">执行事实 · {'stage' in task.params ? task.params.stage : '库存扫描'}</span>
         <span className="badge">{view.state}</span>
       </div>
       <h2>{view.count}</h2>
-      <p>目标 {task.params.count} 次 · 不吃药 · 不碎石</p>
+      <p>{'count' in task.params ? `目标 ${task.params.count} 次` : 'quantity' in task.params ? `目标材料 ${task.params.quantity} 个` : '读取库存'} · 不吃药 · 不碎石</p>
       <p>{view.remaining}</p>
       <p className={task.automation_stopped ? "positive" : "muted"}>
         {view.stopped}
