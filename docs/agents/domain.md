@@ -1,37 +1,23 @@
-# Domain docs
+# 领域文档约定
 
-How engineering skills should consume this repository's domain documentation while exploring the codebase.
+## 何时查阅
 
-## Before exploring, read these
+- 涉及领域概念时，查阅 [CONTEXT.md](../../CONTEXT.md) 并沿用其术语。
+- 涉及模块职责、进程、通信、数据归属或架构取舍时，查阅[工程说明](../engineering/architecture.md)和 [docs/adr/](../adr/) 中相关的架构决定。
+- 提出设计、实现变更或审查结论时，明确与相关既有决定的关系。
 
-- **`CONTEXT.md`** at the repository root.
-- **`docs/adr/`**: read ADRs that affect the area about to be changed.
+若对应资料不存在，继续当前任务，无需预先要求补建文档；在领域建模实际明确术语或决定时再建立。
 
-If these files do not exist, proceed silently. Do not flag their absence or suggest creating them upfront. Domain-modeling workflows create them lazily when terms or decisions are actually resolved.
+## 文档位置
 
-## File structure
+本仓库采用单一领域上下文：根目录 `CONTEXT.md` 维护共享术语与领域模型，`docs/adr/` 保存持久架构决定。实际代码布局由工程说明维护。
 
-This is a single-context repository:
+## 术语使用
 
-```text
-/
-├── CONTEXT.md
-├── docs/adr/
-│   ├── 0001-example-decision.md
-│   └── 0002-another-decision.md
-└── src/
-```
+在 Issue 标题、重构建议、调查假设或测试名称等输出中提到领域概念时，使用 `CONTEXT.md` 定义的术语，避免使用词汇表明确排除的同义表达。
 
-`CONTEXT.md` contains the shared domain vocabulary and model. `docs/adr/` contains durable architectural decisions.
+所需概念不在词汇表中时，先判断它是否属于项目领域；确有缺口时，记录为后续领域建模事项。
 
-## Use the glossary's vocabulary
+## 架构冲突
 
-When output names a domain concept—for example in an issue title, refactor proposal, hypothesis, or test name—use the term defined in `CONTEXT.md`. Do not drift to synonyms that the glossary explicitly avoids.
-
-If a required concept is absent from the glossary, reconsider whether the term belongs to the project. If it represents a real gap, record it for a future domain-modeling pass.
-
-## Flag ADR conflicts
-
-If proposed work contradicts an existing ADR, surface the conflict explicitly instead of silently overriding it:
-
-> _Contradicts ADR-0007 (event-sourced orders), but worth reopening because…_
+拟议工作与现有 ADR 冲突时，明确列出对应 ADR、冲突内容、重新讨论的理由和影响；保留现有决定，待取舍明确后更新或替代相应 ADR。
