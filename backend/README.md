@@ -351,3 +351,5 @@ npm --prefix backend run client -- shutdown
 基于 `8ec496e` 增补。`TaskService.takeover` 先同步原记录，缺口、冲突或连接失败时拒绝放行；Adapter 再核对租约、活动执行和确切阻塞范围。Python 持久保存核对意图与结果，成功时将接管凭据作为独立执行证据同步回业务库。`takeover.released` 只解除准入阻塞，不能解释为旧任务已完成或已确认停止。退出交接可接受完整同步的接管凭据，但不重写旧结果。
 
 `agent/requests.ts` 对实际工具返回的 `device_busy_or_uncertain` 使用确定性回复，说明当前未受理并引导处理阻塞，不采用模型建议的改次数或重复发送。页面操作见 [Demo 说明](../docs/engineering/demo.md#处理历史阻塞)。
+
+2026-09-21：Backend 与 Adapter 的默认端口交由操作系统分配，避免随机命中 Windows 排除端口；显式端口、仅本机监听和鉴权保持不变。验证沿用 CLI 启停与宿主交接测试。
