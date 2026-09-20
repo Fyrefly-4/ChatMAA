@@ -1,20 +1,24 @@
 # CI 使用与接入
 
-最近核对：2026-09-19；Issue #11 从 `4bcf381` 调整 Python 精确基线为 3.12.14，Node 保持 24.19.0。setup action 继续读取版本文件，workflow 结构不变。本文是日常运行和新增检查的维护入口；路径沿用 `ci-plan.md`，原实施过程见 [归档方案](../archive/2026-09-ci/ci-plan.md)。
+最近核对：2026-09-20；本轮从 `a3d8703` 增补文档链接与 workflow 静态检查、浏览器失败产物，并减少 PR 元信息编辑引起的重跑。保留单 Windows job 与 Node 24.19.0／Python 3.12.14 基线。本文是日常运行和新增检查的维护入口；路径沿用 `ci-plan.md`，原实施过程见 [归档方案](../archive/2026-09-ci/ci-plan.md)。
 
 ## 当前如何运行
 
-[CI workflow](../../.github/workflows/ci.yml) 使用单个 Windows `offline-checks` job，超时 20 分钟。所有触发都运行全套离线检查，包括纯文档修改。
+[CI workflow](../../.github/workflows/ci.yml) 使用单个 Windows `offline-checks` job，超时 20 分钟。符合下表条件的运行执行全套离线检查，包括纯文档提交。
 
 | 入口 | 行为 |
 |---|---|
-| 面向 `main` 的 PR | opened、synchronize、reopened、edited 时运行，Draft 和 Ready 相同；调整目标分支或修改标题、描述也可能触发 |
+| 面向 `main` 的 PR | opened、synchronize、reopened，以及 edited 中目标分支改变时执行检查，Draft 和 Ready 相同；仅改标题或描述时产生跳过记录，不分配 runner |
 | `main` push | 检查合并后的状态 |
 | 手动 `workflow_dispatch` | 无参数运行全套；workflow 进入默认分支后可从 Actions 页面选择分支运行 |
 
-同一 PR 的新运行取消旧运行；main 和手动运行各自使用 run ID，不互相取消。Node、Python 和两端依赖各准备一次，增加 Web 依赖及配套 Chromium 准备，然后执行 Backend 类型检查、Backend 集成测试、Adapter 单元测试、Web 类型检查、构建和浏览器检查。Web 准备失败不阻止已准备好的 Backend／Adapter 检查；Web 构建失败时不运行浏览器检查。
+同一 PR 的有效新运行取消旧运行；仅改标题或描述的运行使用独立 run ID，不取消已有代码检查。main 和手动运行也各自使用 run ID。Node、Python 和两端依赖各准备一次，运行文档链接检查、检查器回归和 actionlint，再准备 Web 依赖及配套 Chromium，执行 Backend 类型检查、Backend 集成测试、Adapter 单元测试、Web 类型检查、构建和浏览器检查。轻量检查失败不阻止环境已就绪的业务检查；Web 准备失败不阻止已准备好的 Backend／Adapter 检查，Web 构建失败时不运行浏览器检查。
 
-环境准备失败时跳过检查；准备成功后，一项检查失败仍继续后续检查，除非运行被取消。任何检查失败都使 job 失败。排错时查看对应 step 的日志，可在 Actions 页面重跑失败的 job；由于只有一个 job，重跑会重新准备环境并执行全套检查。
+各检查依据所需环境决定是否执行：文档检查依赖 Node 准备成功，actionlint 不依赖 Node／Python 准备；其他检查沿用上述环境条件。任何检查失败都使 job 失败，取消时停止后续检查。排错时查看对应 step 的日志，可在 Actions 页面重跑失败的 job；由于只有一个 job，重跑会重新准备环境并执行全套检查。
+
+浏览器检查失败且运行未取消时，上传 `.artifacts/checks/web-results/`，产物名为 `browser-failure-<run_id>-<run_attempt>`，保留 7 天。该目录包含 Playwright 留存的失败 trace；可从 Actions 运行页下载后使用 Trace Viewer 检查。测试在生成产物前失败时只报告目录为空，不掩盖原测试失败。上传范围仅限离线浏览器检查目录，不包含其他 `.artifacts/` 数据；成功、跳过和取消运行不上传。
+
+文档检查覆盖 Git 跟踪的 Markdown 中常见内联链接、图片和引用定义的本地文件／目录目标，跳过代码示例；目标须受版本管理，避免本地忽略文件掩盖断链。它不访问外网、不检查标题锚点，也不充当完整 Markdown 解析或格式检查器。actionlint 1.7.12 使用固定 Windows x64 包及 SHA-256，检查 workflow 的语法、表达式和步骤引用；不代替远端执行，也不检查 PowerShell 业务语义或完整 composite action 内容。
 
 截至上述基线，未启用强制门禁。以后设为 required 前，应另行确认并核对检查名 `offline-checks`。既有记录已验证 PR 路径，本轮 Web 接入验证了手动入口；main 和 fork 入口尚未分别验证。CI 仅运行离线、替身／回放测试，通过不表示实机验收通过。
 
@@ -44,6 +48,9 @@ Windows CI 的 Python 来源为 [Astral python-build-standalone 固定发布 202
 ```powershell
 npm --prefix web ci --registry=https://registry.npmjs.org
 node web/node_modules/playwright/cli.js install chromium
+node scripts/ci/check-doc-links.mjs
+node --test scripts/ci/check-doc-links.test.mjs
+./scripts/ci/check-workflows.ps1
 npm --prefix backend run check
 npm --prefix backend test
 & ./adapter/maa/.venv/Scripts/python.exe -m unittest discover -s adapter/maa/tests -v
@@ -51,6 +58,8 @@ npm --prefix web run check
 npm --prefix web run build
 npm --prefix web run test:e2e
 ```
+
+`check-workflows.ps1` 默认下载并校验固定 actionlint 包；离线复用已核实的本地二进制时，可传 `-ActionlintPath <actionlint.exe路径>`。文档检查只读取 Git 跟踪文件，新增文件需先加入暂存区才能纳入扫描。详细边界见 [CI 辅助脚本](../../scripts/ci/README.md)。
 
 ## 后续如何接入
 
@@ -85,6 +94,8 @@ npm --prefix web run test:e2e
 某组测试明显拖慢反馈时再拆 job；多个入口确实复用相同检查时再提取 reusable workflow；无关修改反复触发昂贵检查时再评估路径选择；有明确跨平台或多版本支持目标时再增加矩阵。新增模块本身不要求引入上述全部机制。
 
 ## 历史与证据
+
+2026-09-20 CI 维护补充（从 `a3d8703` 实施）：本地 Node 24.19.0／Python 3.12.14 下，Backend 41、Adapter 33、Edge Chromium 浏览器 17 项及两端类型检查、Web 构建通过。文档检查覆盖 30 份已跟踪 Markdown，检查器 2 项回归通过；actionlint 1.7.12 的实际下载、SHA-256 校验和静态检查通过，`git diff --check` 通过。首次浏览器检查因缺少配套 Chromium 未启动，后改用已有 Edge；未调用真实模型或游戏。已观察失败 trace 写入指定目录，但远端产物上传、PR 编辑事件筛选及新版 Windows job 尚待推送后验证，本地通过不替代这些结论。
 
 2026-09-19 根目录启动入口补充（基于 `084bb43`）：本地 Backend 39、Adapter 25、Web 浏览器 16 项及两端类型检查／构建通过。新增 `web/tests/launcher.spec.ts` 在构建完成后验证缺失／过期构建、错误模式、窗口选择、带空格路径和真实 PowerShell 脚本到回放 Backend 的退出交接。窗口与 MAA 安装使用夹具，未运行游戏；根目录命令使用 `-Replay -NoModel -NoBrowser`，不读密钥文件或调用模型。另在本机 PowerShell PTY 验证实际 Ctrl+C 正常交接退出；浏览器自动打开与真实窗口仍需日常现场核对。`f80e42f` 的 [Windows CI](https://github.com/Fyrefly-4/ChatMAA/actions/runs/35418942887) 已全部通过：Node 24.19.0／Python 3.12.14，Backend 39、Adapter 25、配套 Chromium 浏览器 16 项和类型检查／构建；所有准备与检查步骤均已核对。随后仅回写验证说明。
 

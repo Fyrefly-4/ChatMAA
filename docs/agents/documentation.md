@@ -1,13 +1,13 @@
 # 文档维护规则
 
-适用范围：创建、更新、迁移项目文档，或工程变更影响已有说明时。人类可读内容以简体中文撰写，保留代码、协议与官方名称。
+查找项目资料时，可使用下方信息归属表定位主要来源。状态标注、更新与迁移流程适用于创建、更新、迁移项目文档，或工程变更影响已有说明时。人类可读内容以简体中文撰写，保留代码、协议与官方名称。
 
 ## 信息归属
 
 | 信息 | 主维护位置 |
 |---|---|
 | 项目定位与愿景 | [项目定义](../overview/project-definition.md) |
-| 正式产品行为与验收 | GitHub Spec，当前为 [#1](https://github.com/Fyrefly-4/ChatMAA/issues/1)；访问遵循 [Issue 约定](issue-tracker.md) |
+| 正式产品行为与验收 | GitHub Spec，当前为 [#18](https://github.com/Fyrefly-4/ChatMAA/issues/18)；开发路线见 [#19](https://github.com/Fyrefly-4/ChatMAA/issues/19)，访问遵循 [Issue 约定](issue-tracker.md) |
 | 共享术语 | [CONTEXT](../../CONTEXT.md) |
 | 当前模块、关系、代码落点与实现状态 | [工程说明](../engineering/architecture.md) |
 | 持久架构决定 | `docs/adr/`；沿用 [domain 约定](domain.md) |

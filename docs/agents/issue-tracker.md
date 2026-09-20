@@ -2,20 +2,32 @@
 
 Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all operations.
 
+## Scope and interpretation
+
+Use the [source ownership table](documentation.md#信息归属) to locate the current Spec and development roadmap. Read product requirements from the Spec, and stage scope and completion conditions from the roadmap and relevant issues. For historical changes, establish which requirements applied to the change being reviewed.
+
+Read issue state, body, and relevant comments together. Check completion comments and linked PRs when determining progress; a stale body may still describe work as pending. If sources materially conflict, identify their scope and the discrepancy rather than resolving it by date alone.
+
+Issue operations follow the current assignment and applicable workflow. Stage start and handoff conditions remain in the roadmap; reading an issue does not itself start implementation or require creating another issue.
+
 ## Conventions
 
-- **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
-- **Read an issue**: `gh issue view <number> --json number,title,body,labels,comments --jq '{number,title,body,labels:[.labels[].name],comments:[.comments[].body]}'` to retrieve the issue body, labels, and comments together.
-- **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
+- **Create an issue**: `gh issue create --title "..." --body-file <body-file>`.
+- **Read an issue**: `gh issue view <number> --json number,title,state,body,labels,comments --jq '{number,title,state,body,labels:[.labels[].name],comments:[.comments[] | {body,createdAt,url}]}'` to retrieve the issue state, body, labels, and dated comments together.
+- **List issues**: `gh issue list --state open --json number,title,state,body,labels,comments --jq '[.[] | {number,title,state,body,labels:[.labels[].name],comments:[.comments[] | {body,createdAt,url}]}]'` with appropriate `--label` and `--state` filters.
 - **Comment on an issue**: `gh issue comment <number> --body "..."`
 - **Apply or remove labels**: `gh issue edit <number> --add-label "..."` or `--remove-label "..."`
 - **Close an issue**: `gh issue close <number> --comment "..."`
 
 Infer the repository from `git remote -v`; `gh` does this automatically when run inside this clone.
 
+For multi-line issue or PR bodies and comments, write the exact text to a UTF-8 file using PowerShell, then pass it with `--body-file`. Use a single-quoted here-string when writing literal content so PowerShell preserves `$` and backticks. To close with a multi-line explanation, post it using `gh issue comment <number> --body-file <body-file>`, then close the issue without duplicating the comment.
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.**
+
+This setting controls intake and triage of requests. Reading PRs, reviewing changes, and checking merge results remain available regardless of this setting.
 
 When set to `yes`, PRs run through the same labels and states as issues, using the `gh pr` equivalents:
 
@@ -34,6 +46,8 @@ Create a GitHub issue.
 Use the **Read an issue** command under **Conventions** above.
 
 ## Wayfinding operations
+
+Use this section only for tasks explicitly using the Wayfinding workflow. Ordinary investigation, planning, implementation, and review follow the current assignment and relevant issue agreements.
 
 The map is a single issue with child issues as tickets.
 
