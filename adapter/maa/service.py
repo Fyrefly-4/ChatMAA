@@ -17,6 +17,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from contract import MAX_COUNT
 from readiness import fresh
 from worker import execute, recheck
+from operations import ExecutionParams
+from evidence import uncertain
 from takeover import Takeovers, TakeoverRequest, blocked, released
 
 
@@ -39,7 +41,7 @@ class Params(BaseModel):
 class Submission(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,80}$")
-    params: Params
+    params: Params | ExecutionParams
 
 
 class RecheckRequest(BaseModel):
@@ -75,7 +77,8 @@ class Controller:
                             recheck={**snap["recheck"], "state": "unknown", "automation_stopped": False})
             if snap["state"] != "ended":
                 self.record(row["id"], "recovered_uncertain", state="unknown", certainty="lower_bound",
-                            device="needs_check", reason="executor_restarted", automation_stopped=False)
+                            device="needs_check", reason="executor_restarted", automation_stopped=False,
+                            **uncertain(snap, "executor_restarted"))
 
     def trace(self, kind, **values):
         line = json.dumps({"kind": kind, "at": time.time(), **values})
@@ -147,6 +150,28 @@ class Controller:
                                  "automation_stopped": stopped, "ready": ready, "environment": environment})
         elif kind == "worker_started":
             self.record(execution_id, kind, state="stopping" if control["stop"].is_set() else "running")
+        elif kind in ("operation_progress", "operation_finished"):
+            changes = {key: value[key] for key in ("count_result", "material_result", "inventory_result",
+                       "threshold_reached", "interpretation_version", "started_cycles", "unsettled_cycles", "evidence_source", "resource_digest") if key in value}
+            # Legacy confirmed always denotes successful fights, never inventory/material units.
+            changes["confirmed"] = value.get("count_result", {}).get("value", 0)
+            changes["certainty"] = value.get("count_result", {}).get("certainty", "lower_bound")
+            if kind == "operation_finished":
+                stopped = value.get("automation_stopped") is True
+                healthy = not value.get("errors") and not any(value.get(k) for k in ("callback_error", "runtime_error", "stop_error"))
+                if not stopped or any(value.get(k) for k in ("callback_error", "runtime_error", "stop_error")):
+                    changes.update(uncertain(changes, "execution_evidence_incomplete"))
+                    changes["certainty"] = changes.get("count_result", {}).get("certainty", "lower_bound")
+                environment = environment_view(value.get("environment", {}))
+                changes.update(state="ended" if stopped else "unknown", automation_stopped=stopped,
+                               device="ready" if stopped and healthy and fresh(environment) else "needs_check",
+                               environment=environment, reason=value.get("reason", "unknown"))
+            signature = json.dumps(changes, sort_keys=True)
+            if kind == "operation_finished" or signature != control.get("projection"):
+                control["projection"] = signature
+                self.record(execution_id, kind, detail=value, **changes)
+            if kind == "operation_progress" and value.get("errors"):
+                self.request_stop(execution_id)
         elif kind == "progress":
             signature = json.dumps(value, sort_keys=True)
             if signature != control.get("projection"):
@@ -168,7 +193,8 @@ class Controller:
                         automation_stopped=stopped, started_cycles=value["started_cycles"], unsettled_cycles=value["unsettled_cycles"])
         else:
             self.record(execution_id, "worker_error", detail=value, state="unknown", certainty="lower_bound",
-                        device="needs_check", reason="worker_error", automation_stopped=False)
+                        device="needs_check", reason="worker_error", automation_stopped=False,
+                        **uncertain(self.read(execution_id), "worker_error"))
 
     def drain(self):
         for _ in range(100):
@@ -183,7 +209,7 @@ class Controller:
                 self.active[execution_id]["stop"].set()
                 self.trace("storage_failed", id=execution_id)
             finally:
-                if kind in ("finished", "worker_error", "recheck_finished"):
+                if kind in ("finished", "operation_finished", "worker_error", "recheck_finished"):
                     self.active.pop(execution_id, None)
 
     def recheck(self, execution_id, body):
@@ -228,6 +254,10 @@ class Controller:
         snap = {"id": body.id, "seq": 0, "state": "accepted", "confirmed": 0, "certainty": "lower_bound",
                 "device": "occupied", "reason": None, "automation_stopped": False, "started_cycles": 0,
                 "unsettled_cycles": 0, "evidence_source": "offline_callback_replay" if self.settings.mode == "maa-replay" else "MaaCore_v6.17.5"}
+        if body.params.model_dump().get("version") == 2:
+            snap.update(operation=body.params.kind, contract_version=2, interpretation_version=3)
+            if self.settings.mode == "maa-replay":
+                snap["evidence_source"] = "synthetic_d2_callbacks"
         self.db.execute("INSERT INTO executions VALUES(?,?,?)", (body.id, canonical, json.dumps(snap)))
         self.takeovers.owned.add(body.id)
         self.record(body.id, "accepted")
@@ -243,6 +273,7 @@ class Controller:
         snap = self.read(execution_id)
         if self.storage_failed:
             snap.update(state="unknown", certainty="lower_bound", device="needs_check", reason="storage_failed")
+            snap.update(uncertain(snap, "storage_failed"))
         events = [json.loads(row[0]) for row in self.db.execute(
             "SELECT evidence FROM events WHERE id=? AND seq>? ORDER BY seq", (execution_id, after))]
         return {"snapshot": snap, "events": events, "instance": self.instance}

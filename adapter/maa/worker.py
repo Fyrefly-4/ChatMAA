@@ -14,8 +14,8 @@ def recheck(settings, execution_id, recheck_id, stop, emit):
         output = settings.data / "rechecks" / directory
         if settings.mode == "maa-live":
             from native import probe
-            from core import window_identity
-            window_identity(settings.hwnd)
+            from connection import target_identity
+            target_identity(settings)
             stopped = False
             environment = probe(settings, stop, output)
             stopped = environment["automation_stopped"]
@@ -40,13 +40,32 @@ def execute(settings, operation, stop, emit):
             stream.flush()
             os.fsync(stream.fileno())
         (output / "request.json").write_text(json.dumps(operation), encoding="utf-8")
-        if settings.mode == "maa-replay":
+        version_two = operation["params"].get("version") == 2
+        if version_two and settings.mode == "maa-replay":
+            from operation_replay import replay_operation
+            result = replay_operation(operation, stop, emit, output)
+        elif version_two:
+            from resources import manifest, verify_material
+            from execution import execute_operation, projection
+            platform = "mumu" if settings.connection else "desktop"
+            try:
+                resources = manifest(settings.installation, platform)
+                (output / "resources.json").write_text(json.dumps(resources, ensure_ascii=False, indent=2), encoding="utf-8")
+                verify_material(settings.installation, platform, operation["params"])
+            except (ValueError, OSError) as error:
+                result = projection([], 0, operation["params"], True)
+                result.update(automation_stopped=True, reason="resource_validation_failed", runtime_error=repr(error),
+                              environment={"ready": False, "observed_at": time.time(), "basis": "resource_validation_failed"})
+            else:
+                result = execute_operation(settings, operation, stop, emit, output)
+                result["resource_digest"] = resources["sha256"]
+        elif settings.mode == "maa-replay":
             from replay import replay
             result = replay(operation, stop, emit, output)
         else:
             from native import execute_native
             result = execute_native(settings, operation, stop, emit, output)
         (output / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-        emit("finished", result)
+        emit("operation_finished" if version_two else "finished", result)
     except BaseException as error:
         emit("worker_error", {"error": repr(error)})

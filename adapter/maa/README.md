@@ -62,4 +62,4 @@ live 默认使用仓库根目录下的 `.artifacts/live/`；本地验证向导�
 
 上述协议已有离线覆盖；后续固定环境实机还验证了核对失败不放行、显式核对成功后保留旧未知结果并接收新任务，见[工程说明](../../docs/engineering/architecture.md#issue-11-真实整链验证2026-09-19)。响应丢失、重启等其他故障仍只有离线证据。现场步骤见 [Demo 说明](../../docs/engineering/demo.md#处理历史阻塞)。
 
-D2 底层契约：operations.py 区分库存扫描、次数与材料操作；inventory.py、fight_evidence.py 分别解释库存完整性和周期／掉落证据，evidence.py 保留不确定性。此步尚未接入工作线程。验证：test_inventory.py、test_fight_evidence.py。
+D2 执行已接入：显式 MuMu ADB 配置与旧桌面窗口配置互斥；三类操作经原控制线程、工作线程、设备锁和 SQLite 留证，复用停止与环境核对。资源按平台加载并记录摘要，扫描后允许有限返回。v2 离线反馈标记 synthetic_d2_callbacks，不等同真实识别。验证：Adapter 全套单元检查，native 边界使用替身、不操作游戏。

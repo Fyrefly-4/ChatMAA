@@ -6,6 +6,7 @@ import time
 
 from contract import fight_params, summarize, write_failure_overlay
 from core import Core, ResourceLoadError, window_identity
+from connection import create_core, connect_core, target_identity
 from readiness import fresh, interpret_probe, write_readiness_overlay
 
 
@@ -22,9 +23,16 @@ class Session:
             return
 
         def deliver():
+            # Evidence I/O failure must never prevent delivery of the stop command.
             try:
-                if not self.core.lib.AsstStop(self.core.handle):
+                self.core.write("stop_requested")
+            except Exception as error:
+                self.stop_error = repr(error)
+            try:
+                accepted = bool(self.core.lib.AsstStop(self.core.handle))
+                if not accepted:
                     self.stop_error = "AsstStop rejected"
+                self.core.write("stop_returned", accepted=accepted)
             except BaseException as error:
                 self.stop_error = repr(error)
 
@@ -47,10 +55,11 @@ class Session:
         self.stopped = True
 
 
-def probe(settings, stop, output, core_factory=Core):
+def probe(settings, stop, output, core_factory=Core, return_from_depot=False):
     output.mkdir(parents=True)
     try:
-        core = core_factory(settings.installation, output, incremental=write_readiness_overlay(output), quiet_callbacks=True)
+        overlay = write_readiness_overlay(output, True) if return_from_depot else write_readiness_overlay(output)
+        core = create_core(settings, output, core_factory, incremental=overlay, quiet_callbacks=True)
     except ResourceLoadError as error:
         evidence = {"ready": False, "observed_at": time.time(), "basis": "resource_load_failed",
                     "automation_stopped": True, "error": repr(error)}
@@ -62,11 +71,13 @@ def probe(settings, stop, output, core_factory=Core):
     try:
         if core.version != "v6.17.5":
             raise RuntimeError("unsupported MaaCore version")
-        core.attach(settings.hwnd)
+        connect_core(core, settings)
         if stop.is_set():
             raise RuntimeError("canceled before recognition")
-        task_id = core.lib.AsstAppendTask(core.handle, b"Custom",
-                                        b'{"task_names":["ChatMAAReadyHome","ChatMAAReadyStage"]}')
+        nodes = ["ChatMAAReadyHome", "ChatMAAReadyStage"]
+        if return_from_depot:
+            nodes += ["ChatMAADepotAll", "ChatMAADepotMaterial"]
+        task_id = core.lib.AsstAppendTask(core.handle, b"Custom", json.dumps({"task_names": nodes}).encode())
         if task_id <= 0 or not core.lib.AsstStart(core.handle):
             raise RuntimeError("recognition not accepted")
         deadline = time.monotonic() + 15
@@ -93,7 +104,7 @@ def probe(settings, stop, output, core_factory=Core):
 def execute_native(settings, operation, stop, emit, output, core_factory=Core, identity=window_identity):
     count = operation["params"]["count"]
     params = fight_params(count)
-    window = identity(settings.hwnd)
+    window = target_identity(settings, identity)
     environment = probe(settings, stop, output / "before-check", core_factory)
     result = summarize([], 0, count)
     result.update(automation_stopped=environment["automation_stopped"], reason="environment_unconfirmed", environment=environment,
@@ -103,7 +114,7 @@ def execute_native(settings, operation, stop, emit, output, core_factory=Core, i
     battle = output / "battle"
     battle.mkdir()
     try:
-        core = core_factory(settings.installation, battle, incremental=write_failure_overlay(battle), quiet_callbacks=True)
+        core = create_core(settings, battle, core_factory, incremental=write_failure_overlay(battle), quiet_callbacks=True)
     except ResourceLoadError as error:
         # The preceding probe stopped, and no battle instance has been created.
         result.update(automation_stopped=True, reason="resource_load_failed",
@@ -119,7 +130,7 @@ def execute_native(settings, operation, stop, emit, output, core_factory=Core, i
     try:
         if core.version != "v6.17.5":
             raise RuntimeError("unsupported MaaCore version")
-        core.attach(settings.hwnd)
+        connect_core(core, settings)
         if not fresh(environment):
             raise RuntimeError("environment evidence expired before execution")
         if stop.is_set():
