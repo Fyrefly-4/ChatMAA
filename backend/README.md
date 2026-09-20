@@ -1,6 +1,6 @@
 # Backend 独立执行入口
 
-2026-09-20 D2 开发补充：原任务 HTTP 与独立 CLI 新增 v2 扫描、次数和材料操作，`submit-file` 接收含稳定 ID 的 JSON；契约、MuMu 配置及证据边界见 [D2 执行契约](../docs/engineering/d2-adapter.md)。新能力未接入模型工具或完整方案确认，尚无 MuMu 实机验收结论。
+2026-09-21 D2 补充：原任务 HTTP 与独立 CLI 新增 v2 扫描、次数和材料操作，`submit-file` 接收含稳定 ID 的 JSON；契约、MuMu 配置及证据边界见 [D2 执行契约](../docs/engineering/d2-adapter.md)。固定 MuMu 上已通过扫描→次数→材料→停止的 Backend 实机链路，详见[验证交付说明](../docs/engineering/d2-verification.md)；新能力未接入模型工具或完整方案确认。
 
 Backend 提供明确参数的提交、查询、停止和结果读取；确定参数入口不依赖 Web 或模型，`--agent` 与 `--web` 可装配自然语言 Agent。TS 管理 Python 子进程，通过本机 HTTP 协作，各自保存 SQLite。默认使用脱敏回调回放，启动不会自动提交任务。完整网页使用从 [Demo 运行入口](../docs/engineering/demo.md)开始，显式选择配置。
 
