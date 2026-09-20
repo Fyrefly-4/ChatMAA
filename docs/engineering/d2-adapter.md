@@ -94,6 +94,12 @@ Backend 任务服务保存提交意图后调用 Python `/executions`；控制线
 
 ## 代码与检查入口
 
+2026-09-21 接管同步修正（基于 `7d7b6cb`）：Backend 将“执行终止”和“证据已稳定”分开判断。仍阻塞新操作的历史任务继续周期同步，包括 ended／已停止但 needs_check 的记录；已完整同步并放行的历史才退出常规轮询，旧 unknown 事实不因此改写。启动未同步、证据缺口／冲突、单任务复核未停止均阻止提交；退出仍全量核对。沿用双库及 Adapter 的持久接管记录，不新增接管表，也不因恢复或丢失回执重发操作。
+
+Backend `GET /device` 和浏览器状态的 `device` 在执行端事实之外增加 `admission`：`ready` 可受理，`blocked` 仍有执行／环境阻塞，`synchronizing` 执行端已解除阻塞但业务证据尚未满足放行条件，`unavailable` 服务正在退出或不可用。`conflictingTaskIds` 是业务侧阻塞范围；查询只描述当前状态，不预留执行资格，每次提交仍重新检查，Adapter 最终执行互斥检查。Web 和确定参数客户端应消费该汇总，不仅凭 recovery=succeeded 放行，也不要自行修改旧结果。
+
+受控延迟回归见 `backend/tests/recovery-sync.test.ts`：POST 返回后才追加放行证据，覆盖多目标、ended／unknown 历史、丢失回执、服务状态重建、失败／停止不明及证据缺口。普通轮询完成同步后停止查询稳定历史；真实进程及同目录重启由既有 `takeover.test.ts` 联调覆盖，其等待不再调用强制全量同步。以上是离线证据，不替代 MuMu 实机验收。
+
 - `adapter/maa/operations.py`：参数校验及 Core 映射；`connection.py`、`resources.py`：连接选择、资源清单与材料 ID 核对。
 - `inventory.py`、`fight_evidence.py`：库存、次数和材料解释；`execution.py`：v2 执行与前后环境核对；原 native.py 继续提供停止会话和旧路径。
 - `service.py`、`worker.py`：同一受理、记录、设备控制与操作分发；`operation_replay.py`：明确标识的合成 D2 回调。

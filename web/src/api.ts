@@ -13,7 +13,7 @@ export type Status = {
   adapterAvailable: boolean;
   storageFailed: boolean;
   conflictingTaskIds: string[];
-  device: import("../../backend/src/task-contract.ts").DeviceStatus | null;
+  device: import("../../backend/src/task-contract.ts").BackendDeviceStatus | null;
 };
 
 function acceptStartupToken() {

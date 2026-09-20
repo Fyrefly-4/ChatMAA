@@ -52,10 +52,7 @@ export default function App() {
             send={state.send}
             disabled={
               state.sending ||
-              !state.status?.device ||
-              !!state.status.device.blockers.length ||
-              !!state.status.conflictingTaskIds.length ||
-              state.status.device.recovery?.state === "running" ||
+              state.status?.device?.admission.state !== "ready" ||
               !state.status?.modelAvailable ||
               state.status.closing ||
               !!state.status.busy ||

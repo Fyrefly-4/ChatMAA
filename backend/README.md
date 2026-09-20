@@ -116,6 +116,8 @@ flowchart LR
 
 `task-contract.ts` 定义输入与结果；`task-service.ts` 在发出执行前保存稳定 ID 和意图。超时只查询原 ID，未确认状态阻止冲突；停止不等待模型或进度事件。`store.ts` 在一个事务内保存证据、读取位置及结果，重复事件不重复计数，缺口保留下界。`host.ts` 管理自有 Python，关闭后端时交接最终证据；客户端退出不走此流程。
 
+2026-09-21：历史接管后的周期同步与统一准入汇总已调整，规则及 `/device` 的 `admission` 字段见 [D2 执行契约](../docs/engineering/d2-adapter.md#代码与检查入口)。任务已结束不再单独构成停止同步的条件。
+
 `app.ts` 只做调用方身份与协议映射，业务检查仍在共同任务服务。Agent 从已启动的宿主取得 `host.tasks`，使用同样的方法，例如：
 
 ```typescript

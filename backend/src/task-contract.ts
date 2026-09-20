@@ -34,10 +34,17 @@ export function uncertainEvidence(snapshot: Snapshot, issue: string, conflict = 
   return result;
 }
 export function blocksExecution(t: Snapshot & { gap?: boolean; sync?: SyncStatus }) {
-  if (t.takeover?.released && (t.gap || t.evidence_conflict || t.sync?.available === false)) return true;
-  return t.state !== 'rejected' && (!t.takeover?.released || t.evidence_conflict) &&
-    (t.state !== 'ended' || !t.automation_stopped || t.device !== 'ready');
+  if (t.state === 'rejected') return false;
+  if (t.gap || t.evidence_conflict || t.sync?.available === false) return true;
+  return !t.takeover?.released && (t.state !== 'ended' || !t.automation_stopped || t.device !== 'ready' ||
+    !!(t.recheck && (t.recheck.state !== 'ended' || !t.recheck.automation_stopped)));
 }
+// Execution termination is not evidence stability: recovery may still append a release.
+export function needsSynchronization(t: TaskView, pendingControl = false) {
+  return t.state !== 'rejected' && (pendingControl || blocksExecution(t));
+}
+export type Admission = { state: 'ready' | 'blocked' | 'synchronizing' | 'unavailable'; conflictingTaskIds: string[] };
+export type BackendDeviceStatus = DeviceStatus & { admission: Admission };
 export type DeviceStatus = {
   blockers: { id: string; seq: number; confirmed: number; certainty: string; reason: string | null; kind: 'current' | 'historical' }[];
   recoverable: boolean;

@@ -34,6 +34,7 @@ test('periodic requests exclude stable history but reconcile startup, active tas
   assert.deepEqual(x.calls, ['/executions/active?after=0', '/executions/active?after=0']);
   x.remote.get('active')!.state = 'ended';
   x.remote.get('active')!.automation_stopped = true;
+  x.remote.get('active')!.device = 'ready';
   await x.tasks.poll();
   assert.equal(x.tasks.get('active').state, 'ended');
   x.calls.length = 0;

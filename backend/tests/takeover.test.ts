@@ -29,7 +29,7 @@ test('lost takeover response reconciles without replay; same-directory restart p
     await assert.rejects(host.tasks.takeover(input));
     host.tasks.adapter.call = call;
     for (let i = 0; i < 100 && !host.tasks.get('history').takeover?.released; i++) {
-      await new Promise(r => setTimeout(r, 30)); await host.tasks.poll(true);
+      await new Promise(r => setTimeout(r, 30));
     }
     const after = host.tasks.get('history');
     assert.equal(after.takeover?.released, true);
