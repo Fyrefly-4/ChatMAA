@@ -27,6 +27,30 @@ def cycle(index, total, series=1):
 
 
 class FightEvidenceTest(unittest.TestCase):
+    def test_invalid_cycle_identity_preserves_unsettled_start(self):
+        for identity in (None, 0, -1, True, "1"):
+            for with_start in (False, True):
+                with self.subTest(identity=identity, with_start=with_start):
+                    data = {"task": "StartButton2"}
+                    if identity is not None:
+                        data["exec_times"] = identity
+                    events = [event(20001, {"task": "StartButton2"})] if with_start else []
+                    events += [event(20002, data)] * 2
+                    result = summarize_fight(events, 1, PARAMS, True)
+                    self.assertEqual(result["started_cycles"], 1)
+                    self.assertEqual(result["unsettled_cycles"], 1)
+                    self.assertEqual(result["count_result"]["value"], 0)
+                    self.assertEqual(result["count_result"]["certainty"], "lower_bound")
+                    self.assertFalse(result["threshold_reached"])
+                    self.assertIn("unsettled_cycles", result["material_result"]["issues"])
+                    # A later valid cycle must neither absorb the unknown start nor
+                    # use its unassociated settlement to fill the requested target.
+                    result = summarize_fight(events + cycle(2, 2), 1, PARAMS, True)
+                    self.assertEqual(result["started_cycles"], 2)
+                    self.assertEqual(result["unsettled_cycles"], 1)
+                    self.assertEqual(result["count_result"]["value"], 1)
+                    self.assertEqual(result["material_result"]["certainty"], "lower_bound")
+
     def test_interruption_cannot_strengthen_conflicting_evidence(self):
         result = uncertain({"material_result": {"items": {"30012": 2}, "certainty": "unknown", "issues": ["conflict"]},
                             "count_result": {"value": 1, "certainty": "exact", "issues": []}}, "worker_error")

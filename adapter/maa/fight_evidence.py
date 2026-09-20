@@ -22,6 +22,7 @@ def summarize_fight(events, task_id, params, stopped=False):
     errors, count_issues, material_issues = set(), set(), set()
     completed = False
     starting = False
+    unidentified_start = False
     for event in events:
         detail = event.get("details") or {}
         if event.get("kind") != "callback" or detail.get("taskchain") != "Fight" or detail.get("taskid") != task_id:
@@ -41,6 +42,9 @@ def summarize_fight(events, task_id, params, stopped=False):
             starting = False
             cycle_id = data.get("exec_times")
             if type(cycle_id) is not int or cycle_id <= 0:
+                # Without an identity, repeated callbacks cannot establish how many
+                # cycles started. Preserve at least one unresolved start permanently.
+                unidentified_start = True
                 count_issues.add("invalid_cycle_identity")
                 active = None
                 continue
@@ -90,7 +94,7 @@ def summarize_fight(events, task_id, params, stopped=False):
             totals = expected
         except ValueError:
             material_issues.add("invalid_or_conflicting_drop_totals")
-    unsettled = sum(c["signature"] is None for c in cycles.values()) + int(starting)
+    unsettled = sum(c["signature"] is None for c in cycles.values()) + int(starting) + int(unidentified_start)
     if stopped and unsettled:
         count_issues.add("unsettled_cycles")
         material_issues.add("unsettled_cycles")
@@ -104,5 +108,5 @@ def summarize_fight(events, task_id, params, stopped=False):
                else totals.get(params["item_id"], 0) >= params["quantity"])
     return {"interpretation_version": 3, "count_result": count_result, "material_result": material_result,
             "threshold_reached": reached and not conflict, "task_chain_completed": completed,
-            "started_cycles": len(cycles), "unsettled_cycles": unsettled,
+            "started_cycles": len(cycles) + int(unidentified_start), "unsettled_cycles": unsettled,
             "errors": sorted(errors | count_issues | material_issues)}
