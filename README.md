@@ -32,6 +32,7 @@ ChatMAA 是一个正在开发中的智能自动化应用，探索如何让 Agent
 |---|---|
 | 产品功能与验收场景 | [MVP Spec #18](https://github.com/Fyrefly-4/ChatMAA/issues/18) |
 | 开发路线与阶段进度 | [MVP 路线 #19](https://github.com/Fyrefly-4/ChatMAA/issues/19) |
+| MVP 模块协作、状态与交互设计 | [协作约定与交互结构](docs/engineering/mvp-collaboration.md)（D1 文档交付，非实现或运行验收结论） |
 | 项目术语 | [CONTEXT](CONTEXT.md) |
 | 架构选择与取舍 | [运行结构](docs/adr/0001-runtime-structure.md)、[HTTP 通信](docs/adr/0002-local-http-adapter.md)、[记录归属](docs/adr/0003-execution-evidence.md)、[Agent Loop](docs/adr/0004-agent-loop-boundary.md) |
 | CI 运行与新增检查接入 | [CI 使用与接入](docs/engineering/ci-plan.md) |
