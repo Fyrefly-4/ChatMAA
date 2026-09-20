@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import threading
 import time
+from resources import resource_roots
 
 
 class ResourceLoadError(RuntimeError):
@@ -12,7 +13,7 @@ class ResourceLoadError(RuntimeError):
 
 
 class Core:
-    def __init__(self, installation: Path, output: Path, incremental=None, quiet_callbacks=False):
+    def __init__(self, installation: Path, output: Path, incremental=None, quiet_callbacks=False, platform="desktop"):
         # 与官方 WPF GUI 的 system DPI 声明一致，在 native 创建线程/窗口前设置。
         user = ctypes.WinDLL("user32", use_last_error=True)
         user.GetThreadDpiAwarenessContext.restype = ctypes.c_void_p
@@ -47,6 +48,7 @@ class Core:
             "AsstCreateEx": (pointer, [pointer, pointer]),
             "AsstDestroy": (None, [pointer]),
             "AsstAsyncAttachWindow": (integer, [pointer, pointer, size, size, size, boolean]),
+            "AsstAsyncConnect": (integer, [pointer, text, text, text, boolean]),
             "AsstConnected": (boolean, [pointer]),
             "AsstAsyncScreencap": (integer, [pointer, boolean]),
             "AsstGetImage": (size, [pointer, pointer, size]),
@@ -61,12 +63,8 @@ class Core:
         self.version = self.lib.AsstGetVersion().decode("utf-8")
         if not self.lib.AsstSetUserDir(str(self.output).encode("utf-8")):
             raise RuntimeError("AsstSetUserDir failed")
-        resource_roots = [installation.resolve()]
-        # 与本机 GUI 日志所示顺序一致：基础资源、热更新、可选 PC 差异资源。
-        for candidate in (installation / "cache", installation / "resource/platform_diff/PC"):
-            if (candidate / "resource").is_dir():
-                resource_roots.append(candidate.resolve())
-        for resource_root in resource_roots:
+        roots = resource_roots(installation, platform)
+        for resource_root in roots:
             if not self.lib.AsstLoadResource(str(resource_root).encode("utf-8")):
                 self.dll_directory.close()
                 raise ResourceLoadError(f"AsstLoadResource failed: {resource_root}")
@@ -79,7 +77,7 @@ class Core:
         if not self.handle:
             raise RuntimeError("AsstCreateEx failed")
         self.write("core_loaded", version=self.version)
-        self.write("host_runtime", **runtime, resource_roots=[str(path) for path in resource_roots])
+        self.write("host_runtime", **runtime, resource_roots=[str(path) for path in roots])
 
     def write(self, kind, **values):
         event = {"at": time.time(), "monotonic": time.monotonic(), "kind": kind, **values}
@@ -115,6 +113,16 @@ class Core:
         self.write("attach_returned", call_id=call_id, connected=connected)
         if not connected:
             raise RuntimeError("window connection failed; inspect raw callback evidence")
+
+    def connect(self, connection):
+        self.write("adb_connect_requested", address=connection["address"], config=connection["config"])
+        call_id = self.lib.AsstAsyncConnect(self.handle, connection["adb"].encode("utf-8"),
+                                          connection["address"].encode("utf-8"),
+                                          connection["config"].encode("utf-8"), True)
+        connected = bool(self.lib.AsstConnected(self.handle))
+        self.write("adb_connect_returned", call_id=call_id, connected=connected)
+        if call_id <= 0 or not connected:
+            raise RuntimeError("ADB connection failed; inspect raw callback evidence")
 
     def screenshot(self, filename="window.png"):
         call_id = self.lib.AsstAsyncScreencap(self.handle, True)

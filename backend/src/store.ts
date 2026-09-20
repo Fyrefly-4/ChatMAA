@@ -1,6 +1,8 @@
 import { DatabaseSync } from 'node:sqlite';
 import { isDeepStrictEqual } from 'node:util';
-import type { Params, Snapshot, Update, TaskView, SyncStatus } from './task-contract.ts';
+import type { Snapshot, Update, TaskView, SyncStatus } from './task-contract.ts';
+import type { AnyParams } from './execution-contract.ts';
+import { uncertainEvidence } from './task-contract.ts';
 
 // Adapted from prototypes/lifecycle/src/store.ts at 273055d: preserve transactional evidence projection.
 export type Task = { id: string; params: string; snapshot: string; cursor: number; gap: number };
@@ -25,7 +27,7 @@ export class Store {
     return row ? { ...JSON.parse(row.snapshot), params: JSON.parse(row.params), cursor: row.cursor, gap: !!row.gap,
       sync: sync ?? { available: false, last_success_at: previous?.last_success ?? null, reason: 'not_synchronized' } } : null;
   }
-  prepare(id: string, params: Params, source: string) {
+  prepare(id: string, params: AnyParams, source: string) {
     const snapshot: Snapshot = { id, seq: 0, state: 'submitting', confirmed: 0,
       certainty: 'lower_bound', device: 'needs_check', reason: 'submission_not_confirmed',
       automation_stopped: false, started_cycles: 0, unsettled_cycles: 0, evidence_source: source };
@@ -57,10 +59,10 @@ export class Store {
         this.db.prepare('INSERT INTO gaps VALUES(?,?,?)').run(id, row.cursor, update.snapshot.seq);
       }
       // 快照包含绝对已确认完成量；缺口保留，不把最后值当作完整结果。
-      const snapshot = conflict
-        ? { ...JSON.parse(row.snapshot), evidence_conflict: true, state: 'unknown', certainty: 'lower_bound',
-          device: 'needs_check', reason: 'evidence_conflict' }
-        : { ...update.snapshot, certainty: gap ? 'lower_bound' : update.snapshot.certainty };
+      const snapshot: Snapshot = conflict
+        ? uncertainEvidence({ ...JSON.parse(row.snapshot), evidence_conflict: true, state: 'unknown',
+          device: 'needs_check', reason: 'evidence_conflict' }, 'evidence_conflict', true)
+        : gap ? uncertainEvidence(update.snapshot, 'evidence_gap') : { ...update.snapshot };
       // 已发出的停止意图属于 TS。停止前发起的轮询可能晚到，不能把界面退回“运行中”。
       if (JSON.parse(row.snapshot).stop_requested) {
         snapshot.stop_requested = true;

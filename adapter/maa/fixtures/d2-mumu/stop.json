@@ -1,0 +1,65 @@
+{
+  "source": "sanitized_mumu_capture",
+  "capture_date": "2026-09-21",
+  "core": "v6.17.5",
+  "redaction": "whitelisted callback fields; taskid=7; relative timestamps; inventory projected to two items with substituted quantities 2001=5 and 30012=72",
+  "params": {
+    "version": 2,
+    "stage": "1-7",
+    "series": 1,
+    "medicine": 0,
+    "premium": 0,
+    "kind": "fight_count",
+    "count": 2
+  },
+  "events": [
+    {
+      "kind": "callback",
+      "at": 0.0,
+      "message": 10001,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 7
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 20.034317,
+      "message": 20003,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 7,
+        "what": "FightTimes",
+        "details": {
+          "series": 1
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 22.332353,
+      "message": 20001,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 7,
+        "details": {
+          "task": "StartButton2",
+          "exec_times": 1
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 23.434104,
+      "message": 20002,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 7,
+        "details": {
+          "task": "StartButton2",
+          "exec_times": 1
+        }
+      }
+    }
+  ]
+}

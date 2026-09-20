@@ -1,0 +1,100 @@
+{
+  "source": "sanitized_mumu_capture",
+  "capture_date": "2026-09-21",
+  "core": "v6.17.5",
+  "redaction": "whitelisted callback fields; taskid=7; relative timestamps; inventory projected to two items with substituted quantities 2001=5 and 30012=72",
+  "params": {
+    "version": 2,
+    "kind": "scan_inventory"
+  },
+  "events": [
+    {
+      "kind": "callback",
+      "at": 0.0,
+      "message": 10001,
+      "details": {
+        "taskchain": "Depot",
+        "taskid": 7
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 8.885489,
+      "message": 20003,
+      "details": {
+        "taskchain": "Depot",
+        "taskid": 7,
+        "what": "DepotInfo",
+        "details": {
+          "done": false,
+          "data": "{\"2001\": 5}"
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 10.558574,
+      "message": 20003,
+      "details": {
+        "taskchain": "Depot",
+        "taskid": 7,
+        "what": "DepotInfo",
+        "details": {
+          "done": false,
+          "data": "{\"2001\": 5, \"30012\": 72}"
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 12.282379,
+      "message": 20003,
+      "details": {
+        "taskchain": "Depot",
+        "taskid": 7,
+        "what": "DepotInfo",
+        "details": {
+          "done": false,
+          "data": "{\"2001\": 5, \"30012\": 72}"
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 15.865155,
+      "message": 20003,
+      "details": {
+        "taskchain": "Depot",
+        "taskid": 7,
+        "what": "DepotInfo",
+        "details": {
+          "done": false,
+          "data": "{\"2001\": 5, \"30012\": 72}"
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 15.865155,
+      "message": 20003,
+      "details": {
+        "taskchain": "Depot",
+        "taskid": 7,
+        "what": "DepotInfo",
+        "details": {
+          "done": true,
+          "data": "{\"2001\": 5, \"30012\": 72}"
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 15.867643,
+      "message": 10002,
+      "details": {
+        "taskchain": "Depot",
+        "taskid": 7
+      }
+    }
+  ]
+}

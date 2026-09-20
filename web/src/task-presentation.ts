@@ -23,6 +23,9 @@ const reasons: Record<string, string> = {
   readiness_failed: "环境识别未通过",
 };
 export function taskPresentation(task: TaskView) {
+  const requestedCount = 'count' in task.params ? task.params.count : undefined;
+  const isScan = 'kind' in task.params && task.params.kind === 'scan_inventory';
+  const material = 'kind' in task.params && task.params.kind === 'fight_material' ? task.params : undefined;
   const exact =
     task.certainty === "exact" && !task.gap && !task.evidence_conflict;
   return {
@@ -30,14 +33,18 @@ export function taskPresentation(task: TaskView) {
     reason: task.reason
       ? (reasons[task.reason] ?? `需要核对（${task.reason}）`)
       : "暂无",
-    count: exact
-      ? `已确认完成 ${task.confirmed}/${task.params.count} 次`
+    count: isScan ? (task.inventory_result?.complete ? '库存识别已完成' : '库存识别结果待核对')
+      : material ? (task.material_result?.certainty === 'unknown' ? '材料数量存在冲突，待核对'
+        : `已确认材料 ${task.material_result?.items[material.item_id] ?? 0} 个（${task.material_result?.certainty === 'exact' ? '精确' : '其余待核对'}）`)
+      : task.count_result?.certainty === 'unknown' ? '成功次数存在冲突，待核对'
+      : exact
+      ? `已确认完成 ${task.confirmed}/${requestedCount} 次`
       : `至少确认 ${task.confirmed} 次，其余待核对`,
     remaining:
-      task.state === "ended" && exact
-        ? task.confirmed === task.params.count
+      task.state === "ended" && exact && requestedCount !== undefined
+        ? task.confirmed === requestedCount
           ? "目标次数已完成。"
-          : `本轮未完成 ${Math.max(0, task.params.count - task.confirmed)} 次，不自动补刷。`
+          : `本轮未完成 ${Math.max(0, requestedCount - task.confirmed)} 次，不自动补刷。`
         : "",
     stopped: task.automation_stopped ? "自动化已停止" : "尚未确认自动化停止",
     environment:

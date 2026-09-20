@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import sys
 
@@ -20,6 +21,7 @@ class Settings:
     stop_deadline_ms: int = 20000
     installation: Path | None = None
     hwnd: int | None = None
+    connection: dict | None = None
 
     @classmethod
     def from_env(cls):
@@ -35,8 +37,20 @@ class Settings:
                           and result.data.parent.parent == (REPOSITORY / ".artifacts/live-wizard").resolve())
             if sys.platform != "win32" or not (result.data == (REPOSITORY / ".artifacts/live").resolve() or wizard_run):
                 raise ValueError("live requires Windows and the default or wizard run data directory")
-            if not result.installation or type(result.hwnd) is not int or result.hwnd <= 0:
-                raise ValueError("live requires installation and hwnd")
+            if not result.installation:
+                raise ValueError("live requires installation")
+            if result.connection is not None:
+                c = result.connection
+                if (not isinstance(c, dict) or set(c) != {"kind", "adb", "address", "config"}
+                        or result.hwnd is not None or c.get("kind") != "mumu"
+                        or c.get("config") != "MuMuEmulator12"
+                        or not isinstance(c.get("adb"), str) or not Path(c["adb"]).is_file()
+                        or not isinstance(c.get("address"), str)
+                        or not re.fullmatch(r"127\.0\.0\.1:[0-9]{1,5}", c["address"])
+                        or not 1 <= int(c["address"].split(":")[1]) <= 65535):
+                    raise ValueError("invalid explicit MuMu connection")
+            elif type(result.hwnd) is not int or result.hwnd <= 0:
+                raise ValueError("desktop live requires hwnd")
             with (result.installation / "MaaCore.dll").open("rb") as stream:
                 if hashlib.file_digest(stream, "sha256").hexdigest() != CORE_SHA256:
                     raise ValueError("MaaCore changed: verify version before use")

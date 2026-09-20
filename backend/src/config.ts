@@ -2,10 +2,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 
 export const repository = resolve(import.meta.dirname, '../..');
+export type MuMuConnection = { kind: 'mumu'; adb: string; address: string; config: 'MuMuEmulator12' };
 export type Config = {
   mode: 'maa-replay' | 'maa-live'; python: string; dataDir: string; port: number;
   pollMs: number; httpTimeoutMs: number; leaseMs: number; stopDeadlineMs: number;
-  installation?: string; hwnd?: number;
+  installation?: string; hwnd?: number; connection?: MuMuConnection;
 };
 export function loadConfig(path = process.env.CHATMAA_CONFIG, values?: unknown): Config {
   const local = resolve(repository, 'backend/config.local.json');
@@ -13,7 +14,7 @@ export function loadConfig(path = process.env.CHATMAA_CONFIG, values?: unknown):
   const raw = values ?? (file ? JSON.parse(readFileSync(file, 'utf8')) : {});
   const base = file ? dirname(file) : resolve(repository, 'backend');
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('配置必须是 JSON 对象');
-  const allowed = ['mode', 'python', 'dataDir', 'port', 'pollMs', 'httpTimeoutMs', 'leaseMs', 'stopDeadlineMs', 'installation', 'hwnd'];
+  const allowed = ['mode', 'python', 'dataDir', 'port', 'pollMs', 'httpTimeoutMs', 'leaseMs', 'stopDeadlineMs', 'installation', 'hwnd', 'connection'];
   if (Object.keys(raw).some(k => !allowed.includes(k))) throw new Error('配置含未知字段');
   const mode = raw.mode ?? 'maa-replay';
   if (!['maa-replay', 'maa-live'].includes(mode)) throw new Error('不支持的执行模式');
@@ -43,10 +44,25 @@ export function loadConfig(path = process.env.CHATMAA_CONFIG, values?: unknown):
     throw new Error('租约须大于三个续期间隔；退出窗口须至少容纳两次 HTTP 等待');
   }
   if (mode === 'maa-live') {
-    if (typeof raw.installation !== 'string' || !raw.installation || !Number.isSafeInteger(raw.hwnd) || raw.hwnd <= 0) {
-      throw new Error('live 必须显式配置 installation 和 hwnd');
+    if (typeof raw.installation !== 'string' || !raw.installation) {
+      throw new Error('live 必须显式配置 installation');
     }
-    config.installation = resolve(base, raw.installation); config.hwnd = raw.hwnd;
+    config.installation = resolve(base, raw.installation);
+    if (raw.connection !== undefined) {
+      const c = raw.connection;
+      if (!c || typeof c !== 'object' || Array.isArray(c) || raw.hwnd !== undefined ||
+          Object.keys(c).sort().join() !== 'adb,address,config,kind' || c.kind !== 'mumu' ||
+          typeof c.adb !== 'string' || !c.adb || c.config !== 'MuMuEmulator12' ||
+          typeof c.address !== 'string' || !/^127\.0\.0\.1:[0-9]{1,5}$/.test(c.address) ||
+          Number(c.address.split(':')[1]) < 1 || Number(c.address.split(':')[1]) > 65535) {
+        throw new Error('MuMu 连接须明确指定 ADB、本机实例端口与 MuMuEmulator12 配置，不能同时指定 hwnd');
+      }
+      config.connection = { kind: 'mumu', adb: resolve(base, c.adb), address: c.address, config: c.config };
+      if (!existsSync(config.connection.adb)) throw new Error('找不到配置的 ADB');
+    } else {
+      if (!Number.isSafeInteger(raw.hwnd) || raw.hwnd <= 0) throw new Error('桌面端 live 必须显式配置 hwnd');
+      config.hwnd = raw.hwnd;
+    }
     if (!existsSync(resolve(config.installation!, 'MaaCore.dll'))) throw new Error('找不到配置的 MaaCore.dll');
   }
   return config;

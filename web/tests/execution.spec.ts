@@ -5,11 +5,14 @@ test("visible summary precedes real replay acceptance; result, tools, repeat req
   page,
   server,
 }) => {
-  let observed = false;
+  const observed = new Set<string>();
   await page.route("**/summary-displayed", async (route) => {
     await expect(page.getByRole("region", { name: "操作摘要" })).toBeVisible();
-    expect(server.audit()).toHaveLength(0);
-    observed = true;
+    const receipt = route.request().url();
+    if (!observed.has(receipt)) {
+      expect(server.audit()).toHaveLength(observed.size);
+      observed.add(receipt);
+    }
     await route.continue();
   });
   await page.goto(server.url);
@@ -20,7 +23,7 @@ test("visible summary precedes real replay acceptance; result, tools, repeat req
   await expect(
     page.getByRole("heading", { name: "已确认完成 10/10 次" }),
   ).toBeVisible();
-  expect(observed).toBe(true);
+  expect(observed.size).toBe(1);
   expect(server.audit()).toHaveLength(1);
   await expect(page.getByText("目标次数已完成。")).toBeVisible();
   await page.getByText("查看 Tool Call 与请求记录").click();
@@ -31,13 +34,14 @@ test("visible summary precedes real replay acceptance; result, tools, repeat req
     path: resolve(import.meta.dirname, "../../.artifacts/checks/web-desktop.png"),
     fullPage: true,
   });
-  await page.unroute("**/summary-displayed");
+  // Keep interception stable while polling is in flight; inspect both receipts.
   await page.getByLabel("完整指令").fill("刷1-7一次");
   await page.getByRole("button", { name: "发送指令" }).click();
   await expect(
     page.getByRole("heading", { name: "已确认完成 1/1 次" }),
   ).toBeVisible();
   expect(server.audit()).toHaveLength(2);
+  expect(observed.size).toBe(2);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({
     path: resolve(import.meta.dirname, "../../.artifacts/checks/web-mobile.png"),
@@ -53,6 +57,7 @@ test("visible summary precedes real replay acceptance; result, tools, repeat req
     page.getByRole("heading", { name: "已确认完成 1/1 次" }),
   ).toBeVisible();
   expect(server.audit()).toHaveLength(2);
+  await page.unrouteAll({ behavior: "wait" });
 });
 
 test("unsupported and incomplete instructions never create executions", async ({

@@ -29,6 +29,7 @@ export async function startHost(config: Config) {
     env: { ...childEnv, PYTHONPATH: runtime.site, CHATMAA_ADAPTER_CONFIG: JSON.stringify({
       mode: config.mode, data: config.dataDir, controller, token, lease_ms: config.leaseMs,
       stop_deadline_ms: config.stopDeadlineMs, installation: config.installation, hwnd: config.hwnd,
+      connection: config.connection,
     }) },
     stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true, detached: true,
   });

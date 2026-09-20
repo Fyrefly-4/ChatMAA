@@ -11,7 +11,9 @@ export function RecoveryPanel({ status }: { status?: Status }) {
   const recovery = device?.recovery;
   if (!status) return null;
   if (!device) return <section className="warning" role="alert">设备状态暂不可读，暂缓发送新任务；已有任务仍可查询和停止。</section>;
-  if (!device.blockers.length && recovery?.state !== "running") {
+  if (device.admission.state === "unavailable") return <section className="warning" role="alert">服务暂不可用，暂缓发送新任务；保留已有结果。</section>;
+  if (device.admission.state === "synchronizing") return <section className="warning" role="status">执行端已解除阻塞，正在同步业务证据，暂不能发送新指令。</section>;
+  if (device.admission.state === "ready") {
     return recovery?.state === "succeeded" ? <section className="warning" role="status">环境核对通过，可以发送新指令。历史任务结果保持原样；此前未受理的指令不会自动执行。</section> : null;
   }
   async function recover() {

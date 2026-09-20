@@ -1,5 +1,7 @@
 # MAA Adapter
 
+2026-09-21 D2 补充：新增 MuMu/ADB 连接、v2 库存／次数／材料操作及独立结果解释，见 [D2 执行契约](../../docs/engineering/d2-adapter.md)。首轮固定 MuMu 基本通路通过，脱敏回调与异常注入已加入离线检查；实测范围和限制见[验证交付说明](../../docs/engineering/d2-verification.md)。下文桌面 Demo 证据保持原范围。
+
 正式执行端由 [Backend](../../backend/README.md) 启动，承担受理、防重、设备占用、MaaCore 工作线程和执行证据。控制线程写 `executor.sqlite`，工作线程只发反馈；不加载原型脚本或实验 grant。启动不连接游戏，只有明确的 live 提交才进入 native 路径。
 
 ## 能力与证据边界

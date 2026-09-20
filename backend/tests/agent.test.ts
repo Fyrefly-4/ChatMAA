@@ -276,6 +276,7 @@ test('task query and stop stay available while model explanation is stalled', as
   const pending = agent.handle({ requestId: 'stalled', original: '刷1-7 100次' }, async () => {});
   await until(() => !!complete);
   const task = agent.read('stalled').task!;
+  assert('count' in task.params);
   assert.equal(task.params.count, 100);
   await x.host.tasks.stop(task.id);
   await until(() => x.host.tasks.get(task.id).automation_stopped);

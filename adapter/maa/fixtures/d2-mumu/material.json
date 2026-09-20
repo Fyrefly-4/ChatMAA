@@ -1,0 +1,180 @@
+{
+  "source": "sanitized_mumu_capture",
+  "capture_date": "2026-09-21",
+  "core": "v6.17.5",
+  "redaction": "whitelisted callback fields; taskid=7; relative timestamps; inventory projected to two items with substituted quantities 2001=5 and 30012=72",
+  "params": {
+    "version": 2,
+    "stage": "1-7",
+    "series": 1,
+    "medicine": 0,
+    "premium": 0,
+    "kind": "fight_material",
+    "item_id": "30012",
+    "quantity": 1,
+    "max_count": 2
+  },
+  "events": [
+    {
+      "kind": "callback",
+      "at": 0.0,
+      "message": 10001,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 7
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 24.424088,
+      "message": 20003,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 7,
+        "what": "FightTimes",
+        "details": {
+          "series": 1
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 26.808301,
+      "message": 20001,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 7,
+        "details": {
+          "task": "StartButton2",
+          "exec_times": 1
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 27.909901,
+      "message": 20002,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 7,
+        "details": {
+          "task": "StartButton2",
+          "exec_times": 1
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 100.625158,
+      "message": 20001,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 7,
+        "details": {
+          "task": "EndOfAction",
+          "exec_times": 1
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 106.620103,
+      "message": 20003,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 7,
+        "what": "StageDrops",
+        "details": {
+          "stars": 3,
+          "stage": {
+            "stageCode": "1-7"
+          },
+          "drops": [
+            {
+              "itemId": "4001",
+              "quantity": 72,
+              "dropType": "EXP_LMB_DROP"
+            },
+            {
+              "itemId": "5001",
+              "quantity": 72,
+              "dropType": "EXP_LMB_DROP"
+            },
+            {
+              "itemId": "30012",
+              "quantity": 1,
+              "dropType": "NORMAL_DROP"
+            },
+            {
+              "itemId": "2001",
+              "quantity": 1,
+              "dropType": "EXTRA_DROP"
+            },
+            {
+              "itemId": "30051",
+              "quantity": 1,
+              "dropType": "EXTRA_DROP"
+            }
+          ],
+          "stats": [
+            {
+              "itemId": "4001",
+              "quantity": 72
+            },
+            {
+              "itemId": "5001",
+              "quantity": 72
+            },
+            {
+              "itemId": "30012",
+              "quantity": 1
+            },
+            {
+              "itemId": "30051",
+              "quantity": 1
+            },
+            {
+              "itemId": "2001",
+              "quantity": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 106.62108,
+      "message": 20002,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 7,
+        "details": {
+          "task": "EndOfAction",
+          "exec_times": 1
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 115.390459,
+      "message": 20003,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 7,
+        "what": "FightTimes",
+        "details": {
+          "series": 1
+        }
+      }
+    },
+    {
+      "kind": "callback",
+      "at": 115.891761,
+      "message": 10002,
+      "details": {
+        "taskchain": "Fight",
+        "taskid": 7
+      }
+    }
+  ]
+}

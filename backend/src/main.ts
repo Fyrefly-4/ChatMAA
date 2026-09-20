@@ -1,6 +1,6 @@
 import { existsSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { randomInt, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { loadConfig } from './config.ts';
 import { startHost } from './host.ts';
 import { createApp } from './app.ts';
@@ -68,10 +68,7 @@ requestStop = () => { stopRequested = true; if (listening) void shutdown(); };
 process.on('SIGINT', () => requestStop());
 process.on('SIGTERM', () => requestStop());
 try {
-  for (let attempt = 0; attempt < 30 && !stopRequested; attempt++) {
-    try { address = await app.listen({ host: '127.0.0.1', port: config.port || randomInt(20000, 60000) }); break; }
-    catch (error) { if (config.port || (error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error; }
-  }
+  if (!stopRequested) address = await app.listen({ host: '127.0.0.1', port: config.port });
   if (!address && !stopRequested) throw new Error('没有可用的本机端口');
   listening = true;
   if (stopRequested) await shutdown();

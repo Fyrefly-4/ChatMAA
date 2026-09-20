@@ -7,7 +7,7 @@ READY_TTL_SECONDS = 5
 PROBE_NODES = {"ChatMAAReadyHome", "ChatMAAReadyStage"}
 
 
-def write_readiness_overlay(output: Path):
+def write_readiness_overlay(output: Path, return_from_depot=False):
     directory = output / "readiness-policy/resource/tasks"
     directory.mkdir(parents=True)
     patch = {}
@@ -18,6 +18,17 @@ def write_readiness_overlay(output: Path):
     # v6.17.5 的 Fight 使用此现有模板。重命名节点不能依赖 baseTask
     # 继承 template：实际解析会回退到 ChatMAAReadyHome.png。
     patch["ChatMAAReadyHome"]["template"] = "SwitchTheme@ToggleSettingsMenu.png"
+    if return_from_depot:
+        # Only an identified Depot tab may lead to one matched Return click.
+        # No generic back loop or inherited error/navigation successors.
+        for name, template, roi in (("ChatMAADepotAll", "DepotAllTab.png", [450, 0, 300, 138]),
+                                    ("ChatMAADepotMaterial", "DepotMaterialTab.png", [945, 0, 300, 138])):
+            patch[name] = {"algorithm": "MatchTemplate", "template": template, "roi": roi,
+                           "action": "DoNothing", "next": ["ChatMAADepotReturn"], "maxTimes": 1}
+        patch["ChatMAADepotReturn"] = {"algorithm": "MatchTemplate", "template": "Return.png",
+                                       "roi": [0, 0, 180, 80], "templThreshold": 0.7,
+                                       "action": "ClickSelf", "postDelay": 2000, "maxTimes": 1,
+                                       "next": ["ChatMAAReadyHome"]}
     (directory / "tasks.json").write_text(json.dumps(patch, indent=2), encoding="utf-8")
     return output / "readiness-policy"
 

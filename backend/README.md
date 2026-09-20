@@ -1,5 +1,7 @@
 # Backend 独立执行入口
 
+2026-09-21 D2 补充：原任务 HTTP 与独立 CLI 新增 v2 扫描、次数和材料操作，`submit-file` 接收含稳定 ID 的 JSON；契约、MuMu 配置及证据边界见 [D2 执行契约](../docs/engineering/d2-adapter.md)。固定 MuMu 上已通过扫描→次数→材料→停止的 Backend 实机链路，详见[验证交付说明](../docs/engineering/d2-verification.md)；新能力未接入模型工具或完整方案确认。
+
 Backend 提供明确参数的提交、查询、停止和结果读取；确定参数入口不依赖 Web 或模型，`--agent` 与 `--web` 可装配自然语言 Agent。TS 管理 Python 子进程，通过本机 HTTP 协作，各自保存 SQLite。默认使用脱敏回调回放，启动不会自动提交任务。完整网页使用从 [Demo 运行入口](../docs/engineering/demo.md)开始，显式选择配置。
 
 ## 浏览器入口
@@ -113,6 +115,8 @@ flowchart LR
 ```
 
 `task-contract.ts` 定义输入与结果；`task-service.ts` 在发出执行前保存稳定 ID 和意图。超时只查询原 ID，未确认状态阻止冲突；停止不等待模型或进度事件。`store.ts` 在一个事务内保存证据、读取位置及结果，重复事件不重复计数，缺口保留下界。`host.ts` 管理自有 Python，关闭后端时交接最终证据；客户端退出不走此流程。
+
+2026-09-21：历史接管后的周期同步与统一准入汇总已调整，规则及 `/device` 的 `admission` 字段见 [D2 执行契约](../docs/engineering/d2-adapter.md#代码与检查入口)。任务已结束不再单独构成停止同步的条件。
 
 `app.ts` 只做调用方身份与协议映射，业务检查仍在共同任务服务。Agent 从已启动的宿主取得 `host.tasks`，使用同样的方法，例如：
 
