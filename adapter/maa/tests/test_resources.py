@@ -11,7 +11,8 @@ from resources import manifest, resource_roots, verify_material
 class ResourceTest(unittest.TestCase):
     def test_platform_roots_and_content_fingerprint(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
+            # Windows CI may expose TEMP through an 8.3 alias; compare canonical paths.
+            root = Path(tmp).resolve()
             (root / "resource").mkdir()
             index = root / "resource/item_index.json"
             index.write_text(json.dumps({"30012": {"name": "fixture"}}))
