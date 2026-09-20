@@ -9,11 +9,12 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  group: ci-${{ github.event_name }}-${{ (github.event.action != 'edited' || github.event.changes.base.ref != '') && github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   offline-checks:
     name: offline-checks
+    if: ${{ github.event.action != 'edited' || github.event.changes.base.ref != '' }}
     runs-on: windows-2025
     timeout-minutes: 20
     defaults:
@@ -27,8 +28,18 @@ jobs:
         id: node
       - uses: ./.github/actions/setup-python
         id: python
+      - name: 文档链接检查
+        if: ${{ !cancelled() && steps.node.outcome == 'success' }}
+        run: node scripts/ci/check-doc-links.mjs
+      - name: 文档检查器回归
+        if: ${{ !cancelled() && steps.node.outcome == 'success' }}
+        run: node --test scripts/ci/check-doc-links.test.mjs
+      - name: Workflow 静态检查
+        if: ${{ !cancelled() }}
+        run: ./scripts/ci/check-workflows.ps1
       - name: Web 依赖与浏览器
         id: web
+        if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.python.outcome == 'success' }}
         run: |
           npm --prefix web ci --registry=https://registry.npmjs.org
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -51,5 +62,15 @@ jobs:
         if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.web.outcome == 'success' }}
         run: npm --prefix web run build
       - name: Web 浏览器检查
+        id: web-tests
         if: ${{ !cancelled() && steps.node.outcome == 'success' && steps.python.outcome == 'success' && steps.web.outcome == 'success' && steps.web-build.outcome == 'success' }}
         run: npm --prefix web run test:e2e
+      - name: 保存浏览器失败产物
+        if: ${{ !cancelled() && steps.web-tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: browser-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .artifacts/checks/web-results/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
