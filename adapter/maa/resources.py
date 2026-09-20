@@ -33,6 +33,9 @@ def verify_material(installation, platform, params):
     for root in resource_roots(installation, platform):
         path = root / "resource/item_index.json"
         if path.is_file():
-            items.update(json.loads(path.read_text(encoding="utf-8")))
+            index = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(index, dict):
+                raise ValueError("material resource index must be an object")
+            items.update(index)
     if params["item_id"] not in items:
         raise ValueError("material ID absent from installed resource index")
