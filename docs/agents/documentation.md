@@ -10,6 +10,7 @@
 | 正式产品行为与验收 | GitHub Spec，当前为 [#18](https://github.com/Fyrefly-4/ChatMAA/issues/18)；开发路线见 [#19](https://github.com/Fyrefly-4/ChatMAA/issues/19)，访问遵循 [Issue 约定](issue-tracker.md) |
 | 共享术语 | [CONTEXT](../../CONTEXT.md) |
 | 当前模块、关系、代码落点与实现状态 | [工程说明](../engineering/architecture.md) |
+| MVP 跨模块操作、状态含义与交互设计 | [协作约定与交互结构](../engineering/mvp-collaboration.md)；描述目标协作，不替代 Spec 或实现状态 |
 | 持久架构决定 | `docs/adr/`；沿用 [domain 约定](domain.md) |
 | 实验事实、环境、验证边界 | 对应原型的报告及证据 |
 | 已结束的讨论与阶段判断 | [归档](../archive/README.md) |
