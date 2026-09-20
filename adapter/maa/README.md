@@ -61,3 +61,5 @@ live 默认使用仓库根目录下的 `.artifacts/live/`；本地验证向导�
 核对复用 `worker.recheck` 的只识别探针，不运行 Fight。执行库新增 `takeovers` 表记录意图、失败或成功结果；成功事务一次性保存所有目标的 `manual_takeover` 事件与 `takeover` 凭据。旧快照的执行状态、次数、可信度、停止、原因和环境字段不改写。后续执行事件使旧接管凭据失效。相同核对 ID 永不再次调用探针；启动将未完成核对标为 interrupted，等待明确的新人工操作。核对停止无法确认时当前进程继续封锁准入。
 
 上述协议已有离线覆盖；后续固定环境实机还验证了核对失败不放行、显式核对成功后保留旧未知结果并接收新任务，见[工程说明](../../docs/engineering/architecture.md#issue-11-真实整链验证2026-09-19)。响应丢失、重启等其他故障仍只有离线证据。现场步骤见 [Demo 说明](../../docs/engineering/demo.md#处理历史阻塞)。
+
+D2 底层契约：operations.py 区分库存扫描、次数与材料操作；inventory.py、fight_evidence.py 分别解释库存完整性和周期／掉落证据，evidence.py 保留不确定性。此步尚未接入工作线程。验证：test_inventory.py、test_fight_evidence.py。
