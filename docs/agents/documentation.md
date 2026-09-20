@@ -7,7 +7,7 @@
 | 信息 | 主维护位置 |
 |---|---|
 | 项目定位与愿景 | [项目定义](../overview/project-definition.md) |
-| 正式产品行为与验收 | GitHub Spec，当前为 [#1](https://github.com/Fyrefly-4/ChatMAA/issues/1)；访问遵循 [Issue 约定](issue-tracker.md) |
+| 正式产品行为与验收 | GitHub Spec，当前为 [#18](https://github.com/Fyrefly-4/ChatMAA/issues/18)；开发路线见 [#19](https://github.com/Fyrefly-4/ChatMAA/issues/19)，访问遵循 [Issue 约定](issue-tracker.md) |
 | 共享术语 | [CONTEXT](../../CONTEXT.md) |
 | 当前模块、关系、代码落点与实现状态 | [工程说明](../engineering/architecture.md) |
 | 持久架构决定 | `docs/adr/`；沿用 [domain 约定](domain.md) |
