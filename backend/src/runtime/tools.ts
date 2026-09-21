@@ -64,7 +64,7 @@ export function businessTools(business: BusinessService, run: RunInput, options:
           }
           const { intentMessageId, ...parameters } = input;
           const source = intentMessageId === undefined ? sourceMessage : text(input, 'intentMessageId');
-          if (!(run.turn.sourceMessages ?? [sourceMessage]).includes(source)) throw new TaskError(403, 'untrusted_intent_source');
+          if (mutate && !(run.turn.sourceMessages ?? [sourceMessage]).includes(source)) throw new TaskError(403, 'untrusted_intent_source');
           const message = business.records.read('messages', source);
           if (!message || message.role !== 'user' || message.conversationId !== conversationId) throw new TaskError(403, 'untrusted_intent_source');
           const operation = operations.begin(conversationId, source, name, parameters, check);

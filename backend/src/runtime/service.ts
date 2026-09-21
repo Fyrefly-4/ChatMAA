@@ -1,4 +1,4 @@
-import type { BusinessService } from '../business/service.ts';
+import type { BusinessService, FollowUp } from '../business/service.ts';
 import { TaskError } from '../task-contract.ts';
 import { RuntimeRecords } from './records.ts';
 import type { Turn } from './records.ts';
@@ -21,6 +21,7 @@ export class RuntimeService {
   private running = new Map<string, { abort: AbortController; done: Promise<void> }>();
   private providerCalls = new Set<Promise<string>>();
   private operations = new Set<Promise<unknown>>();
+  private followups = new Map<string, { conversationId: string; abort: AbortController }>();
 
   constructor(business: BusinessService, run?: RunTurn, options: RuntimeOptions = {}) {
     this.business = business; this.run = run;
@@ -34,12 +35,44 @@ export class RuntimeService {
     return { available: !!this.run && !this.closing && !this.storageFailed, closing: this.closing,
       storageFailed: this.storageFailed, active: this.running.size, inFlightModelCalls: this.providerCalls.size };
   }
+  enableFollowups() { this.business.setFollowupConsumer(context => this.consumeFollowup(context)); }
+  private async consumeFollowup(followup: FollowUp) {
+    if (!this.run || this.closing || this.storageFailed) throw new TaskError(503, 'runtime_unavailable');
+    const abort = new AbortController();
+    this.followups.set(followup.record.id, { conversationId: followup.record.conversationId, abort });
+    const signal = AbortSignal.any([abort.signal, followup.signal]);
+    let listener: (() => void) | undefined;
+    try {
+      const active = [...this.running.entries()].filter(([id]) => this.records.read(id)?.conversationId === followup.record.conversationId);
+      const interrupted = new Promise<never>((_resolve, reject) => {
+        listener = () => reject(new Error('followup_interrupted'));
+        signal.addEventListener('abort', listener, { once: true }); if (signal.aborted) listener();
+      });
+      await Promise.race([Promise.allSettled(active.map(([, entry]) => entry.done)), interrupted]);
+      signal.throwIfAborted();
+      const current = this.business.request(followup.record.requestId);
+      const entry = this.business.records.read('continuations', followup.record.id);
+      if (current.state !== 'active' || current.revision !== followup.record.revision || entry?.token !== followup.record.token || entry.state !== 'processing')
+        throw new TaskError(409, 'followup_not_current');
+      const turn = this.records.beginFollowup(current.conversationId, current.sourceMessage, followup.record.id);
+      const done = this.execute(turn, abort, { ...followup, signal }).finally(() => this.running.delete(turn.id));
+      this.running.set(turn.id, { abort, done });
+      await done;
+      if (this.records.read(turn.id)?.state !== 'completed') throw new Error('followup_not_published');
+    } finally {
+      if (listener) signal.removeEventListener('abort', listener);
+      this.followups.delete(followup.record.id);
+    }
+  }
   submit(conversationId: string, messageId: string, text: string) {
     if (this.closing || this.storageFailed) throw new TaskError(503, 'runtime_unavailable');
     let accepted;
     try { accepted = this.records.accept(this.business, conversationId, messageId, text); }
     catch (error) { if (!(error instanceof TaskError)) this.storageFailed = true; throw error; }
     if (accepted.duplicate) return accepted.turn;
+    for (const [id, entry] of this.followups) if (entry.conversationId === conversationId) {
+      entry.abort.abort(); this.business.interruptFollowup(id);
+    }
     for (const id of accepted.interrupted) this.running.get(id)?.abort.abort();
     if (!this.run || this.providerCalls.size >= this.maxConcurrent) {
       return this.records.finish(accepted.turn.id, 'failed', this.run ? 'model_busy' : 'model_unavailable');
@@ -56,14 +89,16 @@ export class RuntimeService {
     if (this.closing || this.storageFailed) throw new TaskError(503, 'runtime_unavailable');
     this.records.assertCurrent(turn);
   }
-  private async execute(turn: Turn, abort: AbortController) {
+  private async execute(turn: Turn, abort: AbortController, followup?: FollowUp) {
     const timeout = setTimeout(() => abort.abort(new Error('model_timeout')), this.timeoutMs);
-    const signal = abort.signal;
+    const signal = followup ? AbortSignal.any([abort.signal, followup.signal]) : abort.signal;
     let listener: (() => void) | undefined;
     try {
       this.assertCurrent(turn, signal);
       if (this.providerCalls.size >= this.maxConcurrent) throw new TaskError(503, 'model_busy');
       const context = contextFor(this.business, turn.conversationId, turn.sourceMessage, 48000, turn.sourceMessages);
+      if (followup) Object.assign(context, { followup: { id: followup.record.id, requestId: followup.record.requestId,
+        revision: followup.record.revision, reason: followup.record.reason, taskId: followup.record.taskId } });
       const work = Promise.resolve().then(() => {
         this.assertCurrent(turn, signal);
         return this.run!({ turn, context, signal, assertCurrent: () => this.assertCurrent(turn, signal), track: work => {
@@ -82,7 +117,10 @@ export class RuntimeService {
       });
       const text = await Promise.race([work, interrupted]);
       this.assertCurrent(turn, signal);
-      this.records.publish(this.business, turn, text);
+      if (followup) this.business.acceptFollowup(followup.record.id, followup.record.token!, () => {
+        this.assertCurrent(turn, signal); return this.records.publish(this.business, turn, text);
+      });
+      else this.records.publish(this.business, turn, text);
     } catch (error) {
       if (!this.closing && !this.storageFailed) {
         try {
@@ -105,6 +143,7 @@ export class RuntimeService {
   async close() {
     if (!this.closing) {
       this.closing = true;
+      for (const entry of this.followups.values()) entry.abort.abort();
       for (const [id, entry] of this.running) {
         entry.abort.abort();
         try { this.records.finish(id, 'interrupted', 'host_closing'); } catch { this.storageFailed = true; }

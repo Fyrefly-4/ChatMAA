@@ -6,6 +6,7 @@ import { TaskError } from '../task-contract.ts';
 export type Turn = {
   id: string; conversationId: string; sourceMessage: string; generation: number;
   sourceMessages?: string[];
+  continuationId?: string;
   state: 'processing' | 'completed' | 'failed' | 'interrupted';
   reason: string | null; createdAt: string; finishedAt: string | null;
 };
@@ -64,8 +65,8 @@ export class RuntimeRecords {
       if (existing) return { turn: JSON.parse(String(existing.body)) as Turn, duplicate: true, interrupted: [] };
       const previous = this.store.db.prepare('SELECT generation FROM runtime_heads WHERE conversation_id=?').get(conversationId);
       const generation = Number(previous?.generation ?? 0) + 1;
-      const completed = this.store.db.prepare("SELECT MAX(generation) AS generation FROM runtime_turns WHERE conversation_id=? AND json_extract(body,'$.state')='completed'").get(conversationId);
-      const sources = this.store.db.prepare('SELECT source_message FROM runtime_turns WHERE conversation_id=? AND generation>? ORDER BY generation')
+      const completed = this.store.db.prepare("SELECT MAX(generation) AS generation FROM runtime_turns WHERE conversation_id=? AND json_extract(body,'$.state')='completed' AND json_extract(body,'$.continuationId') IS NULL").get(conversationId);
+      const sources = this.store.db.prepare("SELECT source_message FROM runtime_turns WHERE conversation_id=? AND generation>? AND json_extract(body,'$.continuationId') IS NULL ORDER BY generation")
         .all(conversationId, Number(completed?.generation ?? 0)).map(row => String(row.source_message));
       const interrupted: string[] = [];
       for (const row of this.store.db.prepare("SELECT body FROM runtime_turns WHERE conversation_id=? AND json_extract(body,'$.state')='processing'").all(conversationId)) {
@@ -81,6 +82,19 @@ export class RuntimeRecords {
         .run(turn.id, conversationId, messageId, generation, JSON.stringify(turn));
       this.activity(turn.id, 'accepted', { sourceMessage: messageId });
       return { turn, duplicate: false, interrupted };
+    });
+  }
+  beginFollowup(conversationId: string, sourceMessage: string, continuationId: string): Turn {
+    return this.store.transaction(() => {
+      const active = this.store.db.prepare("SELECT id FROM runtime_turns WHERE conversation_id=? AND json_extract(body,'$.state')='processing'").get(conversationId);
+      if (active) throw new TaskError(409, 'conversation_turn_busy');
+      const head = this.store.db.prepare('SELECT generation FROM runtime_heads WHERE conversation_id=?').get(conversationId);
+      const generation = Number(head?.generation ?? 0) + 1;
+      const turn: Turn = { id: randomUUID(), conversationId, sourceMessage, sourceMessages: [], continuationId, generation,
+        state: 'processing', reason: null, createdAt: new Date().toISOString(), finishedAt: null };
+      this.store.db.prepare('INSERT INTO runtime_turns VALUES(?,?,?,?,?)').run(turn.id, conversationId, `followup:${continuationId}`, generation, JSON.stringify(turn));
+      this.store.db.prepare('INSERT INTO runtime_heads VALUES(?,?) ON CONFLICT(conversation_id) DO UPDATE SET generation=excluded.generation').run(conversationId, generation);
+      this.activity(turn.id, 'followup_accepted', { continuationId }); return turn;
     });
   }
   finish(id: string, state: Exclude<Turn['state'], 'processing'>, reason: string | null = null) {

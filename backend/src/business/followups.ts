@@ -8,6 +8,7 @@ export class FollowupRunner<T> {
   private active = new Set<Promise<void>>();
   private abort = new AbortController();
   private closing = false;
+  private controllers = new Map<string, AbortController>();
   readonly records: BusinessRecords;
   readonly context: (record: Continuation, signal: AbortSignal) => T;
   readonly failed: (error: unknown) => void;
@@ -18,12 +19,20 @@ export class FollowupRunner<T> {
     }
   }
   setConsumer(consumer: (context: T) => Promise<void>) { this.consumer = consumer; }
+  interrupt(id: string) {
+    const current = this.records.read('continuations', id);
+    if (current && ['pending', 'processing'].includes(current.state)) {
+      this.records.save('continuations', { ...current, state: 'interrupted', token: null });
+      this.controllers.get(id)?.abort();
+    }
+  }
   dispatch() {
     if (!this.consumer || this.closing) return;
     for (const entry of this.records.pendingContinuations()) {
       const record = { ...entry, state: 'processing' as const, token: randomUUID() };
       this.records.save('continuations', record);
-      const signal = AbortSignal.any([this.abort.signal, AbortSignal.timeout(60000)]);
+      const controller = new AbortController(); this.controllers.set(entry.id, controller);
+      const signal = AbortSignal.any([this.abort.signal, controller.signal, AbortSignal.timeout(60000)]);
       let abortListener: () => void;
       const interrupted = new Promise<never>((_resolve, reject) => {
         abortListener = () => reject(new Error('followup_interrupted'));
@@ -39,7 +48,7 @@ export class FollowupRunner<T> {
         signal.throwIfAborted(); return consumer(this.context(record, signal));
       })]).then(() => finish('completed'), () => finish(this.closing ? 'interrupted' : 'failed'))
         .catch(error => this.failed(error))
-        .finally(() => { signal.removeEventListener('abort', abortListener); this.active.delete(work); });
+        .finally(() => { signal.removeEventListener('abort', abortListener); this.active.delete(work); this.controllers.delete(entry.id); });
       this.active.add(work);
     }
   }

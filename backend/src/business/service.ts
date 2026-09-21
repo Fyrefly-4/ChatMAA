@@ -440,6 +440,7 @@ export class BusinessService {
   setFollowupConsumer(consumer: (context: FollowUp) => Promise<void>) {
     this.followups.setConsumer(consumer); this.dispatchFollowups();
   }
+  interruptFollowup(id: string) { this.transaction(() => this.followups.interrupt(id)); }
   private dispatchFollowups() {
     if (this.closing || this.retiring || this.projectionFailure || this.tasks.storageFailed) return;
     try { this.followups.dispatch(); } catch { this.projectionFailure = 'followup_storage_failed'; }

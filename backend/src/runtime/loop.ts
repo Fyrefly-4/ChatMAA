@@ -12,8 +12,9 @@ export function modelRunner(business: BusinessService, model: LanguageModel, rea
   const records = new RuntimeRecords(business.tasks.store);
   return async run => {
     const emit = (kind: string, data: unknown) => { run.assertCurrent(); records.activity(run.turn.id, kind, data); };
-    const bound = businessTools(business, run, { emit, track: run.track, readOnly });
-    emit('model_started', { instructionsVersion: INSTRUCTIONS_VERSION, readOnly });
+    const restricted = readOnly || !!run.turn.continuationId;
+    const bound = businessTools(business, run, { emit, track: run.track, readOnly: restricted });
+    emit('model_started', { instructionsVersion: INSTRUCTIONS_VERSION, readOnly: restricted });
     const result = await generateText({ model, tools: bound.tools, system: instructions,
       messages: [{ role: 'user', content: JSON.stringify(run.context) }], abortSignal: run.signal,
       providerOptions, maxRetries: 0, stopWhen: stepCountIs(8),
