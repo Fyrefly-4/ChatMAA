@@ -3,6 +3,29 @@ import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { presentationPage, scenarios, sceneData } from './mvp-presentation';
 
+test('业务投影失败且没有结果消息时，缓存终态任务及详情仍可见', async ({ page }) => {
+  const data = sceneData('running');
+  data.messages = data.messages.filter(message => message.reference !== data.task.id);
+  await presentationPage(page, data);
+  const taskCard = page.getByRole('region', { name: '刷图任务', exact: true });
+  await expect(taskCard).toHaveCount(1);
+  await expect(taskCard.getByRole('button', { name: '停止任务', exact: true })).toBeVisible();
+
+  data.status.projection = { available: false, reason: 'business_projection_failed' };
+  data.status.tasks = [];
+  data.conversation.activeTasks = [];
+  data.task.task.seq += 1;
+  data.task.task.state = 'ended';
+  data.task.task.automation_stopped = true;
+  data.task.task.device = 'ready';
+  data.task.task.reason = 'user_stop';
+  await expect(page.getByText(/业务投影：business_projection_failed/)).toBeVisible();
+  await expect(taskCard.getByText('自动化已停止', { exact: true })).toBeVisible();
+  await expect(taskCard.getByRole('button', { name: '停止任务', exact: true })).toHaveCount(0);
+  await taskCard.getByRole('button', { name: '查看任务详情 →' }).click();
+  await expect(page.getByRole('complementary', { name: '详情' }).getByText('自动化已停止', { exact: true })).toBeVisible();
+});
+
 for (const scene of scenarios) test(`V2.1 ${scene} 五种宽度与详情`, async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   const data = sceneData(scene); await presentationPage(page, data);

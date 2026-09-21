@@ -38,7 +38,8 @@ export default function Workspace() {
   const referencedPlans = new Set(state.messages.flatMap(m => m.reference && state.plans[m.reference] ? [m.reference] : []));
   const referencedTasks = new Set(state.messages.flatMap(m => m.reference && state.tasks[m.reference] ? [m.reference] : []));
   const renderedTasks = new Set<string>();
-  const ownTasks = Object.values(state.tasks).filter(t => t.conversationId === state.conversationId && !referencedTasks.has(t.id) && !t.task.automation_stopped);
+  // Execution may finish before a result message exists, including projection failures.
+  const ownTasks = Object.values(state.tasks).filter(t => t.conversationId === state.conversationId && !referencedTasks.has(t.id));
   const title = status?.conversations.find(c => c.id === state.conversationId)?.title ?? '开始一段对话';
   return <main className={`mvp ${state.selection ? 'm-has-details' : ''}`}>
     <nav className="m-nav" aria-label="会话列表">
