@@ -1,0 +1,19 @@
+{
+  "turn": {
+    "id": "example-turn",
+    "conversationId": "example-chat",
+    "sourceMessage": "example-message",
+    "sourceMessages": ["example-message"],
+    "generation": 1,
+    "state": "completed",
+    "reason": null,
+    "createdAt": "2026-09-21T00:00:00.000Z",
+    "finishedAt": "2026-09-21T00:00:01.000Z"
+  },
+  "activities": [
+    { "sequence": 1, "turnId": "example-turn", "kind": "accepted", "data": { "sourceMessage": "example-message" } },
+    { "sequence": 2, "turnId": "example-turn", "kind": "model_started", "data": { "instructionsVersion": "d4-1", "readOnly": false, "model": "deepseek-flash", "provider": "deepseek" } },
+    { "sequence": 3, "turnId": "example-turn", "kind": "message", "data": { "messageId": "reply-example-turn" } },
+    { "sequence": 4, "turnId": "example-turn", "kind": "completed", "data": { "reason": null } }
+  ]
+}

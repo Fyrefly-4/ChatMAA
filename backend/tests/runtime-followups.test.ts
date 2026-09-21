@@ -1,0 +1,178 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { Store } from '../src/store.ts';
+import { TaskService } from '../src/task-service.ts';
+import { BusinessService } from '../src/business/service.ts';
+import { RuntimeService } from '../src/runtime/service.ts';
+import type { RunTurn } from '../src/runtime/service.ts';
+
+async function until(check: () => boolean) {
+  for (let i = 0; i < 200; i++) { if (check()) return; await new Promise(resolve => setTimeout(resolve, 5)); }
+  assert.fail('condition_timeout');
+}
+function setup(run: RunTurn, pending = true) {
+  const store = new Store(':memory:');
+  const tasks = new TaskService(store, { instance: 'fixture', call: async () => { throw new Error('no_execution_expected'); } }, 'fixture');
+  const business = new BusinessService(tasks); business.createConversation('chat', '测试');
+  business.appendMessage('chat', 'source', 'user', '补到100个固源岩');
+  business.createRequest('chat', 'request', 'source', { kind: 'inventory', quantity: 100, itemId: '30012' });
+  // Inject the D3 event boundary; actual Adapter delivery is covered separately.
+  const enqueue = () => business.records.insert('continuations', { id: 'event', conversationId: 'chat', requestId: 'request', revision: 1,
+    taskId: null, state: 'pending', reason: 'scan_needs_input', token: null });
+  if (pending) enqueue();
+  const runtime = new RuntimeService(business, run);
+  return { store, business, runtime, enqueue, event: () => business.records.read('continuations', 'event')!,
+    close: async () => { await runtime.close(); await business.close(); store.db.close(); } };
+}
+
+test('后台解释以一次性接纳事务发布，token 不进入模型上下文', async t => {
+  const x = setup(async input => {
+    assert.equal(input.turn.continuationId, 'event');
+    assert.equal(JSON.stringify(input.context).includes('"token"'), false);
+    assert.match(JSON.stringify(input.context), /scan_needs_input/);
+    return '库存识别不完整，请补充处理方式。';
+  }); t.after(x.close);
+  x.runtime.enableFollowups(); await until(() => x.event().state === 'completed');
+  assert.equal(x.event().token, null);
+  assert.equal(x.business.conversation('chat').messages.filter(m => m.role === 'assistant').length, 1);
+  assert.throws(() => x.business.acceptFollowup('event', 'old-token', () => {}), /followup_not_current/);
+});
+
+test('新消息中断后台解释，忽略取消的迟到回复不能发布', async t => {
+  let entered!: () => void; let release!: (text: string) => void;
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  const x = setup(async input => {
+    if (input.turn.continuationId) { entered(); return new Promise(resolve => { release = resolve; }); }
+    return '已收到新的说明。';
+  }); t.after(x.close);
+  x.runtime.enableFollowups(); await started;
+  const turn = x.runtime.submit('chat', 'new-message', '先不扫描');
+  await x.runtime.settled(turn.id);
+  assert.equal(x.event().state, 'interrupted'); assert.equal(x.event().token, null);
+  release('过期指引'); await new Promise(resolve => setImmediate(resolve));
+  const replies = x.business.conversation('chat').messages.filter(m => m.role === 'assistant');
+  assert.deepEqual(replies.map(m => m.text), ['已收到新的说明。']);
+});
+
+test('后台发布完成记录失败时助手消息和一次性接纳一起回滚', async t => {
+  const x = setup(async () => '不应发布的回复'); t.after(x.close);
+  x.store.db.exec("CREATE TRIGGER fail_completion BEFORE INSERT ON runtime_activities WHEN NEW.kind='completed' BEGIN SELECT RAISE(ABORT,'completion_failed'); END");
+  x.runtime.enableFollowups(); await until(() => x.event().state === 'failed');
+  assert.equal(x.business.conversation('chat').messages.filter(m => m.role === 'assistant').length, 0);
+  assert.equal(x.event().token, null);
+});
+
+test('后台等待活动用户轮；新消息可中断等待，未完成来源不被后台清除', async t => {
+  let release!: (text: string) => void;
+  let calls = 0;
+  const x = setup(async input => {
+    calls++;
+    if (input.turn.sourceMessage === 'm1') return new Promise(resolve => { release = resolve; });
+    return '新轮回答';
+  }, false); t.after(x.close);
+  const old = x.runtime.submit('chat', 'm1', '补充说明');
+  await new Promise(resolve => setImmediate(resolve));
+  x.enqueue(); x.runtime.enableFollowups(); await until(() => x.event().state === 'processing');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls, 1);
+  const next = x.runtime.submit('chat', 'm2', '更正说明'); await x.runtime.settled(next.id);
+  assert.equal(x.runtime.read(old.id).turn.state, 'interrupted');
+  assert.ok(next.sourceMessages?.includes('m1'));
+  assert.equal(x.event().state, 'interrupted');
+  release('旧回答'); await new Promise(resolve => setImmediate(resolve));
+});
+
+test('用户轮发布针对事件的解释后，等待中的后台不重复采样', async t => {
+  let release!: () => void; let calls = 0;
+  const x = setup(async input => {
+    calls++;
+    await new Promise<void>(resolve => { release = resolve; });
+    input.explainWaiting('event', '识别不完整，请确认是否重新扫描。');
+    return '已核对当前事实。';
+  }, false); t.after(x.close);
+  const turn = x.runtime.submit('chat', 'question', '识别情况如何');
+  await new Promise(resolve => setImmediate(resolve));
+  x.enqueue(); x.runtime.enableFollowups(); await until(() => x.event().state === 'processing');
+  release(); await x.runtime.settled(turn.id); await until(() => x.event().state === 'completed');
+  assert.equal(calls, 1);
+  assert.equal(x.runtime.records.waitingExplained('event', 1, 'scan_needs_input'), true);
+  const messages = x.business.conversation('chat').messages.filter(m => m.role === 'assistant');
+  assert.equal(messages.length, 1); assert.match(messages[0].text, /识别不完整/);
+});
+
+test('发布失败不留下事件解释标记', async t => {
+  const x = setup(async input => {
+    input.explainWaiting('event', '识别不完整'); return '说明';
+  }); t.after(x.close);
+  x.store.db.exec("CREATE TRIGGER fail_completion BEFORE INSERT ON runtime_activities WHEN NEW.kind='completed' BEGIN SELECT RAISE(ABORT,'completion_failed'); END");
+  const turn = x.runtime.submit('chat', 'question', '识别情况如何'); await x.runtime.settled(turn.id);
+  assert.equal(x.runtime.records.waitingExplained('event', 1, 'scan_needs_input'), false);
+  assert.equal(x.business.conversation('chat').messages.filter(m => m.role === 'assistant').length, 0);
+});
+
+test('普通用户轮回复不冒充特定事件解释，后台仍处理该事件', async t => {
+  let release!: () => void; let calls = 0;
+  const x = setup(async input => {
+    calls++;
+    if (!input.turn.continuationId) { await new Promise<void>(resolve => { release = resolve; }); return '普通回答'; }
+    return '针对扫描缺失的澄清';
+  }, false); t.after(x.close);
+  const turn = x.runtime.submit('chat', 'question', '你好');
+  await new Promise(resolve => setImmediate(resolve));
+  x.enqueue(); x.runtime.enableFollowups(); await until(() => x.event().state === 'processing');
+  release(); await x.runtime.settled(turn.id); await until(() => x.event().state === 'completed');
+  assert.equal(calls, 2); assert.equal(x.runtime.records.waitingExplained('event', 1, 'scan_needs_input'), false);
+  assert.equal(x.business.conversation('chat').messages.filter(m => m.role === 'assistant').length, 2);
+});
+
+test('外层 Runtime 关联事务回滚前不领取或派发后台事件', async t => {
+  let calls = 0;
+  const x = setup(async () => { calls++; return '不得出现'; }); t.after(x.close);
+  const event = x.event(); x.store.db.prepare('DELETE FROM continuations WHERE id=?').run(event.id);
+  assert.throws(() => x.store.transaction(() => {
+    x.business.records.insert('continuations', event);
+    x.runtime.enableFollowups();
+    assert.equal(x.event().state, 'pending');
+    throw new Error('outer_association_failed');
+  }), /outer_association_failed/);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls, 0); assert.equal(x.event(), undefined);
+});
+
+for (const claimed of [false, true]) test(`新消息原子撤销${claimed ? '已领取但未注册消费者' : '尚未领取'}的旧事件`, async t => {
+  let backgroundCalls = 0;
+  const x = setup(async input => {
+    if (input.turn.continuationId) backgroundCalls++;
+    return input.turn.continuationId ? '过时后台回复' : '新用户回复';
+  }); t.after(x.close);
+  if (claimed) x.runtime.enableFollowups();
+  assert.equal(x.event().state, claimed ? 'processing' : 'pending');
+  // Deliberately stay in the same JS job, before the consumer's queued microtask.
+  const turn = x.runtime.submit('chat', 'new-message', '先不扫描');
+  assert.equal(x.event().state, 'interrupted'); assert.equal(x.event().token, null);
+  if (!claimed) x.runtime.enableFollowups();
+  await x.runtime.settled(turn.id); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(backgroundCalls, 0);
+  assert.deepEqual(x.business.conversation('chat').messages.filter(m => m.role === 'assistant').map(m => m.text), ['新用户回复']);
+});
+
+test('重复消息重传不撤销该消息之后到达的后台事件', async t => {
+  const x = setup(async () => '回复', false); t.after(x.close);
+  const first = x.runtime.submit('chat', 'message', '查询'); await x.runtime.settled(first.id);
+  x.enqueue(); x.runtime.enableFollowups();
+  const token = x.event().token;
+  const duplicate = x.runtime.submit('chat', 'message', '查询');
+  assert.equal(duplicate.id, first.id); assert.equal(x.event().token, token);
+  await until(() => x.event().state === 'completed');
+});
+
+test('用户消息受理事务失败时事件失效一起回滚，不提前中断消费者', async t => {
+  const x = setup(async () => '后台有效回复'); t.after(x.close);
+  x.runtime.enableFollowups(); const token = x.event().token;
+  x.store.db.exec("CREATE TRIGGER fail_admission BEFORE INSERT ON runtime_activities WHEN NEW.kind='accepted' BEGIN SELECT RAISE(ABORT,'admission_failed'); END");
+  assert.throws(() => x.runtime.records.accept(x.business, 'chat', 'failed-message', '新消息'), /admission_failed/);
+  assert.equal(x.event().state, 'processing'); assert.equal(x.event().token, token);
+  assert.equal(x.business.records.read('messages', 'failed-message'), undefined);
+  await until(() => x.event().state === 'completed');
+  assert.equal(x.business.conversation('chat').messages.filter(m => m.role === 'assistant').length, 1);
+});
