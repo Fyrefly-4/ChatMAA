@@ -102,3 +102,57 @@ for (const kind of ['material', 'inventory'] as const) test(`Runtime 正式回�
   assert.equal(host.tasks.store.all().length, kind === 'inventory' ? 2 : 1);
   assert.ok(business.conversation('chat').messages.some(m => m.id === `result-${taskId}` || (m.reference === taskId && m.id.startsWith('result-'))));
 });
+
+test('正式扫描缺失所需材料时触发真实 D3 后续事件，后台只读澄清而不猜零', async t => {
+  const host = await startHost({ mode: 'maa-replay', dataDir: resolve(repository, '.artifacts/checks', `runtime-missing-${Date.now()}`),
+    python: resolve(repository, 'adapter/maa/.venv/Scripts/python.exe'), port: 0, pollMs: 50,
+    httpTimeoutMs: 1000, leaseMs: 5000, stopDeadlineMs: 3000 }, { business: true });
+  const business = host.business!; business.createConversation('chat', '缺失库存');
+  business.appendMessage('chat', 'goal', 'user', '补到75个固源岩组');
+  business.createRequest('chat', 'request', 'goal', { kind: 'inventory', quantity: 75, itemId: '30013' });
+  let sampled = 0;
+  const model = new MockLanguageModelV4({ doGenerate: async options => {
+    sampled++; assert.ok(!options.tools?.some(tool => tool.name === 'scan_inventory'));
+    assert.match(JSON.stringify(options.prompt), /scan_needs_input/);
+    return response([{ type: 'text', text: '扫描未识别所需材料，库存未知，不能按零计算。请确认下一步。' }]);
+  } });
+  const runtime = new RuntimeService(business, modelRunner(business, model)); runtime.enableFollowups();
+  t.after(async () => { await runtime.close(); await host.close(); });
+  await business.scan('request', 1, 'scan', '先扫描库存');
+  const deadline = Date.now() + 10000;
+  while (!business.conversation('chat').messages.some(m => m.role === 'assistant') && Date.now() < deadline) await new Promise(r => setTimeout(r, 30));
+  assert.equal(sampled, 1);
+  assert.equal(business.conversation('chat').currentPlan, null);
+  assert.ok(business.request('request').waiting.includes('inventory_required'));
+  assert.equal(business.records.list('continuations')[0].state, 'completed');
+  assert.equal(host.tasks.store.all().length, 1);
+});
+
+test('执行中模型选到不可比较的调整目标仍先停止，拒绝不恢复旧任务或创建替代执行', async t => {
+  const host = await startHost({ mode: 'maa-replay', dataDir: resolve(repository, '.artifacts/checks', `runtime-adjust-${Date.now()}`),
+    python: resolve(repository, 'adapter/maa/.venv/Scripts/python.exe'), port: 0, pollMs: 50,
+    httpTimeoutMs: 1000, leaseMs: 5000, stopDeadlineMs: 3000 }, { business: true });
+  const business = host.business!; business.createConversation('chat', '执行中调整');
+  business.appendMessage('chat', 'goal', 'user', '刷100次');
+  business.createRequest('chat', 'request', 'goal', { kind: 'count', quantity: 100, stage: '1-7' });
+  const planId = business.conversation('chat').currentPlan!; business.present(planId, 'display');
+  const started = await business.confirm(planId, 'display', 'confirmation', 'button');
+  let sampled = 0;
+  const model = new MockLanguageModelV4({ doGenerate: async options => {
+    sampled++;
+    if (sampled === 1) return response([{ type: 'tool-call', toolCallId: 'adjust', toolName: 'adjust_task', input: JSON.stringify({
+      taskId: started.id, goal: { kind: 'material', itemId: '30012', quantity: 5 }, semantics: 'total' }) }]);
+    assert.match(JSON.stringify(options.prompt), /incomparable_total_goal/);
+    return response([{ type: 'text', text: '已经请求停止；次数与材料总目标不可直接比较，请明确新目标。' }]);
+  } });
+  const runtime = new RuntimeService(business, modelRunner(business, model));
+  t.after(async () => { await runtime.close(); await host.close(); });
+  const turn = runtime.submit('chat', 'adjust-message', '改成总共获得5个固源岩'); await runtime.settled(turn.id);
+  assert.equal(runtime.read(turn.id).turn.state, 'completed');
+  assert.equal(host.tasks.get(started.id).stop_requested, true);
+  const deadline = Date.now() + 10000;
+  while (!host.tasks.get(started.id).automation_stopped && Date.now() < deadline) await new Promise(r => setTimeout(r, 30));
+  assert.equal(host.tasks.get(started.id).automation_stopped, true);
+  assert.equal(host.tasks.store.all().length, 1);
+  assert.equal(business.conversation('chat').requests.length, 1);
+});

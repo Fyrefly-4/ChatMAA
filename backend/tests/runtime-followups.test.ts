@@ -123,3 +123,17 @@ test('普通用户轮回复不冒充特定事件解释，后台仍处理该事�
   assert.equal(calls, 2); assert.equal(x.runtime.records.waitingExplained('event', 1, 'scan_needs_input'), false);
   assert.equal(x.business.conversation('chat').messages.filter(m => m.role === 'assistant').length, 2);
 });
+
+test('外层 Runtime 关联事务回滚前不领取或派发后台事件', async t => {
+  let calls = 0;
+  const x = setup(async () => { calls++; return '不得出现'; }); t.after(x.close);
+  const event = x.event(); x.store.db.prepare('DELETE FROM continuations WHERE id=?').run(event.id);
+  assert.throws(() => x.store.transaction(() => {
+    x.business.records.insert('continuations', event);
+    x.runtime.enableFollowups();
+    assert.equal(x.event().state, 'pending');
+    throw new Error('outer_association_failed');
+  }), /outer_association_failed/);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls, 0); assert.equal(x.event(), undefined);
+});

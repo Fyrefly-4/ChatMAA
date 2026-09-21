@@ -443,6 +443,9 @@ export class BusinessService {
   interruptFollowup(id: string) { this.transaction(() => this.followups.interrupt(id)); }
   private dispatchFollowups() {
     if (this.closing || this.retiring || this.projectionFailure || this.tasks.storageFailed) return;
+    // Runtime may wrap a synchronous business operation in a larger atomic association.
+    // Do not even claim the continuation until that outer transaction commits or rolls back.
+    if (this.tasks.store.db.isTransaction) { queueMicrotask(() => this.dispatchFollowups()); return; }
     try { this.followups.dispatch(); } catch { this.projectionFailure = 'followup_storage_failed'; }
   }
   acceptFollowup<T>(id: string, token: string, apply: (request: Request) => T): T {

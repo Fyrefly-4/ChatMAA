@@ -94,6 +94,8 @@ export function businessTools(business: BusinessService, run: RunInput, options:
       input => business.records.messagePage(conversationId, { before: input.before as string | undefined, query: input.query as string | undefined })),
     read_task: define('read_task', '读取本会话任务，或全局正在占用设备的明确任务。', { taskId: string }, ['taskId'], false,
       input => task(text(input, 'taskId'), true)),
+    read_plan: define('read_plan', '读取本会话历史或当前方案的原始目标、依据和限制；历史授权不能再次使用。', { planId: string }, ['planId'], false,
+      input => plan(text(input, 'planId'))),
     find_material: define('find_material', '从有版本资料按名称或 ID 查材料；歧义需澄清，不凭模型记忆编造 ID。', { query: string }, ['query'], false,
       input => {
         const query = text(input, 'query'); const snapshot = business.catalog.snapshot;
@@ -142,6 +144,6 @@ export function businessTools(business: BusinessService, run: RunInput, options:
         input.itemIds as string[] | null, `${op.sourceMessage}: ${text(input, 'reason')}`, conversationId) }))),
   };
   return { tools: options.readOnly ? Object.fromEntries(Object.entries(tools).filter(([name]) =>
-    ['read_state', 'read_history', 'read_task', 'find_material', 'select_stage', 'estimate_plan', 'explain_waiting'].includes(name))) : tools,
+    ['read_state', 'read_history', 'read_task', 'read_plan', 'find_material', 'select_stage', 'estimate_plan', 'explain_waiting'].includes(name))) : tools,
     nextStep: () => { check(); stepMutated = false; }, calls: () => calls };
 }
