@@ -1,6 +1,6 @@
 # D4 Runtime 实现与接入
 
-2026-09-21，从 D3 合并基线 `818d123` 开始建设。**当前为开发中，不代表 D4 完成。** 产品行为依据 [Spec #18](https://github.com/Fyrefly-4/ChatMAA/issues/18)，阶段条件见 [D4 #23](https://github.com/Fyrefly-4/ChatMAA/issues/23)。
+2026-09-21，代码核对至 `a46e20d`，从 D3 合并基线 `818d123` 建设。实现与分层验证进入阶段审阅；不代表完整页面或真实游戏整体验收。产品行为依据 [Spec #18](https://github.com/Fyrefly-4/ChatMAA/issues/18)，阶段条件见 [D4 #23](https://github.com/Fyrefly-4/ChatMAA/issues/23)。
 
 ## 已实现的基础
 
@@ -23,9 +23,22 @@
 
 正式 `maa-replay` 集成检查已通过次数、材料增量和补库存三种目标。次数路径经过真实本机 HTTP，三种目标均接实际 Backend、Python Adapter 与两库；补库存先扫描，材料增量不扫描，均在展示确认后执行。独立进程 --runtime --no-model 与 CLI 的消息、完整方案输出、展示防重、确定确认和退出交接已验证。模型使用 AI SDK 替身，集成测试展示为显式模拟回执，CLI 另验证实际输出；不代表真实模型或网页证据。
 
-Node 24.19.0 下，Backend 类型检查、Runtime 35 项检查和 D3 业务 29 项回归通过。检查使用实际 `BusinessService` 与内存 SQLite、受控模型函数及 AI SDK MockLanguageModelV4；轮次检查不执行任务，操作关联检查使用内存执行通道替身。覆盖原子回滚、会话隔离、消息防重、过期输出、忽略取消、超时、关闭、容量和只读恢复，以及提交前关联故障、提交后结果保存故障和调整停止意图回滚。SDK 检查根据真实资料工具的匹配结果分支决定建草案或澄清，另检查并行变更、确认消息顺序、跨会话限制与循环上限；这不证明真实模型自然语言理解质量。
+Node 24.19.0 下，Backend 全量 136 项通过；后续提示与工具描述调整后的类型检查和 Runtime 39 项通过。Adapter 59 项、Web 类型检查／构建、Edge 浏览器 18 项在本阶段通过，之后未修改 Adapter／Web。检查使用实际 `BusinessService` 与内存 SQLite、受控模型函数及 AI SDK MockLanguageModelV4；轮次检查不执行任务，操作关联检查使用内存执行通道替身。覆盖原子回滚、会话隔离、消息防重、过期输出、忽略取消、超时、关闭、容量和只读恢复，以及提交前关联故障、提交后结果保存故障和调整停止意图回滚。SDK 检查根据真实资料工具的匹配结果分支决定建草案或澄清；另检查确认顺序、跨会话限制、循环上限，以及截断、空白和误输出工具协议时拒绝发布。这些离线检查不替代真实模型样例。
 
-没有本轮真实模型或游戏证据。阶段仍需异常路径补充、最终全量检查、逐项完成审计及真实模型样例；完成条件保持不变。
+本阶段已调用 DeepSeek `deepseek-flash`，连接实际 Backend 与正式 `maa-replay`。回放来源是 `synthetic_d2_callbacks`，不是新 MuMu 或真实游戏证据。模型样例保存原始输入、工具、业务对象与回复，人工核对范围如下：
+
+| 样例 | 已核对的行为 |
+|---|---|
+| 次数、材料新增、补库存 | 补充承接、72 补到 75 得到差额 3；三类经展示后确认执行 |
+| 咨询、修改与改写 | 咨询不变更；“修改并直接开始”仍等新确认；再次执行产生新需求 |
+| 未知／已满足库存 | 缺失不是零；72 已满足 70，不生成刷图任务 |
+| 缺推荐／不适用关卡 | 缺推荐夹具要求补关卡；不适用的用户指定不被擅自替换 |
+| 执行中调整与停止 | total／additional 保留不同语义；假设不停止，含糊调整先请求停止；无自动替代执行 |
+| 下界与中断 | 不给出精确剩余；新消息中断旧模型，停止经实际 Backend 下发 |
+| 后台澄清 | 实际扫描缺材料触发只读模型与一次性发布，不自动重扫或执行 |
+| 异常资料与超时 | 资料字段中的指令未产生业务变更；1 秒人为时限触发模型中断，不自动重试 |
+
+首轮不是全部通过：曾误用独立查库存替换补库存目标，2000 输出 token 被推理用尽，以及关闭工具后将 DSML 当正文。修正工具与提示说明、增加明确收尾指令，输出上限调为 6000（仍含推理），截断／空白／DSML 正文记失败；针对失败路径复验。随后修正默认候选被误记作用户指定、运行状态被说成已开战的问题。失败证据与各提示版本保留在本地 `.artifacts/d4-model-validation/`，没有自动重试直到成功。代表样例不构成任意表达均可靠的保证；回复仍可能冗长或重复澄清，确定方案、进度及停止入口仍以业务事实为准。
 
 检查入口：
 
@@ -38,7 +51,9 @@ node --test --test-concurrency=1 backend/tests/business.test.ts backend/tests/ru
 
 ## 调试入口
 
-真实模型样例驱动为 `node backend/src/runtime/samples.ts --allow-model`，必须先获得该次调用授权，并用 `CHATMAA_CONFIG` 显式指定 `mode=maa-replay` 的配置。脚本在读取模型凭据和启动宿主前拒绝 live；不进入离线 CI。它保存模型标识、提示版本、输入、工具活动、业务快照与退出结果到本地数据目录下的 `model-samples-*/evidence.json`。当前脚本提供三种目标、咨询／修改、资源范围和未知库存的初始样例，输出仍需人工对照事实审阅，不以脚本退出作为验收通过，也不替代提案要求的全部改写与异常样例。此入口尚未调用真实模型。
+真实模型样例驱动为 `node backend/src/runtime/samples.ts --allow-model`；边界与后台样例用 `node backend/src/runtime/edge-samples.ts --allow-model`。必须先获得该次调用授权，并用 `CHATMAA_CONFIG` 显式指定 `mode=maa-replay` 的配置。两入口在读取模型凭据和启动宿主前拒绝 live，不进入离线 CI。用 `--scenario inventory,material` 等名称列表定向验证，省略则运行该入口全部样例。
+
+驱动保存模型标识、提示版本、输入、工具活动、业务快照与退出结果到本地数据目录下的 `model-samples-*/evidence.json` 或 `model-edges-*/evidence.json`。普通样例实际打印方案后才登记展示；边界样例中的长任务由脚本模拟前置展示／按钮确认，缺推荐及指令性资料是明确标注的夹具。它们验证模型读取与后续选择，不作为用户前置交互的证据。边界驱动每场景独立宿主，检查结束后的清理停止单独记录；超时样例人为设为 1 秒，正式运行仍为 60 秒。脚本退出不等于验收通过，需核对原文、工具参数、当时事实、最终事实及回复。
 
 先按 [Demo 回放配置](demo.md#回放入口)显式设置 `CHATMAA_CONFIG`，避免读到本地 live 配置。`node backend/src/main.ts --runtime --no-model` 可检查连接及确定操作，不加载模型密钥；显式去掉 `--no-model` 才按现有 DeepSeek 配置启用模型。启用模型不等于获得本轮真实模型调用授权。
 
@@ -64,7 +79,7 @@ node backend/src/runtime/cli.ts stop <任务ID>
 
 ## D5 同进程契约与活动
 
-类型入口为 [contract.ts](../../backend/src/runtime/contract.ts)，咨询轮次的展示夹具见 [runtime-consultation.json](fixtures/runtime-consultation.json)。夹具为结构样例，时间、标识和内容均为示例，不是实际模型证据。D5 可以使用服务及类型准备页面，但本阶段尚未完成真实模型验证。
+类型入口为 [contract.ts](../../backend/src/runtime/contract.ts)，咨询轮次的展示夹具见 [runtime-consultation.json](fixtures/runtime-consultation.json)。夹具为结构样例，时间、标识和内容均为示例，不是实际模型证据。D5 可复用这些服务及类型；页面与浏览器身份包装仍须独立实施验证。
 
 `submit(conversationId, messageId, text)` 同步返回轮次，模型处理在后台继续；同 ID 同内容返回原轮次。`read(turnId, after)` 返回当前轮次和最多 100 条后续活动，序号在库中全局递增，按本轮最后序号续读，允许有间隔。`conversation(id)` 返回 D3 会话事实、最近 20 个轮次和当前方案展示；最终回复按 `message` 活动的 messageId 从业务消息读取。页面刷新仅恢复读取，不能重新生成消息 ID 或重新执行。
 
@@ -77,8 +92,8 @@ node backend/src/runtime/cli.ts stop <任务ID>
 | completed / failed / interrupted | 助手轮次结束；游戏任务独立，不据此判断已停止或成功 |
 | sourceMessages / continuationId | 本轮承接的用户消息或后台事件，用于关联展示，不代表新增授权 |
 
-`model_unavailable`、`model_busy`、`model_timeout` 是轮次失败／中断原因，确定查询和停止仍可用；`context_budget_exceeded` 要求缩小问题，不截断必要约束。对象范围、版本和确认拒绝以工具 error 呈现；`committed` 或 `unknown` 操作应查 targetId，不换 ID 重发。工具记录故障关闭本轮，不以聊天回复覆盖任务结果。
+`model_unavailable`、`model_busy`、`model_timeout` 是轮次失败／中断原因，确定查询和停止仍可用；`context_budget_exceeded` 要求缩小问题，不截断必要约束。`model_output_budget_exceeded`、`model_empty_response`、`model_invalid_response` 表示回复截断、空白或误输出工具协议；不发布残缺正文、不自动重试，已提交业务操作不会撤销。对象范围、版本和确认拒绝以工具 error 呈现；`committed` 或 `unknown` 操作应查 targetId，不换 ID 重发。工具记录故障关闭本轮，不以聊天回复覆盖任务结果。
 
 页面展示完整方案后调用 D3 `present`，复用稳定展示 ID；按钮确认调用 D3 `confirm(..., 'button')`，自然语言确认经过 Runtime 且必须是展示后的新消息。直接停止调用 D3 `stop`，不等待模型。应用令牌 HTTP 只是调试面，D5 包装前须保留浏览器 Host／Origin 与独立令牌检查。
 
-模型循环目前为 8 步、12 次工具、单次输出最多 2000 tokens、总时限 60 秒。扫描／执行／停止受理后，宿主关闭后续工具，只生成最终解释；明确调整直接调用会先停止的 adjust_task，含糊调整则先 stop_task 收尾并澄清。
+模型循环目前为 8 步、12 次工具、每步输出最多 6000 tokens（含推理）、总时限 60 秒，输入按约 48000 字符限制。扫描／执行／停止受理后，宿主关闭后续工具并明确要求自然语言收尾；明确调整直接调用会先停止的 adjust_task，含糊调整则先 stop_task 收尾并澄清。当前提示版本为 `d4-5`。

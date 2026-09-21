@@ -1,6 +1,6 @@
 # Backend 独立执行入口
 
-2026-09-21 D4 开发中：独立 `runtime/` 已接入业务工具、上下文、轮次中断、后台澄清及显式 `--runtime` 入口；正式 Python 回放与模型替身已联调，真实模型样例尚未执行。操作、活动契约和验证范围见 [D4 Runtime](../docs/engineering/d4-runtime.md)；默认无模型 MVP 和 legacy 入口继续使用下述行为。
+2026-09-21 D4：独立 `runtime/` 已接入业务工具、上下文、轮次中断、后台澄清及显式 `--runtime` 入口；真实 DeepSeek 与正式 Python 回放的代表样例已核对，进入阶段审阅。操作、活动契约、失败修正和验证范围见 [D4 Runtime](../docs/engineering/d4-runtime.md)；未新增真实游戏证据，默认无模型 MVP 和 legacy 入口继续使用下述行为。
 
 2026-09-21 D3：默认启动改为 MVP 共同业务入口，提供会话、三种目标、方案展示与确认、任务结果、停止后调整和资料版本管理。使用及字段见 [D3 业务契约](../docs/engineering/d3-backend.md)，资料来源见 [快照说明](data/README.md)。正式 Adapter 的离线 HTTP／双库联调及固定 MuMu 业务链路已核对，实机范围与后续确认来源修复的验证边界见 D3 业务契约；真实模型与完整页面仍由后续阶段落实。
 

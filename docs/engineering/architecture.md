@@ -1,6 +1,6 @@
 # ChatMAA 当前工程与目标架构
 
-2026-09-21 D4 开发补充：MVP 已新增独立 [Runtime 模块](../../backend/src/runtime/service.ts)，使用有界 AI SDK 业务工具循环、会话轮次代次、上下文来源与后台只读澄清；显式 `--runtime` 经应用令牌 HTTP／回放 CLI 接入。三种目标已连接正式 Python 回放，真实模型证据仍缺失，阶段尚未完成。结构、活动契约和检查入口见 [D4 Runtime](d4-runtime.md)。下文原 Agent／Web 描述继续属于 legacy Demo，不代表新 MVP 仍使用完整指令直接授权规则。
+2026-09-21 D4 补充（代码 `a46e20d`）：MVP 已新增独立 [Runtime 模块](../../backend/src/runtime/service.ts)，使用有界 AI SDK 业务工具循环、会话轮次代次、上下文来源与后台只读澄清；显式 `--runtime` 经应用令牌 HTTP／回放 CLI 接入。三种目标及代表异常已通过真实模型＋正式 Python 回放核对，进入阶段审阅；完整页面与真实游戏整体验收仍留后续阶段。结构、活动契约、失败修正和检查入口见 [D4 Runtime](d4-runtime.md)。下文原 Agent／Web 描述继续属于 legacy Demo，不代表新 MVP 仍使用完整指令直接授权规则。
 
 2026-09-21 D3 结构：共同业务入口保持不变，请求迁移、依据判断、事实投影和消费者生命周期各有明确模块；执行停止意图统一归 TaskService。同步按受影响任务推进业务，启动仍全量核对；业务投影失败与执行证据存储失败分开表达。具体职责及字段见 [D3 业务契约](d3-backend.md)。进程、双库、确认含义与阶段实机完成条件不变。
 
