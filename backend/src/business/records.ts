@@ -1,6 +1,7 @@
 import type { Store } from '../store.ts';
 import type { GoalDraft, Goal, Amount, GoalResult } from './goals.ts';
 import type { CatalogSnapshot } from './catalog.ts';
+import { TaskError } from '../task-contract.ts';
 
 export type Conversation = { id: string; conversationId: string; title: string; currentRequest: string | null; currentPlan: string | null; createdAt: string };
 export type Message = { id: string; conversationId: string; role: 'user' | 'assistant' | 'system'; text: string; reference?: string; createdAt: string };
@@ -80,6 +81,27 @@ export class BusinessRecords {
   latestMessageId(conversationId: string): string | null {
     const row = this.store.db.prepare('SELECT id FROM messages WHERE conversation_id=? ORDER BY rowid DESC LIMIT 1').get(conversationId);
     return row ? String(row.id) : null;
+  }
+  messagePage(conversationId: string, options: { before?: string; limit?: number; query?: string } = {}) {
+    const limit = options.limit ?? 20;
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 20 ||
+        (options.query !== undefined && (typeof options.query !== 'string' || options.query.length > 200)))
+      throw new TaskError(422, 'invalid_history_page');
+    let boundary: number | null = null;
+    if (options.before !== undefined) {
+      const row = this.store.db.prepare('SELECT rowid FROM messages WHERE id=? AND conversation_id=?').get(options.before, conversationId);
+      if (!row) throw new TaskError(422, 'invalid_history_cursor');
+      boundary = Number(row.rowid);
+    }
+    const rows = this.store.db.prepare(`SELECT body FROM messages WHERE conversation_id=?
+      AND (? IS NULL OR rowid<?) AND (? IS NULL OR instr(json_extract(body,'$.text'),?)>0)
+      ORDER BY rowid DESC LIMIT ?`).all(conversationId, boundary, boundary, options.query ?? null, options.query ?? null, limit + 1);
+    const messages = rows.slice(0, limit).map(row => JSON.parse(String(row.body)) as Message).reverse();
+    return { messages, nextBefore: rows.length > limit ? messages[0].id : null };
+  }
+  latestPresentation(planId: string): Presentation | null {
+    const row = this.store.db.prepare("SELECT body FROM plan_presentations WHERE json_extract(body,'$.planId')=? ORDER BY rowid DESC LIMIT 1").get(planId);
+    return row ? JSON.parse(String(row.body)) : null;
   }
   messageFollows(id: string, boundary: string | null): boolean {
     return !!this.store.db.prepare(`SELECT 1 FROM messages WHERE id=? AND
