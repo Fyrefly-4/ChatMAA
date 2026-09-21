@@ -139,6 +139,12 @@ export class RuntimeService {
     if (!turn) throw new TaskError(404, 'unknown_turn');
     return { turn, activities: this.records.activities(id, after) };
   }
+  conversation(id: string) {
+    const business = this.business.conversation(id);
+    const turns = this.business.tasks.store.db.prepare('SELECT body FROM runtime_turns WHERE conversation_id=? ORDER BY generation DESC LIMIT 20')
+      .all(id).map(row => JSON.parse(String(row.body)) as Turn);
+    return { business, turns, presentation: business.currentPlan ? this.business.records.latestPresentation(business.currentPlan) : null };
+  }
   async settled(id: string) { await this.running.get(id)?.done; return this.read(id); }
   async close() {
     if (!this.closing) {

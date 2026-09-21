@@ -21,6 +21,8 @@
 
 ## 当前验证范围
 
+正式 `maa-replay` 集成检查已通过次数目标的一条链路：真实本机 HTTP、Runtime、实际 Backend、Python Adapter、两库与退出交接。模型使用 AI SDK 替身，展示为显式模拟回执；不代表真实模型或网页证据。材料、库存及异常分支的 Runtime 正式回放覆盖仍待补齐。
+
 Node 24.19.0 下，Backend 类型检查、Runtime 21 项检查和 D3 业务 29 项回归通过。检查使用实际 `BusinessService` 与内存 SQLite、受控模型函数及 AI SDK MockLanguageModelV4；轮次检查不执行任务，操作关联检查使用内存执行通道替身。覆盖原子回滚、会话隔离、消息防重、过期输出、忽略取消、超时、关闭、容量和只读恢复，以及提交前关联故障、提交后结果保存故障和调整停止意图回滚。SDK 检查根据真实资料工具的匹配结果分支决定建草案或澄清，另检查并行变更、确认消息顺序、跨会话限制与循环上限；这不证明真实模型自然语言理解质量。
 
 没有本轮真实模型、正式 Adapter 回放或游戏证据。阶段仍需业务工具、多步反馈、异步后续、正式回放链路与真实模型样例，完成条件保持不变。
@@ -33,3 +35,25 @@ node --test --test-concurrency=1 backend/tests/business.test.ts backend/tests/ru
 ```
 
 完整检查及环境准备见 [CI 说明](ci-plan.md)，业务操作及确认语义见 [D3 契约](d3-backend.md)。
+
+## 调试入口
+
+先按 [Demo 回放配置](demo.md#回放入口)显式设置 `CHATMAA_CONFIG`，避免读到本地 live 配置。`node backend/src/main.ts --runtime --no-model` 可检查连接及确定操作，不加载模型密钥；显式去掉 `--no-model` 才按现有 DeepSeek 配置启用模型。启用模型不等于获得本轮真实模型调用授权。
+
+`--runtime` 不能与 engineering 或 legacy 模式混用；默认 MVP 无模型入口保持可用。关闭时先撤销 Runtime 写入资格并取消后台消费者，再排空操作、交接执行证据。
+
+应用令牌保护的接口：`GET /runtime/status`、`POST /runtime/messages`（`conversationId`、稳定 `messageId`、`text`）、`GET /runtime/turns/:id?after=序号`、`GET /runtime/conversations/:id`。展示、按钮确认、查询与停止继续使用 D3 确定操作。当前接口拒绝浏览器 Origin，D5 需在浏览器身份边界内包装同进程服务，不能将应用令牌交给网页。
+
+回放客户端 `node backend/src/runtime/cli.ts` 支持：
+
+```powershell
+node backend/src/runtime/cli.ts new chat 测试会话
+node backend/src/runtime/cli.ts message chat message-1 '刷1-7一次'
+node backend/src/runtime/cli.ts watch <返回的轮次ID>
+node backend/src/runtime/cli.ts show chat
+node backend/src/runtime/cli.ts message chat message-2 '按这个开始'
+node backend/src/runtime/cli.ts state chat
+node backend/src/runtime/cli.ts stop <任务ID>
+```
+
+模型消息示例须在模型调用获准后执行；无模型时消息记录以 `model_unavailable` 结束。`show` 完整打印结构化方案后登记 `cli-方案ID` 展示回执，重试复用回执；`state` 只读取。也可用 `confirm <方案ID> <展示ID> <确认ID>` 确定确认。客户端拒绝 live 配置和非 `mvp-runtime` 连接，退出客户端不关闭宿主；关闭仍用原 `node backend/src/cli.ts shutdown`。
