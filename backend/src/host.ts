@@ -82,9 +82,10 @@ export async function startHost(config: Config, options: { business?: boolean; c
   const heartbeat = setInterval(() => { if (!service.closing) void call('/lease', 'POST').catch(() => {}); }, config.pollMs);
   let business: BusinessService | undefined;
   try {
-    if (options.business) business = new BusinessService(service, options.catalog);
     // Reconcile existing records before exposing operations; never resubmit them.
     await service.poll(true);
+    // Initial business projection must see synchronized history, not startup placeholders.
+    if (options.business) business = new BusinessService(service, options.catalog);
   } catch (error) {
     clearInterval(heartbeat);
     await call('/shutdown', 'POST').catch(() => {}); child.kill(); store.db.close(); throw error;
