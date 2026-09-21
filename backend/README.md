@@ -1,10 +1,10 @@
 # Backend 独立执行入口
 
-2026-09-21 D5 浏览器契约：新增 `--runtime --web` 服务装配入口，`--no-model` 可用于无模型读取和停止。`browser/mvp-routes.ts` 在现有 `x-web-token`／Host／Origin 边界下复用 Runtime、BusinessService 和 TaskService，不提供裸任务创建或通用业务转发。此提交建立服务契约，MVP 页面由后续提交接入；下文旧 `/api/requests` 表格仅适用于 legacy Demo。
+2026-09-21 D5 浏览器契约：新增 `--runtime --web` 服务装配入口，`--no-model` 可用于无模型读取和停止。`browser/mvp-routes.ts` 在现有 `x-web-token`／Host／Origin 边界下复用 Runtime、BusinessService 和 TaskService，不提供裸任务创建或通用业务转发。MVP 页面现已接入，启动与验证边界见 [D5 Web 接入](../docs/engineering/d5-web.md)；下文旧 `/api/requests` 表格仅适用于 legacy Demo。
 
 MVP 的 `/api/status` 返回会话列表、全局任务、Runtime 和环境状态；`/api/conversations/:id` 返回当前业务快照。消息通过 `POST /api/messages` 受理；消息和轮次列表支持互斥的 before／after 游标、每页 20 条，消息游标校验会话归属。`/api/plans/:id` 返回保存版本的依据，`present` 与 `confirm` 分离，按钮确认来源固定由服务包装提供。`/api/tasks/:id/events` 每页最多 100 条，按实际证据序号续读；直接停止及环境核对沿用原服务。
 
-接口验证见 `tests/mvp-browser.test.ts`（白名单、身份、分页、防重与故障停止）和 `tests/runtime-cli.test.ts`（无模型 Web 装配与退出交接）。本层测试不表示真实模型或完整页面已验证。
+接口验证见 `tests/mvp-browser.test.ts`（白名单、身份、分页、防重与故障停止）和 `tests/runtime-cli.test.ts`（无模型 Web 装配与退出交接）。本层测试覆盖服务契约；页面整链与真实模型代表路径的证据另见 D5 Web 接入说明。
 
 2026-09-21 D4：独立 `runtime/` 已接入业务工具、上下文、轮次中断、后台澄清及显式 `--runtime` 入口；真实 DeepSeek 与正式 Python 回放的代表样例已核对，进入阶段审阅。操作、活动契约、失败修正和验证范围见 [D4 Runtime](../docs/engineering/d4-runtime.md)；未新增真实游戏证据，默认无模型 MVP 和 legacy 入口继续使用下述行为。
 

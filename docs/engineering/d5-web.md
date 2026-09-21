@@ -1,6 +1,6 @@
 # D5 Web 接入与检查
 
-2026-09-21，从 D4 合并基线 `b9d580de` 建设，当前实现见本文件所在提交。页面已接入 Runtime、业务服务和正式 Python 回放；真实模型网页联调与真实游戏没有在本轮运行，不能据此宣称 D5 或 MVP 全部验收完成。产品与阶段标准分别见 [Spec #18](https://github.com/Fyrefly-4/ChatMAA/issues/18)、[D5 #24](https://github.com/Fyrefly-4/ChatMAA/issues/24)。
+2026-09-21，从 D4 合并基线 `b9d580de` 建设，当前实现见本文件所在提交。页面已接入 Runtime、业务服务和正式 Python 回放，离线整链与真实模型网页代表路径均已核对；仍有回复表达与阅读体验限制，未调用真实游戏，不代表 D5 已获验收或 MVP 全部完成。产品与阶段标准分别见 [Spec #18](https://github.com/Fyrefly-4/ChatMAA/issues/18)、[D5 #24](https://github.com/Fyrefly-4/ChatMAA/issues/24)。
 
 ## 启动 MVP 页面
 
@@ -70,4 +70,12 @@ npm --prefix backend start -- --runtime --web --no-model
 - `web/tests/mvp.spec.ts`：真实页面、Runtime、BusinessService、TaskService、Python 回放与双库；只有模型响应使用 AI SDK 替身。核对任务实际操作数、刷新、消息／确认响应丢失、跨会话停止、模型失败、草稿与长历史。
 - `web/tests/mvp-visual.spec.ts`：11 类受控 API 状态，1440／1024／736／390／320 px 布局、详情、边框、溢出及故障。截图在 `.artifacts/checks/d5-visual/`；这是展示证据，不是新增真实执行证据。
 
-本轮不改 Backend 的目标核算、Runtime 意图契约或 Python 执行规则。替身短语只存在测试夹具，生产页面不识别“开始”等关键词来绕过 Runtime。真实模型网页连续使用、真实设备、软键盘及现场停止延迟仍需相应环境检查；D4 的真实模型 CLI 证据不替代 D5 网页证据。
+本轮不改 Backend 的目标核算、Runtime 意图契约或 Python 执行规则。替身短语只存在测试夹具，生产页面不识别“开始”等关键词来绕过 Runtime。真实设备、软键盘及现场停止延迟仍需相应环境检查；D4 的真实模型 CLI 证据不替代 D5 网页证据。
+
+### 真实模型网页代表路径
+
+2026-09-21，在原验证提交 `c48b2e4cafc58e8674459170292c4c44dab85d4e` 上，以真实 DeepSeek `deepseek-flash`／提示 `d4-5` 连接生产 `--runtime --web` 和正式 Python 回放。完成三类目标、澄清、修改后新确认、按钮／自然语言确认、连续下一需求、刷新防重、按钮／自然语言停止及停止后咨询。两轮成功检查共 11 条用户模型轮次，分别 5／1 项回放操作，均正常交接并退出，没有调用真实游戏。
+
+模型回复存在冗长、工程字段和“排队”措辞问题，纯文本页面也会原样显示 Markdown 标记；功能衔接检查通过不表示表达质量或整个阶段已验收。任务事实独立更新，模型回复可能保留调用工具时较早的快照，不能用旧回复替代最新任务结果。
+
+提交重整保留上述原验证 SHA。重整没有改变生产代码、测试或配置；原证据按原 SHA 解释，不能将改写后的提交日期或编号当作重新调用模型的证据。
