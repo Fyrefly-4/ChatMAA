@@ -7,14 +7,16 @@ import { resolve } from 'node:path';
 import { repository } from '../src/config.ts';
 
 const execute = promisify(execFile);
-test('真实模型样例入口必须显式授权参数且拒绝 live，不启动执行端', async () => {
+test('两个真实模型样例入口必须显式授权参数且拒绝 live，不启动执行端', async () => {
   const data = resolve(repository, '.artifacts/checks', `runtime-samples-guard-${Date.now()}`); mkdirSync(data, { recursive: true });
-  const script = resolve(repository, 'backend/src/runtime/samples.ts');
-  await assert.rejects(execute(process.execPath, [script], { windowsHide: true, timeout: 5000 }), /allow-model/);
   const config = resolve(data, 'live.json');
   writeFileSync(config, JSON.stringify({ mode: 'maa-live', installation: data, hwnd: 1 }));
-  await assert.rejects(execute(process.execPath, [script, '--allow-model'], {
-    env: { ...process.env, CHATMAA_CONFIG: config }, windowsHide: true, timeout: 5000 }), /拒绝 live/);
+  for (const name of ['samples.ts', 'edge-samples.ts']) {
+    const script = resolve(repository, 'backend/src/runtime', name);
+    await assert.rejects(execute(process.execPath, [script], { windowsHide: true, timeout: 5000 }), /allow-model/);
+    await assert.rejects(execute(process.execPath, [script, '--allow-model'], {
+      env: { ...process.env, CHATMAA_CONFIG: config }, windowsHide: true, timeout: 5000 }), /拒绝 live/);
+  }
   assert.equal(existsSync(resolve(data, 'connection.json')), false);
 });
 test('独立 Runtime 无模型进程与 CLI：消息可见、打印展示、防重和退出；不读取模型凭据', async () => {
