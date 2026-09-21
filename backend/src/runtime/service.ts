@@ -4,7 +4,8 @@ import { RuntimeRecords } from './records.ts';
 import type { Turn } from './records.ts';
 import { contextFor } from './context.ts';
 
-export type RunInput = { turn: Turn; context: ReturnType<typeof contextFor>; signal: AbortSignal; assertCurrent: () => void };
+export type RunInput = { turn: Turn; context: ReturnType<typeof contextFor>; signal: AbortSignal; assertCurrent: () => void;
+  track: <T>(work: Promise<T>) => Promise<T> };
 export type RunTurn = (input: RunInput) => Promise<string>;
 export type RuntimeOptions = { timeoutMs?: number; maxConcurrent?: number };
 
@@ -19,6 +20,7 @@ export class RuntimeService {
   private storageFailed = false;
   private running = new Map<string, { abort: AbortController; done: Promise<void> }>();
   private providerCalls = new Set<Promise<string>>();
+  private operations = new Set<Promise<unknown>>();
 
   constructor(business: BusinessService, run?: RunTurn, options: RuntimeOptions = {}) {
     this.business = business; this.run = run;
@@ -64,7 +66,11 @@ export class RuntimeService {
       const context = contextFor(this.business, turn.conversationId, turn.sourceMessage);
       const work = Promise.resolve().then(() => {
         this.assertCurrent(turn, signal);
-        return this.run!({ turn, context, signal, assertCurrent: () => this.assertCurrent(turn, signal) });
+        return this.run!({ turn, context, signal, assertCurrent: () => this.assertCurrent(turn, signal), track: work => {
+          this.operations.add(work);
+          void work.then(() => this.operations.delete(work), () => this.operations.delete(work));
+          return work;
+        } });
       });
       this.providerCalls.add(work);
       // Both handlers consume late settlement; neither writes records after the turn is retired.
@@ -105,5 +111,6 @@ export class RuntimeService {
       }
     }
     await Promise.allSettled([...this.running.values()].map(entry => entry.done));
+    await Promise.allSettled([...this.operations]);
   }
 }

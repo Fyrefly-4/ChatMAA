@@ -12,11 +12,13 @@
 - `operations.ts`：按来源消息、操作、对象版本和规范化参数建立稳定关联。同步业务变更与关联共用事务；确认、扫描和调整在原业务事务中调用同步关联接口，HTTP 仍在事务外。响应或结果保存失败保留原目标与未知状态，读取记录不会重新发送。
 - `business/records.ts`：会话范围内消息分页、文字过滤与当前方案最近展示查询；跨会话游标拒绝。
 
-当前 `RuntimeService` 接收注入的轮次函数，供离线检查；还没有正式 AI SDK 工具循环、业务工具、后台 consumer 或 HTTP／CLI 装配。不能使用这些基础文件宣称自然语言已能执行 MVP 业务。
+`loop.ts` 已接入 AI SDK 有界循环，最多 8 步、12 次工具调用、无自动重试，最后一步关闭工具。`instructions.ts` 集中保存行为规则及版本；`tools.ts` 提供业务白名单并绑定会话、来源消息、对象范围。模型没有展示回执、按钮身份、原始执行参数或任意 HTTP 工具；同一步只允许一次业务变更，后续步骤根据新事实继续。
+
+`RuntimeService` 当前接受注入的轮次函数，`modelRunner` 可连接 AI SDK 模型；尚未装配后台 consumer、正式 HTTP／CLI 与启动入口。已受理业务操作独立追踪，关闭 Runtime 时等待这些有界操作结束，模型本身忽略取消时不能阻止退出。
 
 ## 当前验证范围
 
-Node 24.19.0 下，Backend 类型检查、Runtime 14 项检查和 D3 业务 29 项回归通过。检查使用实际 `BusinessService` 与内存 SQLite、受控模型函数；轮次检查不执行任务，操作关联检查使用内存执行通道替身。覆盖原子回滚、会话隔离、消息防重、过期输出、忽略取消、超时、关闭、容量和只读恢复，以及提交前关联故障、提交后结果保存故障和调整停止意图回滚。
+Node 24.19.0 下，Backend 类型检查、Runtime 19 项检查和 D3 业务 29 项回归通过。检查使用实际 `BusinessService` 与内存 SQLite、受控模型函数及 AI SDK MockLanguageModelV4；轮次检查不执行任务，操作关联检查使用内存执行通道替身。覆盖原子回滚、会话隔离、消息防重、过期输出、忽略取消、超时、关闭、容量和只读恢复，以及提交前关联故障、提交后结果保存故障和调整停止意图回滚。SDK 检查根据真实资料工具的匹配结果分支决定建草案或澄清，另检查并行变更、确认消息顺序、跨会话限制与循环上限；这不证明真实模型自然语言理解质量。
 
 没有本轮真实模型、正式 Adapter 回放或游戏证据。阶段仍需业务工具、多步反馈、异步后续、正式回放链路与真实模型样例，完成条件保持不变。
 
@@ -24,7 +26,7 @@ Node 24.19.0 下，Backend 类型检查、Runtime 14 项检查和 D3 业务 29 �
 
 ```powershell
 npm --prefix backend run check
-node --test --test-concurrency=1 backend/tests/business.test.ts backend/tests/runtime-records.test.ts backend/tests/runtime-operations.test.ts
+node --test --test-concurrency=1 backend/tests/business.test.ts backend/tests/runtime-records.test.ts backend/tests/runtime-operations.test.ts backend/tests/runtime-loop.test.ts
 ```
 
 完整检查及环境准备见 [CI 说明](ci-plan.md)，业务操作及确认语义见 [D3 契约](d3-backend.md)。

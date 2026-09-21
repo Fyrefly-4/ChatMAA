@@ -324,7 +324,11 @@ export class BusinessService {
     const plan = this.plan(planId);
     return this.createRequest(conversationId, requestId, sourceMessage, { ...plan.goal, stage: plan.stage });
   }
-  async stop(id: string) { const result = await this.tasks.stop(id); this.reconcile({ taskIds: [id] }); return result; }
+  async stop(id: string, association?: OperationAssociation) {
+    if (!association) { const result = await this.tasks.stop(id); this.reconcile({ taskIds: [id] }); return result; }
+    const reserved = this.transaction(() => { const stop = this.tasks.reserveStop(id); associate(association, id); return stop; });
+    const result = await reserved.dispatch(); this.reconcile({ taskIds: [id] }); return result;
+  }
   async adjust(taskId: string, requestId: string, sourceMessage: string, goal: unknown, semantics: 'total' | 'additional', association?: OperationAssociation) {
     const link = this.records.read('task_links', taskId) ?? fail('business_task_required');
     if (link.purpose !== 'fight' || !link.planId) return fail('fight_task_required');

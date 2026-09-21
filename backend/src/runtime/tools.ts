@@ -1,0 +1,135 @@
+import { tool, jsonSchema } from 'ai';
+import type { BusinessService } from '../business/service.ts';
+import { TaskError } from '../task-contract.ts';
+import { RuntimeOperations } from './operations.ts';
+import type { RunInput } from './service.ts';
+import { contextFor } from './context.ts';
+
+type Input = Record<string, unknown>;
+const string = { type: 'string' as const, minLength: 1, maxLength: 1000 };
+const revision = { type: 'integer' as const, minimum: 1 };
+const goal = { type: 'object' as const, additionalProperties: false, properties: {
+  kind: { type: 'string' as const, enum: ['count', 'material', 'inventory'] }, quantity: { type: 'integer' as const, minimum: 1, maximum: 2147483647 },
+  itemId: string, stage: string } };
+function text(input: Input, key: string) {
+  if (typeof input[key] !== 'string' || !input[key]) throw new TaskError(422, 'invalid_tool_input');
+  return input[key] as string;
+}
+function version(input: Input) {
+  if (!Number.isSafeInteger(input.revision) || Number(input.revision) < 1) throw new TaskError(422, 'invalid_tool_input');
+  return Number(input.revision);
+}
+
+export function businessTools(business: BusinessService, run: RunInput, options: {
+  readOnly?: boolean; emit: (kind: string, data: unknown) => void;
+  track: <T>(work: Promise<T>) => Promise<T>;
+}) {
+  const operations = new RuntimeOperations(business.tasks.store);
+  const { conversationId, sourceMessage } = run.turn;
+  let calls = 0; let stepMutated = false;
+  const request = (id: string) => {
+    const value = business.request(id);
+    if (value.conversationId !== conversationId) throw new TaskError(403, 'object_outside_conversation');
+    return value;
+  };
+  const plan = (id: string) => {
+    const value = business.plan(id);
+    if (value.conversationId !== conversationId) throw new TaskError(403, 'object_outside_conversation');
+    return value;
+  };
+  const task = (id: string, global = false) => {
+    const value = business.task(id);
+    if (value.conversationId !== conversationId && !(global && business.global().tasks.some(t => t.id === id)))
+      throw new TaskError(403, 'object_outside_conversation');
+    return value;
+  };
+  function define(name: string, description: string, properties: Record<string, object>, required: string[], mutate: boolean,
+    execute: (input: Input, operation: ReturnType<RuntimeOperations['begin']>) => unknown | Promise<unknown>) {
+    return tool({ description, inputSchema: jsonSchema<Input>({ type: 'object', additionalProperties: false, properties, required }),
+      execute: async (input, context) => {
+        run.assertCurrent();
+        if (++calls > 12) return { error: 'tool_budget_exceeded' };
+        if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(key => !(key in properties)) ||
+            required.some(key => !(key in input))) return { error: 'invalid_tool_input' };
+        options.emit('tool_call', { callId: context.toolCallId, name, input });
+        try {
+          if (mutate) {
+            if (options.readOnly) throw new TaskError(403, 'followup_read_only');
+            if (stepMutated) throw new TaskError(409, 'read_updated_facts_in_next_step');
+            // SDK executes calls in parallel. Claim synchronously before entering any async operation.
+            stepMutated = true;
+          }
+          const operation = operations.begin(conversationId, sourceMessage, name, input, run.assertCurrent);
+          const pending = Promise.resolve(execute(input, operation));
+          const result = await (mutate ? options.track(pending) : pending);
+          run.assertCurrent();
+          options.emit('tool_result', { callId: context.toolCallId, name, result });
+          return result;
+        } catch (error) {
+          run.assertCurrent();
+          const result = { error: error instanceof TaskError ? error.message : 'operation_failed_query_current_facts' };
+          options.emit('tool_result', { callId: context.toolCallId, name, result });
+          return result;
+        }
+      } });
+  }
+  const tools = {
+    read_state: define('read_state', '读取本会话最新方案、展示、任务、未知及全局占用；进度回答前先读。', {}, [], false,
+      () => ({ ...contextFor(business, conversationId, sourceMessage).facts,
+        globalTasks: business.global().tasks.map(t => ({ id: t.id, conversationId: t.conversationId, task: t.task })) })),
+    read_history: define('read_history', '本会话历史，返回按时间排列的最近一页，nextBefore 用于读取更早记录。',
+      { before: string, query: string }, [], false,
+      input => business.records.messagePage(conversationId, { before: input.before as string | undefined, query: input.query as string | undefined })),
+    read_task: define('read_task', '读取本会话任务，或全局正在占用设备的明确任务。', { taskId: string }, ['taskId'], false,
+      input => task(text(input, 'taskId'), true)),
+    find_material: define('find_material', '从有版本资料按名称或 ID 查材料；歧义需澄清，不凭模型记忆编造 ID。', { query: string }, ['query'], false,
+      input => {
+        const query = text(input, 'query'); const snapshot = business.catalog.snapshot;
+        const matches = Object.entries(snapshot.items).filter(([id, item]) => id === query || item.name.includes(query));
+        return { version: snapshot.version, sources: snapshot.sources, coverage: snapshot.coverage,
+          matches: matches.slice(0, 20).map(([id, item]) => ({ id, ...item })), more: matches.length > 20 };
+      }),
+    select_stage: define('select_stage', '核对材料与关卡依据；默认推荐不代表最优效率，不保证关卡当前开放或账号可用。',
+      { itemId: string, stage: string }, [], false, input => ({ ...business.catalog.select(input.stage as string | undefined, input.itemId as string | undefined),
+        version: business.catalog.snapshot.version, sources: business.catalog.snapshot.sources })),
+    estimate_plan: define('estimate_plan', '读取有来源的参考消耗与限制，不保证当前理智或材料产量。',
+      { stage: string, quantity: { type: 'integer', minimum: 1, maximum: 2147483647 }, itemId: string }, ['stage', 'quantity'], false,
+      input => ({ estimate: business.catalog.estimate(text(input, 'stage'), Number(input.quantity), input.itemId as string | undefined),
+        version: business.catalog.snapshot.version, sources: business.catalog.snapshot.sources })),
+    create_request: define('create_request', '明确执行意图才建立目标；缺项可留草案，所有刷图先展示再确认。咨询不调用。', { goal }, ['goal'], true,
+      (input, op) => op.sync(() => ({ targetId: op.id, result: business.createRequest(conversationId, op.id, sourceMessage, input.goal) }))),
+    revise_request: define('revise_request', '补充或修改当前目标，传完整的新目标草案；修订后等待新的展示和确认。',
+      { requestId: string, revision, goal }, ['requestId', 'revision', 'goal'], true,
+      (input, op) => { const target = request(text(input, 'requestId')); return op.sync(() => ({ targetId: target.id,
+        result: business.reviseRequest(target.id, version(input), sourceMessage, input.goal) })); }),
+    prepare_plan: define('prepare_plan', '依据当前事实准备方案；不会确认或开始执行。', { requestId: string, revision }, ['requestId', 'revision'], true,
+      (input, op) => { const target = request(text(input, 'requestId')); return op.sync(() => ({ targetId: target.id, result: business.prepare(target.id, version(input)) })); }),
+    cancel_request: define('cancel_request', '取消尚未开始的需求。执行中的任务须停止，取消模型不等于停止。', { requestId: string, revision }, ['requestId', 'revision'], true,
+      (input, op) => { const target = request(text(input, 'requestId')); return op.sync(() => ({ targetId: target.id, result: business.cancelRequest(target.id, version(input)) })); }),
+    inspect_inventory: define('inspect_inventory', '用户明确要求查看库存时建立库存查询意图；随后调用 scan_inventory。', {}, [], true,
+      (_input, op) => op.sync(() => ({ targetId: op.id, result: business.inspectInventory(conversationId, op.id, sourceMessage) }))),
+    scan_inventory: define('scan_inventory', '仅明确补库存或查看库存意图可扫描；先保存说明，扫描受理后结束本轮，不循环等待。',
+      { requestId: string, revision, explanation: string }, ['requestId', 'revision', 'explanation'], true,
+      (input, op) => { const target = request(text(input, 'requestId')); return op.async(associate => business.scan(target.id, version(input), op.id, text(input, 'explanation'), associate)); }),
+    confirm_plan: define('confirm_plan', '仅本条用户消息明确确认已展示的当前方案时开始。修改与开始不能借同一消息授权新方案。',
+      { planId: string, presentationId: string }, ['planId', 'presentationId'], true,
+      (input, op) => { const target = plan(text(input, 'planId')); return op.async(associate => business.confirm(target.id, text(input, 'presentationId'), op.id, 'message', sourceMessage, associate)); }),
+    reuse_plan: define('reuse_plan', '用户明确要求再次采用历史方案时形成新需求；重查依据、展示并重新确认。', { planId: string }, ['planId'], true,
+      (input, op) => { const target = plan(text(input, 'planId')); return op.sync(() => ({ targetId: op.id, result: business.reusePlan(target.id, conversationId, op.id, sourceMessage) })); }),
+    stop_task: define('stop_task', '用户明确停止或调整执行中的任务时先停止。含糊调整也先停止，再澄清总共或新增；假设咨询不停止。', { taskId: string }, ['taskId'], true,
+      (input, op) => { const target = task(text(input, 'taskId'), true); return op.async(associate => business.stop(target.id, associate)); }),
+    adjust_task: define('adjust_task', '已明确调整语义后，建立与原任务关联的新目标。total 是总目标，additional 是再获得；不得猜测。先 stop_task。',
+      { taskId: string, goal, semantics: { type: 'string', enum: ['total', 'additional'] } }, ['taskId', 'goal', 'semantics'], true,
+      async (input, op) => { const target = task(text(input, 'taskId')); if (!['total', 'additional'].includes(String(input.semantics))) throw new TaskError(422, 'invalid_adjustment');
+        // Even an incomparable replacement must not leave an explicitly adjusted task running.
+        if (!target.task.automation_stopped) { await business.stop(target.id); run.assertCurrent(); }
+        return op.async(associate => business.adjust(target.id, op.id, sourceMessage, input.goal, input.semantics as 'total' | 'additional', associate)); }),
+    record_inventory_change: define('record_inventory_change', '仅记录用户明确报告的外部库存变化；不知道材料范围时传 null，不猜数量。',
+      { itemIds: { type: ['array', 'null'], items: string, maxItems: 100 }, reason: string }, ['itemIds', 'reason'], true,
+      (input, op) => op.sync(() => ({ targetId: op.id, result: business.recordInventoryChange(op.id,
+        input.itemIds as string[] | null, `${sourceMessage}: ${text(input, 'reason')}`, conversationId) }))),
+  };
+  return { tools: options.readOnly ? Object.fromEntries(Object.entries(tools).filter(([name]) =>
+    ['read_state', 'read_history', 'read_task', 'find_material', 'select_stage', 'estimate_plan'].includes(name))) : tools,
+    nextStep: () => { stepMutated = false; }, calls: () => calls };
+}
