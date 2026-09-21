@@ -13,7 +13,7 @@
 ```powershell
 npm --prefix web ci
 npm --prefix web run build
-npm --prefix backend start -- --web
+npm --prefix backend start -- --legacy-demo --web
 ```
 
 打开终端 `web_ready.url` 对应的本机地址。地址片段中的令牌只供本次本机启动；页面读取后立即移除地址片段，在当前标签页 `sessionStorage` 中保存。请勿分享该地址。API 同时检查令牌、Host 和 Origin，静态目录仅为 `web/dist`。

@@ -11,6 +11,8 @@ import { Store } from './store.ts';
 import { TaskService } from './task-service.ts';
 import { TaskError } from './task-contract.ts';
 import type { TaskView } from './task-contract.ts';
+import { BusinessService } from './business/service.ts';
+import type { Catalog } from './business/catalog.ts';
 
 const pause = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 type Ready = { instance: string; controller: string; port: number; pid: number };
@@ -20,7 +22,7 @@ export function adapterEnvironment(environment: NodeJS.ProcessEnv = process.env)
   return Object.fromEntries(Object.entries(environment).filter(([key]) => key.toUpperCase() !== 'DEEPSEEK_API_KEY'));
 }
 
-export async function startHost(config: Config) {
+export async function startHost(config: Config, options: { business?: boolean; catalog?: Catalog } = {}) {
   mkdirSync(config.dataDir, { recursive: true });
   const controller = randomUUID(); const token = randomUUID();
   const runtime = pythonRuntime(config.python);
@@ -77,8 +79,18 @@ export async function startHost(config: Config) {
   tasks = new TaskService(store, { instance: ready.instance, call },
     config.mode === 'maa-replay' ? 'offline_callback_replay' : 'MaaCore_v6.17.5');
   const service = tasks;
-  let polling: Promise<void> | undefined;
   const heartbeat = setInterval(() => { if (!service.closing) void call('/lease', 'POST').catch(() => {}); }, config.pollMs);
+  let business: BusinessService | undefined;
+  try {
+    // Reconcile existing records before exposing operations; never resubmit them.
+    await service.poll(true);
+    // Initial business projection must see synchronized history, not startup placeholders.
+    if (options.business) business = new BusinessService(service, options.catalog);
+  } catch (error) {
+    clearInterval(heartbeat);
+    await call('/shutdown', 'POST').catch(() => {}); child.kill(); store.db.close(); throw error;
+  }
+  let polling: Promise<void> | undefined;
   const poll = setInterval(() => {
     if (!service.closing && !exited && !polling) {
       polling = service.poll().catch(() => { service.storageFailed = true; }).finally(() => { polling = undefined; });
@@ -88,6 +100,7 @@ export async function startHost(config: Config) {
   function close() {
     if (closing) return closing;
     service.closing = true;
+    business?.beginShutdown();
     clearInterval(heartbeat); clearInterval(poll);
     closing = (async () => {
       const until = Date.now() + config.stopDeadlineMs + config.httpTimeoutMs;
@@ -120,10 +133,11 @@ export async function startHost(config: Config) {
       // Do not close storage while a pending poll still owns it.
       await polling;
       const finalTasks = service.list();
+      await business?.close();
       if (exited) store.db.close();
       return { handoffComplete, childExited: exited, finalTasks };
     })();
     return closing;
   }
-  return { tasks: service, close, pid: ready.pid, mode: config.mode };
+  return { tasks: service, business, close, pid: ready.pid, mode: config.mode };
 }

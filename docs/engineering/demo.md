@@ -83,7 +83,7 @@ New-Item -ItemType Directory -Path $run -ErrorAction Stop | Out-Null
   dataDir = Join-Path $run 'data'
 } | ConvertTo-Json | Set-Content -Encoding utf8 (Join-Path $run 'config.json')
 $env:CHATMAA_CONFIG = Join-Path $run 'config.json'
-node backend/src/main.ts --web
+node backend/src/main.ts --legacy-demo --web
 ```
 
 页面来源应是 `offline_callback_replay`，不操作游戏。**回放仅替代执行端**：若配置真实模型密钥，发送页面指令仍会请求真实模型并产生费用。不允许真实模型调用时，仅启动无密钥入口检查连接，或运行上述自动离线测试，不借回放名义调用模型。
@@ -116,10 +116,10 @@ $env:CHATMAA_CONFIG = Join-Path $run 'config.json'
 
 ## 打开网页与执行
 
-模型固定为 DeepSeek `deepseek-flash`。Backend 读取 `DEEPSEEK_API_KEY`；根目录 Demo 入口自动加载 `.env`，直接运行底层 `main.ts --web` 则需显式加载。可在当前终端设置环境变量后运行 `node backend/src/main.ts --web`；或将密钥保存在仓库根目录本地 `.env` 中（`DEEPSEEK_API_KEY=实际密钥`），使用：
+模型固定为 DeepSeek `deepseek-flash`。Backend 读取 `DEEPSEEK_API_KEY`；根目录 Demo 入口自动加载 `.env`，直接运行底层 `main.ts --web` 则需显式加载。可在当前终端设置环境变量后运行 `node backend/src/main.ts --legacy-demo --web`；或将密钥保存在仓库根目录本地 `.env` 中（`DEEPSEEK_API_KEY=实际密钥`），使用：
 
 ```powershell
-node --env-file=.env backend/src/main.ts --web
+node --env-file=.env backend/src/main.ts --legacy-demo --web
 ```
 
 密钥只供 Backend，不能放入 `VITE_`、前端源码或共享日志。缺少模型配置时仍可查询、停止已有任务。保留宿主终端，打开它打印的 `web_ready.url`；带 token 的启动地址只在本机使用。核对页面模式、模型状态及冲突任务；真实来源应为 `MaaCore_v6.17.5`，模式不符立即停止推进。

@@ -20,6 +20,12 @@ export class Store {
       CREATE TABLE IF NOT EXISTS synchronization(id TEXT PRIMARY KEY, last_success REAL);`);
   }
   get(id: string) { return this.db.prepare('SELECT * FROM tasks WHERE id=?').get(id) as Task | undefined; }
+  transaction<T>(work: () => T): T {
+    if (this.db.isTransaction) return work();
+    this.db.exec('BEGIN IMMEDIATE');
+    try { const result = work(); this.db.exec('COMMIT'); return result; }
+    catch (error) { if (this.db.isTransaction) this.db.exec('ROLLBACK'); throw error; }
+  }
   all() { return this.db.prepare('SELECT * FROM tasks').all() as Task[]; }
   view(id: string, sync?: SyncStatus): TaskView | null {
     const row = this.get(id);

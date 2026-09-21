@@ -44,7 +44,7 @@ test('agent debug console starts one host and explicit exit hands it off without
   const config = resolve(directory, 'config.json');
   writeFileSync(config, JSON.stringify({ mode: 'maa-replay', dataDir: directory,
     python: resolve(repository, 'adapter/maa/.venv/Scripts/python.exe'), stopDeadlineMs: 3000, httpTimeoutMs: 1000 }));
-  const child = spawn(process.execPath, [resolve(repository, 'backend/src/main.ts'), '--agent'], {
+  const child = spawn(process.execPath, [resolve(repository, 'backend/src/main.ts'), '--legacy-demo', '--agent'], {
     env: { ...process.env, CHATMAA_CONFIG: config, DEEPSEEK_API_KEY: 'offline-unused-placeholder' },
     stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
   });

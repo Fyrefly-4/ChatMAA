@@ -11,6 +11,12 @@ import { repository } from './config.ts';
 import { prepareDemo, demoTerminal, openDemoBrowser } from './demo.ts';
 
 const demo = process.argv.includes('--demo');
+const engineering = process.argv.includes('--engineering');
+const legacy = demo || process.argv.includes('--legacy-demo');
+if (engineering && legacy) throw new Error('--engineering 与旧 Demo 模式不能同时启用');
+if ((process.argv.includes('--web') || process.argv.includes('--agent')) && !legacy) {
+  throw new Error('旧 Web／Agent 入口须显式选择 --legacy-demo；MVP 通过共同业务入口使用。');
+}
 const config = await (async () => {
   try {
     if (!demo) return loadConfig();
@@ -39,7 +45,7 @@ let stopRequested = false;
 let listening = false;
 let requestStop = () => { stopRequested = true; };
 const closeTerminal = demo ? demoTerminal(() => requestStop()) : undefined;
-const host = await startHost(config).catch(error => { closeTerminal?.(); throw error; });
+const host = await startHost(config, { business: !engineering && !legacy }).catch(error => { closeTerminal?.(); throw error; });
 const token = randomUUID();
 let closing = false;
 let debug: ReturnType<typeof startDebug> | undefined;
@@ -49,7 +55,7 @@ const webToken = randomUUID();
 const developmentOrigin = process.argv.includes('--web-dev') ? 'http://127.0.0.1:5173' : undefined;
 const app = createApp(host.tasks, token, () => { void shutdown(); }, browser ? {
   requests: browser, token: webToken, staticRoot: resolve(repository, 'web/dist'), origin: () => address, developmentOrigin,
-} : undefined);
+} : undefined, host.business);
 async function shutdown() {
   if (closing) return;
   closing = true;
@@ -74,8 +80,9 @@ try {
   if (stopRequested) await shutdown();
   else {
     const connection = resolve(config.dataDir, 'connection.json');
-    writeFileSync(connection, JSON.stringify({ address, token, mode: config.mode }, null, 2));
-    console.log(JSON.stringify({ kind: 'ready', address, mode: config.mode, connection }));
+    const entry = host.business ? 'mvp' : engineering ? 'engineering' : 'legacy-demo';
+    writeFileSync(connection, JSON.stringify({ address, token, mode: config.mode, entry }, null, 2));
+    console.log(JSON.stringify({ kind: 'ready', address, mode: config.mode, entry, connection }));
     if (browser) {
       const url = `${developmentOrigin ?? address}/#token=${webToken}`;
       console.log(JSON.stringify({ kind: 'web_ready', url }));

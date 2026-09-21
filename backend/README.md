@@ -1,14 +1,22 @@
 # Backend 独立执行入口
 
+2026-09-21 D3：默认启动改为 MVP 共同业务入口，提供会话、三种目标、方案展示与确认、任务结果、停止后调整和资料版本管理。使用及字段见 [D3 业务契约](../docs/engineering/d3-backend.md)，资料来源见 [快照说明](data/README.md)。正式 Adapter 的离线 HTTP／双库联调及固定 MuMu 业务链路已核对，实机范围与后续确认来源修复的验证边界见 D3 业务契约；真实模型与完整页面仍由后续阶段落实。
+
+原确定参数入口须显式加 `--engineering`；旧 Web／Agent 须加 `--legacy-demo`，根目录 Demo 启动器已显式选择 Demo。下面保留原模式的使用说明；MVP 禁止裸创建任务，沿用查询、停止和退出入口。
+
 2026-09-21 D2 补充：原任务 HTTP 与独立 CLI 新增 v2 扫描、次数和材料操作，`submit-file` 接收含稳定 ID 的 JSON；契约、MuMu 配置及证据边界见 [D2 执行契约](../docs/engineering/d2-adapter.md)。固定 MuMu 上已通过扫描→次数→材料→停止的 Backend 实机链路，详见[验证交付说明](../docs/engineering/d2-verification.md)；新能力未接入模型工具或完整方案确认。
 
 Backend 提供明确参数的提交、查询、停止和结果读取；确定参数入口不依赖 Web 或模型，`--agent` 与 `--web` 可装配自然语言 Agent。TS 管理 Python 子进程，通过本机 HTTP 协作，各自保存 SQLite。默认使用脱敏回调回放，启动不会自动提交任务。完整网页使用从 [Demo 运行入口](../docs/engineering/demo.md)开始，显式选择配置。
+
+## 执行协调的事务边界
+
+`TaskService.reserve` 与 `reserveStop` 分别同步保存执行预留和停止意图，可加入调用方的本地事务，返回的 dispatch 只在事务提交后送达 Adapter。回滚不留下执行或停止副作用；重建执行记录不重发任务。直接停止在存储失败时仍尝试送达，事务型调整则整体失败。`onSynchronized` 通知具体任务，观察者故障单独记录，不冒充执行证据存储失败或阻断已持久化停止的送达。独立回归见 `tests/task-reservation.test.ts`。
 
 ## 浏览器入口
 
 日常从根目录 `.\start-demo.ps1` 启动，首次准备和可选参数见 [Demo 运行入口](../docs/engineering/demo.md#日常启动一条命令)。它进入同一 Backend，仅增加启动前配置／窗口检查及终端操作；真实执行仍经网页明确指令。下面是保留的底层入口。
 
-`npm --prefix backend start -- --web` 装配同进程的浏览器接口；页面构建产物须放在 `web/dist`。终端输出的 `web_ready.url` 含本次启动的浏览器令牌，只在本机打开，不分享或写入公共记录。缺少模型配置时仍可查询和停止已有任务。此模式不使用控制台自然语言输入，也不因标准输入关闭而退出；通过 Ctrl+C 或原 CLI `shutdown` 收尾。
+`npm --prefix backend start -- --legacy-demo --web` 装配旧 Demo 的浏览器接口；页面构建产物须放在 `web/dist`。终端输出的 `web_ready.url` 含本次启动的浏览器令牌，只在本机打开，不分享或写入公共记录。缺少模型配置时仍可查询和停止已有任务。此模式不使用控制台自然语言输入，也不因标准输入关闭而退出；通过 Ctrl+C 或原 CLI `shutdown` 收尾。
 
 浏览器接口使用 `x-web-token`，检查本机 Host 和同源 Origin。原 `x-app-token` 入口继续拒绝浏览器 Origin；两种令牌不能互换。`--web-dev` 额外允许固定的 `http://127.0.0.1:5173` 开发来源，须与 `--web` 同用；开发代理保留 Origin。生产运行不添加该参数。
 
@@ -69,7 +77,7 @@ $pipVersion = (Get-Content .pip-version -Raw).Trim()
 .\adapter\maa\.venv\Scripts\python.exe -m pip install "pip==$pipVersion"
 .\adapter\maa\.venv\Scripts\python.exe -m pip install -r adapter/maa/requirements.lock
 npm --prefix backend ci
-npm --prefix backend start
+npm --prefix backend start -- --engineering
 ```
 
 不要依赖 `py` 默认选择其他版本。默认 Python 位置为 `adapter/maa/.venv/Scripts/python.exe`，无需安装真实 MAA。上述默认离线示例要求没有本地 live 配置；已有配置时先按 [Demo 入口](../docs/engineering/demo.md#回放入口)显式指定回放配置。连接信息保存于配置的 `dataDir/connection.json`（默认 `.artifacts/replay/connection.json`）。在另一个终端使用相同 `CHATMAA_CONFIG` 独立操作：
@@ -133,7 +141,7 @@ await host.tasks.stop(applicationOperationId);
 
 2026-09-18：在 `be62348` 基础上增加 Agent 实现，当前验证为模型替身与正式回放 Adapter；真实 DeepSeek 四个固定样例的回放调用及回复审阅已通过，该证据限于真实模型与正式回放执行端，不代表真实游戏闭环。
 
-在本地环境设置 `DEEPSEEK_API_KEY` 后，执行 `npm --prefix backend start -- --agent`。普通 Backend 启动不需要模型凭据；密钥不写入业务库，也不传给 Python 子进程。模型固定为 DeepSeek `deepseek-flash`，通过 `@ai-sdk/openai` 的 Responses 接口请求 `https://api.deepseek.com/responses`。没有自动重试或备用模型。
+在本地环境设置 `DEEPSEEK_API_KEY` 后，执行 `npm --prefix backend start -- --legacy-demo --agent`。普通 Backend 启动不需要模型凭据；密钥不写入业务库，也不传给 Python 子进程。模型固定为 DeepSeek `deepseek-flash`，通过 `@ai-sdk/openai` 的 Responses 接口请求 `https://api.deepseek.com/responses`。没有自动重试或备用模型。
 
 该终端是常驻 Backend 控制台：输入一条完整指令后，依次看到原文、核对结论、模型工具参数、应用摘要、工具返回和回复。模型返回后 Backend 继续执行与同步任务；关闭该终端、输入 `/exit` 或输入流结束会关闭宿主并执行既有退出交接。第二个终端中的独立 `client get/stop` 仍可使用，退出客户端不影响任务。
 
@@ -242,7 +250,7 @@ Get-Process | Where-Object { $_.MainWindowTitle -eq '明日方舟' } |
 
 ```powershell
 $env:CHATMAA_CONFIG = (Resolve-Path .artifacts/live-verification/config.json).Path
-npm --prefix backend start
+npm --prefix backend start -- --engineering
 ```
 
 等待输出 `kind: "ready"`，核对 `mode: "maa-live"`，且 `connection` 位于当前仓库 `.artifacts/live/connection.json`。此时只建立服务、记录与锁，尚未连接游戏。若启动报安装目录、DLL 哈希或设备占用错误，先处理该原因，不跳过校验或删除锁来强行启动。
