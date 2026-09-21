@@ -81,13 +81,15 @@ export class BusinessService {
       activities: this.records.list('continuations', id) };
   }
   appendMessage(conversationId: string, id: string, role: Message['role'], text: string, reference?: string) {
-    if (!this.records.read('conversations', taskId(conversationId))) return fail('unknown_conversation', 404);
-    taskId(id);
-    if (!['user', 'assistant', 'system'].includes(role) || typeof text !== 'string' || !text.trim() || text.length > 100000) return fail('invalid_message', 422);
-    const old = this.records.read('messages', id);
-    if (old) { if (old.conversationId !== conversationId || old.text !== text || old.role !== role || old.reference !== reference) return fail('id_parameter_conflict'); return old; }
-    const value: Message = { id, conversationId, role, text, ...(reference ? { reference } : {}), createdAt: now() };
-    this.records.insert('messages', value); return value;
+    return this.transaction(() => {
+      if (!this.records.read('conversations', taskId(conversationId))) return fail('unknown_conversation', 404);
+      taskId(id);
+      if (!['user', 'assistant', 'system'].includes(role) || typeof text !== 'string' || !text.trim() || text.length > 100000) return fail('invalid_message', 422);
+      const old = this.records.read('messages', id);
+      if (old) { if (old.conversationId !== conversationId || old.text !== text || old.role !== role || old.reference !== reference) return fail('id_parameter_conflict'); return old; }
+      const value: Message = { id, conversationId, role, text, ...(reference ? { reference } : {}), createdAt: now() };
+      this.records.insert('messages', value); return value;
+    });
   }
   private userMessage(conversationId: string, messageId: string) {
     const message = this.records.read('messages', taskId(messageId));

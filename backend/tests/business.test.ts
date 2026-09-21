@@ -401,11 +401,33 @@ test('业务投影失败保留执行事实与停止能力，恢复只补投影�
   assert.equal(x.business.global().admission.state, 'unavailable');
   assert.equal(x.business.task(task.id).result!.amount.value, 2);
   assert.throws(() => x.business.createConversation('blocked', 'blocked'), /business_unavailable/);
+  assert.throws(() => x.business.appendMessage('chat', 'blocked-message', 'user', '不应写入'), /business_unavailable/);
+  assert.equal(x.business.records.read('messages', 'blocked-message'), undefined);
   const stop = await x.business.stop(task.id); assert.equal(stop.stop_requested, true); assert.equal(x.stops(), 1);
   x.business.records.save = save;
   await x.publish(task.id, { ...x.completed, reason: 'user_stop', count_result: { value: 2, certainty: 'exact', issues: [] } });
   assert.equal(x.business.global().projection.available, true); assert.equal(x.business.request('first').state, 'completed');
   assert.equal(x.submissions(), 1);
+});
+
+test('消息写入在消费者存储故障和关闭后被拒绝，正常重复消息仍幂等', async t => {
+  const x = setup(); t.after(x.close);
+  x.request('inventory', { kind: 'inventory', quantity: 100, itemId: '30012' });
+  const message = x.business.appendMessage('chat', 'repeat', 'user', '同一条消息');
+  assert.deepEqual(x.business.appendMessage('chat', 'repeat', 'user', '同一条消息'), message);
+  await x.business.scan('inventory', 1, 'scan', '查看库存');
+  await x.publish('scan', { ...x.completed, inventory_result: { items: {}, complete: false, certainty: 'unknown',
+    missing_items: 'unknown', observed_at: 1, issues: [] } });
+  const save = x.business.records.save.bind(x.business.records);
+  x.business.records.save = (table, value) => { if (table === 'continuations') throw new Error('consumer storage failed'); save(table, value); };
+  x.business.setFollowupConsumer(async () => {});
+  assert.equal(x.business.global().projection.reason, 'followup_storage_failed');
+  assert.throws(() => x.business.appendMessage('chat', 'failed', 'user', '不应写入'), /business_unavailable/);
+  assert.equal(x.business.records.read('messages', 'failed'), undefined);
+  x.business.records.save = save;
+  await x.business.close();
+  assert.throws(() => x.business.appendMessage('chat', 'closed', 'user', '关闭后不应写入'), /business_unavailable/);
+  assert.equal(x.business.records.read('messages', 'closed'), undefined);
 });
 test('失败的事实与后续处理一起回滚；下一项同步补齐失败范围，提交后才启动消费者', async t => {
   const x = setup(); t.after(x.close); x.request('first', { kind: 'count', quantity: 1, stage: '1-7' });
