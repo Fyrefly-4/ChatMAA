@@ -83,6 +83,9 @@ export function businessTools(business: BusinessService, run: RunInput, options:
       } });
   }
   const tools = {
+    explain_waiting: define('explain_waiting', '针对 waitingEvents 中明确事件准备解释或澄清。说明会随最终回复原子发布；用于防止后台重复解释，不能表示业务已解决。',
+      { continuationId: string, explanation: string }, ['continuationId', 'explanation'], false,
+      input => run.explainWaiting(text(input, 'continuationId'), text(input, 'explanation'))),
     read_state: define('read_state', '读取本会话最新方案、展示、任务、未知及全局占用；进度回答前先读。', {}, [], false,
       () => ({ ...contextFor(business, conversationId, sourceMessage, 48000, run.turn.sourceMessages).facts,
         globalTasks: business.global().tasks.map(t => ({ id: t.id, conversationId: t.conversationId, task: t.task })) })),
@@ -139,6 +142,6 @@ export function businessTools(business: BusinessService, run: RunInput, options:
         input.itemIds as string[] | null, `${op.sourceMessage}: ${text(input, 'reason')}`, conversationId) }))),
   };
   return { tools: options.readOnly ? Object.fromEntries(Object.entries(tools).filter(([name]) =>
-    ['read_state', 'read_history', 'read_task', 'find_material', 'select_stage', 'estimate_plan'].includes(name))) : tools,
+    ['read_state', 'read_history', 'read_task', 'find_material', 'select_stage', 'estimate_plan', 'explain_waiting'].includes(name))) : tools,
     nextStep: () => { check(); stepMutated = false; }, calls: () => calls };
 }

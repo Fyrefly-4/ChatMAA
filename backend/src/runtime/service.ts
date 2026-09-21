@@ -5,6 +5,7 @@ import type { Turn } from './records.ts';
 import { contextFor } from './context.ts';
 
 export type RunInput = { turn: Turn; context: ReturnType<typeof contextFor>; signal: AbortSignal; assertCurrent: () => void;
+  explainWaiting: (id: string, text: string) => unknown;
   track: <T>(work: Promise<T>) => Promise<T> };
 export type RunTurn = (input: RunInput) => Promise<string>;
 export type RuntimeOptions = { timeoutMs?: number; maxConcurrent?: number };
@@ -54,6 +55,9 @@ export class RuntimeService {
       const entry = this.business.records.read('continuations', followup.record.id);
       if (current.state !== 'active' || current.revision !== followup.record.revision || entry?.token !== followup.record.token || entry.state !== 'processing')
         throw new TaskError(409, 'followup_not_current');
+      if (this.records.waitingExplained(entry.id, entry.revision, entry.reason)) {
+        this.business.acceptFollowup(entry.id, entry.token!, () => {}); return;
+      }
       const turn = this.records.beginFollowup(current.conversationId, current.sourceMessage, followup.record.id);
       const done = this.execute(turn, abort, { ...followup, signal }).finally(() => this.running.delete(turn.id));
       this.running.set(turn.id, { abort, done });
@@ -99,9 +103,20 @@ export class RuntimeService {
       const context = contextFor(this.business, turn.conversationId, turn.sourceMessage, 48000, turn.sourceMessages);
       if (followup) Object.assign(context, { followup: { id: followup.record.id, requestId: followup.record.requestId,
         revision: followup.record.revision, reason: followup.record.reason, taskId: followup.record.taskId } });
+      const explanations = new Map<string, { text: string; revision: number; reason: string; requestId: string }>();
       const work = Promise.resolve().then(() => {
         this.assertCurrent(turn, signal);
-        return this.run!({ turn, context, signal, assertCurrent: () => this.assertCurrent(turn, signal), track: work => {
+        return this.run!({ turn, context, signal, assertCurrent: () => this.assertCurrent(turn, signal), explainWaiting: (id, text) => {
+          this.assertCurrent(turn, signal);
+          const event = this.business.records.read('continuations', id);
+          if (!event || event.conversationId !== turn.conversationId || ['completed', 'obsolete'].includes(event.state) ||
+              this.business.request(event.requestId).revision !== event.revision ||
+              this.business.records.read('conversations', turn.conversationId)?.currentRequest !== event.requestId)
+            throw new TaskError(409, 'waiting_event_not_current');
+          if (typeof text !== 'string' || !text.trim() || text.length > 4000) throw new TaskError(422, 'invalid_explanation');
+          explanations.set(id, { text, revision: event.revision, reason: event.reason, requestId: event.requestId });
+          return { id, publication: 'pending_final_reply' };
+        }, track: work => {
           this.operations.add(work);
           void work.then(() => this.operations.delete(work), () => this.operations.delete(work));
           return work;
@@ -117,10 +132,21 @@ export class RuntimeService {
       });
       const text = await Promise.race([work, interrupted]);
       this.assertCurrent(turn, signal);
+      const publish = () => {
+        for (const [id, explanation] of explanations) {
+          const event = this.business.records.read('continuations', id);
+          const request = this.business.request(explanation.requestId);
+          if (!event || event.revision !== explanation.revision || event.reason !== explanation.reason || request.state !== 'active' ||
+              request.revision !== explanation.revision || this.business.records.read('conversations', turn.conversationId)?.currentRequest !== request.id)
+            throw new TaskError(409, 'waiting_event_not_current');
+          this.records.explainWaiting(turn.id, id, explanation.revision, explanation.reason);
+        }
+        return this.records.publish(this.business, turn, [text, ...[...explanations.values()].map(e => e.text)].filter(Boolean).join('\n\n'));
+      };
       if (followup) this.business.acceptFollowup(followup.record.id, followup.record.token!, () => {
-        this.assertCurrent(turn, signal); return this.records.publish(this.business, turn, text);
+        this.assertCurrent(turn, signal); return publish();
       });
-      else this.records.publish(this.business, turn, text);
+      else this.business.tasks.store.transaction(publish);
     } catch (error) {
       if (!this.closing && !this.storageFailed) {
         try {

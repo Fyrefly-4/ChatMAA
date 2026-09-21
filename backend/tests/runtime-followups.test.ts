@@ -80,3 +80,46 @@ test('后台等待活动用户轮；新消息可中断等待，未完成来源�
   assert.equal(x.event().state, 'interrupted');
   release('旧回答'); await new Promise(resolve => setImmediate(resolve));
 });
+
+test('用户轮发布针对事件的解释后，等待中的后台不重复采样', async t => {
+  let release!: () => void; let calls = 0;
+  const x = setup(async input => {
+    calls++;
+    await new Promise<void>(resolve => { release = resolve; });
+    input.explainWaiting('event', '识别不完整，请确认是否重新扫描。');
+    return '已核对当前事实。';
+  }); t.after(x.close);
+  const turn = x.runtime.submit('chat', 'question', '识别情况如何');
+  await new Promise(resolve => setImmediate(resolve));
+  x.runtime.enableFollowups(); await until(() => x.event().state === 'processing');
+  release(); await x.runtime.settled(turn.id); await until(() => x.event().state === 'completed');
+  assert.equal(calls, 1);
+  assert.equal(x.runtime.records.waitingExplained('event', 1, 'scan_needs_input'), true);
+  const messages = x.business.conversation('chat').messages.filter(m => m.role === 'assistant');
+  assert.equal(messages.length, 1); assert.match(messages[0].text, /识别不完整/);
+});
+
+test('发布失败不留下事件解释标记', async t => {
+  const x = setup(async input => {
+    input.explainWaiting('event', '识别不完整'); return '说明';
+  }); t.after(x.close);
+  x.store.db.exec("CREATE TRIGGER fail_completion BEFORE INSERT ON runtime_activities WHEN NEW.kind='completed' BEGIN SELECT RAISE(ABORT,'completion_failed'); END");
+  const turn = x.runtime.submit('chat', 'question', '识别情况如何'); await x.runtime.settled(turn.id);
+  assert.equal(x.runtime.records.waitingExplained('event', 1, 'scan_needs_input'), false);
+  assert.equal(x.business.conversation('chat').messages.filter(m => m.role === 'assistant').length, 0);
+});
+
+test('普通用户轮回复不冒充特定事件解释，后台仍处理该事件', async t => {
+  let release!: () => void; let calls = 0;
+  const x = setup(async input => {
+    calls++;
+    if (!input.turn.continuationId) { await new Promise<void>(resolve => { release = resolve; }); return '普通回答'; }
+    return '针对扫描缺失的澄清';
+  }); t.after(x.close);
+  const turn = x.runtime.submit('chat', 'question', '你好');
+  await new Promise(resolve => setImmediate(resolve));
+  x.runtime.enableFollowups(); await until(() => x.event().state === 'processing');
+  release(); await x.runtime.settled(turn.id); await until(() => x.event().state === 'completed');
+  assert.equal(calls, 2); assert.equal(x.runtime.records.waitingExplained('event', 1, 'scan_needs_input'), false);
+  assert.equal(x.business.conversation('chat').messages.filter(m => m.role === 'assistant').length, 2);
+});

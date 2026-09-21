@@ -26,7 +26,16 @@ export class RuntimeRecords {
         CREATE TABLE IF NOT EXISTS runtime_activities(
         sequence INTEGER PRIMARY KEY AUTOINCREMENT, turn_id TEXT NOT NULL, kind TEXT NOT NULL, data TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS runtime_activities_turn ON runtime_activities(turn_id, sequence);`);
+      store.db.exec(`CREATE TABLE IF NOT EXISTS runtime_waiting_explanations(
+        continuation_id TEXT PRIMARY KEY, turn_id TEXT NOT NULL, revision INTEGER NOT NULL, reason TEXT NOT NULL);`);
     });
+  }
+  waitingExplained(id: string, revision: number, reason: string): boolean {
+    return !!this.store.db.prepare('SELECT 1 FROM runtime_waiting_explanations WHERE continuation_id=? AND revision=? AND reason=?').get(id, revision, reason);
+  }
+  explainWaiting(turnId: string, id: string, revision: number, reason: string) {
+    if (!this.store.db.isTransaction) throw new Error('waiting_explanation_requires_publication_transaction');
+    this.store.db.prepare('INSERT OR IGNORE INTO runtime_waiting_explanations VALUES(?,?,?,?)').run(id, turnId, revision, reason);
   }
   read(id: string): Turn | undefined {
     const row = this.store.db.prepare('SELECT body FROM runtime_turns WHERE id=?').get(id);

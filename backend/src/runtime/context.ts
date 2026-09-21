@@ -23,6 +23,9 @@ export function contextFor(business: BusinessService, conversationId: string, so
   const presentation = plan ? records.latestPresentation(plan.id) : null;
   const taskIds = new Set([request?.scanTask, ...(request?.previousTasks ?? []), plan?.taskId].filter((id): id is string => !!id));
   const facts = { conversation, request, plan, presentation,
+    waitingEvents: records.list('continuations', conversationId).filter(event => event.requestId === request?.id &&
+      event.revision === request.revision && !['completed', 'obsolete'].includes(event.state))
+      .map(({ id, requestId, revision, reason, taskId, state }) => ({ id, requestId, revision, reason, taskId, state })),
     tasks: [...taskIds].map(id => business.task(id)), catalogVersion: business.catalog.snapshot.version,
     admission: business.tasks.admission(), projection: business.global().projection };
   const input = { facts, anchors: [...anchors.values()], messages, historyBefore: recent.nextBefore,
