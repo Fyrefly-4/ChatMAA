@@ -3,6 +3,7 @@ import { useWorkspace } from './useWorkspace';
 import { PlanCard } from './PlanCard';
 import { TaskSummary } from './TaskSummary';
 import { DetailPanel } from './DetailPanel';
+import { AssistantMessage } from './AssistantMessage';
 import { MessageActivity } from './MessageActivity';
 import { api, id, pathId } from './api';
 import { execution, waitingText } from './presentation';
@@ -88,7 +89,8 @@ export default function Workspace() {
               const task = message.reference ? state.tasks[message.reference] : null;
               const showTask = task && !renderedTasks.has(task.id); if (task) renderedTasks.add(task.id);
               return <div key={message.id} className="m-message-group">
-                <p className={message.role === 'user' ? 'm-user' : message.role === 'assistant' ? 'm-assistant' : 'm-system'}>{message.text}</p>
+                {message.role === 'assistant' ? <AssistantMessage text={message.text} />
+                  : <p className={message.role === 'user' ? 'm-user' : 'm-system'}>{message.text}</p>}
                 {message.role === 'user' && <MessageActivity conversationId={message.conversationId} messageId={message.id} />}
                 {plan && <PlanCard plan={plan} current={plan.id === currentPlan?.id} state={state} />}
                 {showTask && <TaskSummary task={task} state={state} />}

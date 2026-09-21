@@ -208,9 +208,47 @@ h3 {
   white-space:pre-wrap
 }
 .m-assistant {
-  white-space:pre-wrap;
   margin-bottom:16px
 }
+.m-markdown {
+  overflow-wrap:anywhere;
+  min-width:0
+}
+.m-markdown > :first-child { margin-top:0 }
+.m-markdown > :last-child { margin-bottom:0 }
+.m-markdown p,.m-markdown ul,.m-markdown ol,.m-markdown blockquote,.m-markdown pre {
+  margin:0 0 12px
+}
+.m-markdown h1,.m-markdown h2,.m-markdown h3,.m-markdown h4,.m-markdown h5,.m-markdown h6 {
+  margin:18px 0 8px;
+  font-size:1.1em;
+  line-height:1.5
+}
+.m-markdown ul,.m-markdown ol { padding-left:1.5em }
+.m-markdown li > p { margin:0 0 6px }
+.m-markdown li > ul,.m-markdown li > ol { margin-bottom:0 }
+.m-markdown blockquote {
+  border-left:3px solid #dce4e2;
+  padding-left:14px;
+  color:#647474
+}
+.m-markdown code {
+  font-family:Consolas,monospace;
+  font-size:.9em;
+  background:#f0f4f3;
+  padding:2px 4px;
+  border-radius:4px
+}
+.m-markdown pre {
+  max-width:100%;
+  overflow-x:auto;
+  white-space:pre;
+  background:#f0f4f3;
+  padding:12px;
+  border-radius:6px
+}
+.m-markdown pre code { padding:0; background:transparent }
+.m-markdown hr { border:0; border-top:1px solid #dce4e2; margin:16px 0 }
 .m-system {
   font-size:13px;
   color:#647474;
