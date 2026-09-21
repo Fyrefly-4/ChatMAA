@@ -61,3 +61,24 @@ node backend/src/runtime/cli.ts stop <任务ID>
 模型消息示例须在模型调用获准后执行；无模型时消息记录以 `model_unavailable` 结束。`show` 完整打印结构化方案后登记 `cli-方案ID` 展示回执，重试复用回执；`state` 只读取。也可用 `confirm <方案ID> <展示ID> <确认ID>` 确定确认。客户端拒绝 live 配置和非 `mvp-runtime` 连接，退出客户端不关闭宿主；关闭仍用原 `node backend/src/cli.ts shutdown`。
 
 正式回放另覆盖执行中不可比较目标的调整：工具先请求停止，再由 Backend 拒绝错误的总目标，原任务不恢复且不建立替代执行。外层操作关联事务回滚时，后台事件不会提前领取或启动；派发推迟到事务结束后。
+
+## D5 同进程契约与活动
+
+类型入口为 [contract.ts](../../backend/src/runtime/contract.ts)，咨询轮次的展示夹具见 [runtime-consultation.json](fixtures/runtime-consultation.json)。夹具为结构样例，时间、标识和内容均为示例，不是实际模型证据。D5 可以使用服务及类型准备页面，但本阶段尚未完成真实模型验证。
+
+`submit(conversationId, messageId, text)` 同步返回轮次，模型处理在后台继续；同 ID 同内容返回原轮次。`read(turnId, after)` 返回当前轮次和最多 100 条后续活动，序号在库中全局递增，按本轮最后序号续读，允许有间隔。`conversation(id)` 返回 D3 会话事实、最近 20 个轮次和当前方案展示；最终回复按 `message` 活动的 messageId 从业务消息读取。页面刷新仅恢复读取，不能重新生成消息 ID 或重新执行。
+
+| 活动／字段 | 页面含义 |
+|---|---|
+| accepted / followup_accepted | 用户消息／后台事件已建立轮次，不表示游戏已受理 |
+| model_started / model_step | 模型配置、提示版本、步骤结束与用量；不包含隐藏推理 |
+| tool_call / tool_result | 工具与 call ID、输入、操作关联或拒绝原因；业务事实仍以最新查询为准 |
+| message | 完整助手消息已持久发布，读取对应消息正文 |
+| completed / failed / interrupted | 助手轮次结束；游戏任务独立，不据此判断已停止或成功 |
+| sourceMessages / continuationId | 本轮承接的用户消息或后台事件，用于关联展示，不代表新增授权 |
+
+`model_unavailable`、`model_busy`、`model_timeout` 是轮次失败／中断原因，确定查询和停止仍可用；`context_budget_exceeded` 要求缩小问题，不截断必要约束。对象范围、版本和确认拒绝以工具 error 呈现；`committed` 或 `unknown` 操作应查 targetId，不换 ID 重发。工具记录故障关闭本轮，不以聊天回复覆盖任务结果。
+
+页面展示完整方案后调用 D3 `present`，复用稳定展示 ID；按钮确认调用 D3 `confirm(..., 'button')`，自然语言确认经过 Runtime 且必须是展示后的新消息。直接停止调用 D3 `stop`，不等待模型。应用令牌 HTTP 只是调试面，D5 包装前须保留浏览器 Host／Origin 与独立令牌检查。
+
+模型循环目前为 8 步、12 次工具、单次输出最多 2000 tokens、总时限 60 秒。扫描／执行／停止受理后，宿主关闭后续工具，只生成最终解释；明确调整直接调用会先停止的 adjust_task，含糊调整则先 stop_task 收尾并澄清。

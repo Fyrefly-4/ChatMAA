@@ -26,7 +26,7 @@ export function businessTools(business: BusinessService, run: RunInput, options:
 }) {
   const operations = new RuntimeOperations(business.tasks.store);
   const { conversationId, sourceMessage } = run.turn;
-  let calls = 0; let stepMutated = false; let failed = false;
+  let calls = 0; let stepMutated = false; let failed = false; let waitingForExecution = false;
   const check = () => { run.assertCurrent(); if (failed) throw new TaskError(503, 'tool_storage_or_runtime_failed'); };
   const request = (id: string) => {
     const value = business.request(id);
@@ -51,6 +51,7 @@ export function businessTools(business: BusinessService, run: RunInput, options:
     return tool({ description, inputSchema: jsonSchema<Input>({ type: 'object', additionalProperties: false, properties, required }),
       execute: async (input, context) => {
         check();
+        if (waitingForExecution) return { error: 'execution_wait_requires_new_turn' };
         if (++calls > 12) return { error: 'tool_budget_exceeded' };
         if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(key => !(key in properties)) ||
             required.some(key => !(key in input))) return { error: 'invalid_tool_input' };
@@ -70,6 +71,7 @@ export function businessTools(business: BusinessService, run: RunInput, options:
           const operation = operations.begin(conversationId, source, name, parameters, check);
           const pending = Promise.resolve(execute(input, operation));
           const result = await (mutate ? options.track(pending) : pending);
+          if (['scan_inventory', 'stop_task', 'adjust_task', 'confirm_plan'].includes(name)) waitingForExecution = true;
           run.assertCurrent();
           options.emit('tool_result', { callId: context.toolCallId, name, result });
           return result;
@@ -145,5 +147,5 @@ export function businessTools(business: BusinessService, run: RunInput, options:
   };
   return { tools: options.readOnly ? Object.fromEntries(Object.entries(tools).filter(([name]) =>
     ['read_state', 'read_history', 'read_task', 'read_plan', 'find_material', 'select_stage', 'estimate_plan', 'explain_waiting'].includes(name))) : tools,
-    nextStep: () => { check(); stepMutated = false; }, calls: () => calls };
+    nextStep: () => { check(); stepMutated = false; }, calls: () => calls, waiting: () => waitingForExecution };
 }

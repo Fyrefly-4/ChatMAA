@@ -1,5 +1,7 @@
 # D3 Backend：业务操作与下游接入
 
+2026-09-21 D4 接入补充：`confirm`、`scan`、`adjust`、`stop` 增加可选内部同步关联回调，供 Runtime 在业务事务内保存操作关联；HTTP dispatch 仍在事务外，默认调用含义不变。回调失败与业务预留一起回滚，不能传 async 回调。后台 runner 增加单项中断，外层事务未结束时不领取事件。新增读取侧历史分页与最近展示查询，Runtime 的消息和活动见 [D4 契约](d4-runtime.md)。
+
 2026-09-21；从 D2 合并基线 `84fc913` 建设。当前实现提供确定操作、业务记录、方案确认、目标结果、异步后续处理和资料快照。正式 Python 进程、HTTP 与双库的离线联调已接通；执行反馈使用合成回调，另有 D2 脱敏历史回调转换检查。固定 MuMu 环境的业务扫描、三种目标与主动停止已通过现场及人工核验，证据范围见第 6 节；不据此认定 MVP 整体完成。
 
 产品规则见 [Spec #18](https://github.com/Fyrefly-4/ChatMAA/issues/18)，完成条件见 [D3 #22](https://github.com/Fyrefly-4/ChatMAA/issues/22)，共同含义见 [MVP 协作约定](mvp-collaboration.md)。本页维护已实现接口和使用边界，不替代规格。

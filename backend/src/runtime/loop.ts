@@ -18,11 +18,11 @@ export function modelRunner(business: BusinessService, model: LanguageModel, rea
       model: typeof model === 'string' ? model : model.modelId, provider: typeof model === 'string' ? null : model.provider });
     const result = await generateText({ model, tools: bound.tools, system: instructions,
       messages: [{ role: 'user', content: JSON.stringify(run.context) }], abortSignal: run.signal,
-      providerOptions, maxRetries: 0, stopWhen: stepCountIs(8),
+      providerOptions, maxRetries: 0, maxOutputTokens: 2000, stopWhen: stepCountIs(8),
       prepareStep: ({ stepNumber, messages }) => {
         run.assertCurrent(); bound.nextStep();
         if (JSON.stringify(messages).length + instructions.length > 48000) throw new TaskError(422, 'context_budget_exceeded');
-        return stepNumber >= 7 || bound.calls() >= 12 ? { activeTools: [], toolChoice: 'none' as const } : {};
+        return stepNumber >= 7 || bound.calls() >= 12 || bound.waiting() ? { activeTools: [], toolChoice: 'none' as const } : {};
       },
       onStepEnd: step => { emit('model_step', { toolCalls: step.toolCalls.length, finishReason: step.finishReason, usage: step.usage }); },
     });

@@ -18,12 +18,13 @@ test('Runtime HTTP、实际 Backend 与正式 Python 回放：展示后消息确
     python: resolve(repository, 'adapter/maa/.venv/Scripts/python.exe'), port: 0, pollMs: 50,
     httpTimeoutMs: 1000, leaseMs: 5000, stopDeadlineMs: 3000 }, { business: true });
   const business = host.business!; let sampled = 0;
-  const model = new MockLanguageModelV4({ doGenerate: async () => {
+  const model = new MockLanguageModelV4({ doGenerate: async options => {
     sampled++;
     if (sampled === 1) return response([{ type: 'tool-call', toolCallId: 'create', toolName: 'create_request',
       input: JSON.stringify({ goal: { kind: 'count', quantity: 1, stage: '1-7' } }) }]);
     if (sampled === 3) return response([{ type: 'tool-call', toolCallId: 'confirm', toolName: 'confirm_plan',
       input: JSON.stringify({ planId: business.conversation('chat').currentPlan, presentationId: 'shown' }) }]);
+    if (sampled === 4) assert.equal(options.toolChoice?.type, 'none');
     return response([{ type: 'text', text: sampled === 2 ? '请查看方案后确认。' : '已受理，请查看任务事实。' }]);
   } });
   const runtime = new RuntimeService(business, modelRunner(business, model)); runtime.enableFollowups();
@@ -68,7 +69,7 @@ for (const kind of ['material', 'inventory'] as const) test(`Runtime 正式回�
     httpTimeoutMs: 1000, leaseMs: 5000, stopDeadlineMs: 3000 }, { business: true });
   const business = host.business!; business.createConversation('chat', kind); let phase = 0;
   const tool = (name: string, input: unknown) => response([{ type: 'tool-call', toolCallId: `${name}-${phase}`, toolName: name, input: JSON.stringify(input) }]);
-  const model = new MockLanguageModelV4({ doGenerate: async () => {
+  const model = new MockLanguageModelV4({ doGenerate: async options => {
     const step = phase++;
     if (step === 0) return tool('create_request', { goal: { kind, quantity: kind === 'inventory' ? 75 : 3, itemId: '30012', stage: '1-7' } });
     if (step === 1 && kind === 'inventory') {
@@ -77,6 +78,7 @@ for (const kind of ['material', 'inventory'] as const) test(`Runtime 正式回�
       return tool('scan_inventory', { requestId: request.id, revision: request.revision, explanation: '先扫描固源岩库存，再准备差额方案。' });
     }
     if (step === 10) return tool('confirm_plan', { planId: business.conversation('chat').currentPlan, presentationId: 'display' });
+    if (step === 11 || (kind === 'inventory' && step === 2)) assert.equal(options.toolChoice?.type, 'none');
     return response([{ type: 'text', text: step < 10 ? '依据当前事实，等待方案展示与确认。' : '已受理，结果请看任务事实。' }]);
   } });
   const runtime = new RuntimeService(business, modelRunner(business, model)); runtime.enableFollowups();
