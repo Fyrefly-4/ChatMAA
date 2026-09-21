@@ -18,7 +18,7 @@ const legacy = demo || process.argv.includes('--legacy-demo');
 const useRuntime = process.argv.includes('--runtime');
 if (useRuntime && (engineering || legacy)) throw new Error('--runtime 仅用于 MVP 模式');
 if (engineering && legacy) throw new Error('--engineering 与旧 Demo 模式不能同时启用');
-if ((process.argv.includes('--web') || process.argv.includes('--agent')) && !legacy) {
+if ((process.argv.includes('--agent') || (process.argv.includes('--web') && !useRuntime)) && !legacy) {
   throw new Error('旧 Web／Agent 入口须显式选择 --legacy-demo；MVP 通过共同业务入口使用。');
 }
 const config = await (async () => {
@@ -54,12 +54,12 @@ const token = randomUUID();
 let closing = false;
 let debug: ReturnType<typeof startDebug> | undefined;
 let address = '';
-const browser = web ? new BrowserRequests(host.tasks, model) : undefined;
+const browser = web && legacy ? new BrowserRequests(host.tasks, model) : undefined;
 const runtime = useRuntime ? new RuntimeService(host.business!, model ? modelRunner(host.business!, model) : undefined) : undefined;
 runtime?.enableFollowups();
 const webToken = randomUUID();
 const developmentOrigin = process.argv.includes('--web-dev') ? 'http://127.0.0.1:5173' : undefined;
-const app = createApp(host.tasks, token, () => { void shutdown(); }, browser ? {
+const app = createApp(host.tasks, token, () => { void shutdown(); }, web ? {
   requests: browser, token: webToken, staticRoot: resolve(repository, 'web/dist'), origin: () => address, developmentOrigin,
 } : undefined, host.business, runtime);
 async function shutdown() {
@@ -93,7 +93,7 @@ try {
     const entry = runtime ? 'mvp-runtime' : host.business ? 'mvp' : engineering ? 'engineering' : 'legacy-demo';
     writeFileSync(connection, JSON.stringify({ address, token, mode: config.mode, entry }, null, 2));
     console.log(JSON.stringify({ kind: 'ready', address, mode: config.mode, entry, connection }));
-    if (browser) {
+    if (web) {
       const url = `${developmentOrigin ?? address}/#token=${webToken}`;
       console.log(JSON.stringify({ kind: 'web_ready', url }));
       if (demo) {

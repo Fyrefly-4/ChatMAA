@@ -1,4 +1,14 @@
-# Web 执行台
+# Web 连续协作入口
+
+2026-09-21 D5：MVP 页面在 `src/mvp/`，接入连续会话、三类方案、独立确认、任务结果、跨会话停止和历史恢复。使用 `--runtime --web`；可复制的显式回放／无模型启动命令、文件职责、API 与证据边界见 [D5 Web 接入](../docs/engineering/d5-web.md)。离线整链使用模型替身与正式 Python 回放；真实模型网页代表路径也已核对，表达限制与验证原 SHA 见接入说明，未新增真实游戏证据。
+
+修改 MVP 布局从 `Workspace.tsx`／`workspace.css` 入手，状态读取与恢复在 `useWorkspace.ts`，方案在 `PlanCard.tsx`，结果与依据在 `TaskSummary.tsx`／`DetailPanel.tsx`。UI 不承担目标计算或确认有效性判断。
+
+助手回复由 `AssistantMessage.tsx` 使用 `react-markdown` 渲染常用 CommonMark 排版（标题、强调、列表、引用、代码和链接）。原始 HTML 禁用，只有 HTTP(S) 绝对链接可点击且在新页打开，图片显示替代文字；用户和系统消息保持纯文本。不加载表格、数学公式或代码高亮插件。对应排版、窄屏及不可信内容检查在 `tests/mvp-markdown.spec.ts`，依赖版本与 lockfile 一起维护。
+
+## Legacy Demo 说明
+
+下文保留旧执行台行为和历史验证，适用于 `--legacy-demo --web` 与根目录 `start-demo.ps1`。MVP 与 legacy 按服务器入口分别加载，不混用摘要授权规则。
 
 一页 React + TypeScript 应用：输入完整指令、显示执行前摘要、独立读取任务事实、停止和查看工具调用。使用普通 CSS，无路由或全局状态库。浏览器只调用 Backend；模型、任务受理和执行记录仍由原模块管理。
 
