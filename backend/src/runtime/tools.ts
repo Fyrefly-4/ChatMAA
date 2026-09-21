@@ -137,9 +137,15 @@ export function businessTools(business: BusinessService, run: RunInput, options:
     adjust_task: define('adjust_task', '执行中明确调整时调用，工具内部先停止再建立与原任务关联的新目标。total 是总目标，additional 是再获得；不得猜测。不必先单独 stop_task；受理后结束本轮。',
       { taskId: string, goal, semantics: { type: 'string', enum: ['total', 'additional'] } }, ['taskId', 'goal', 'semantics'], true,
       async (input, op) => { const target = task(text(input, 'taskId')); if (!['total', 'additional'].includes(String(input.semantics))) throw new TaskError(422, 'invalid_adjustment');
-        // Even an incomparable replacement must not leave an explicitly adjusted task running.
-        if (!target.task.automation_stopped) { await business.stop(target.id); run.assertCurrent(); }
-        return op.async(associate => business.adjust(target.id, op.id, op.sourceMessage, input.goal, input.semantics as 'total' | 'additional', associate)); }),
+        try {
+          // Valid adjustments reserve stop and associate the replacement in one transaction.
+          return await op.async(associate => business.adjust(target.id, op.id, op.sourceMessage, input.goal, input.semantics as 'total' | 'additional', associate));
+        } catch (error) {
+          if (!(error instanceof TaskError) || error.message !== 'incomparable_total_goal') throw error;
+          // A rejected incomparable target still expresses stop intent. Persist that
+          // stop with its own result under this operation, without a replacement request.
+          return op.async(async associate => ({ error: 'incomparable_total_goal', stop: await business.stop(target.id, associate) }));
+        } }),
     record_inventory_change: define('record_inventory_change', '仅记录用户明确报告的外部库存变化；不知道材料范围时传 null，不猜数量。',
       { itemIds: { type: ['array', 'null'], items: string, maxItems: 100 }, reason: string }, ['itemIds', 'reason'], true,
       (input, op) => op.sync(() => ({ targetId: op.id, result: business.recordInventoryChange(op.id,
