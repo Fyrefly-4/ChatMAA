@@ -23,6 +23,7 @@ function acceptStartupToken() {
   if (changed) {
     sessionStorage.removeItem("chatmaa.requestId");
     sessionStorage.removeItem("chatmaa.taskId");
+    for (const key of Object.keys(sessionStorage)) if (key.startsWith('chatmaa.mvp.')) sessionStorage.removeItem(key);
   }
   sessionStorage.setItem("chatmaa.token", received);
   history.replaceState(null, "", location.pathname + location.search);

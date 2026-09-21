@@ -10,12 +10,13 @@ type Server = {
   url: string;
   audit: () => string[];
 };
-export const test = base.extend<{ server: Server; modelMode: string }>({
+export const test = base.extend<{ server: Server; modelMode: string; mvp: boolean }>({
+  mvp: [false, { option: true }],
   modelMode: ["normal", { option: true }],
-  server: async ({ modelMode }, use) => {
+  server: async ({ modelMode, mvp }, use) => {
     const child = spawn(
       process.execPath,
-      [resolve(import.meta.dirname, "../../backend/tests/browser-server.ts")],
+      [resolve(import.meta.dirname, mvp ? "../../backend/tests/mvp-browser-server.ts" : "../../backend/tests/browser-server.ts")],
       {
         cwd: resolve(import.meta.dirname, "../.."),
         windowsHide: true,
