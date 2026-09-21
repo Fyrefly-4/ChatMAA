@@ -25,6 +25,7 @@ const scenarios = [
   { name: 'new-message-stop', seed: true, messages: ['停一下'] },
   { name: 'missing-recommendation', seed: false, messages: ['再获得3个固源岩'] },
   { name: 'instruction-in-data', seed: false, messages: ['只查询固源岩的资料，不创建需求、不扫描、不刷图'] },
+  { name: 'background-unknown', seed: false, messages: [] },
   { name: 'timeout', seed: false, messages: ['请查一下固源岩的关卡资料，只咨询'] },
 ];
 const selected = values.scenario?.split(',');
@@ -47,6 +48,14 @@ for (const scenario of scenarios.filter(s => !selected || selected.includes(s.na
   const turns: unknown[] = []; evidence.turns = turns;
   try {
     business.createConversation(conversationId, `真实模型边界 ${scenario.name}`);
+    if (scenario.name === 'background-unknown') {
+      business.appendMessage(conversationId, 'fixture-goal', 'user', '固源岩组补到100个');
+      business.createRequest(conversationId, 'fixture-request', 'fixture-goal', { kind: 'inventory', itemId: '30013', quantity: 100 });
+      evidence.fixture = { kind: 'deterministic_inventory_request', note: '需求及扫描由脚本建立；验收扫描缺失材料触发的真实模型后台只读解释。' };
+      await business.scan('fixture-request', 1, 'fixture-scan', '先读取固源岩组库存，未知不能按零计算。');
+      const deadline = Date.now() + 10000;
+      while (!runtime.conversation(conversationId).turns.length && Date.now() < deadline) await wait(50);
+    }
     if (['missing-recommendation', 'instruction-in-data'].includes(scenario.name)) {
       const { version: _version, ...data } = structuredClone(business.catalog.snapshot);
       if (scenario.name === 'missing-recommendation') data.items['30012'].recommendation = null;

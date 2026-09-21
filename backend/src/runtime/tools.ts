@@ -10,7 +10,7 @@ const string = { type: 'string' as const, minLength: 1, maxLength: 1000 };
 const revision = { type: 'integer' as const, minimum: 1 };
 const goal = { type: 'object' as const, additionalProperties: false, properties: {
   kind: { type: 'string' as const, enum: ['count', 'material', 'inventory'] }, quantity: { type: 'integer' as const, minimum: 1, maximum: 2147483647 },
-  itemId: string, stage: string } };
+  itemId: string, stage: { ...string, description: '用户明确指定的关卡。材料目标未指定时省略，由 Backend 保留默认候选与资料来源；不要把工具推荐填作用户指定。' } } };
 function text(input: Input, key: string) {
   if (typeof input[key] !== 'string' || !input[key]) throw new TaskError(422, 'invalid_tool_input');
   return input[key] as string;
