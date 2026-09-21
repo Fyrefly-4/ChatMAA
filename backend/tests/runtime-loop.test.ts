@@ -147,3 +147,38 @@ test('工具活动存储故障后关闭本轮，不能接着产生业务变更',
   assert.equal(result.turn.state, 'failed');
   assert.equal(steps, 1); assert.equal(x.business.conversation('chat').requests.length, 0);
 });
+
+test('模型输出预算耗尽不能发布残缺回复或假完成，已创建业务事实仍可查询', async t => {
+  const exhausted = response([{ type: 'text', text: '截断的解释' }]);
+  exhausted.finishReason = { unified: 'length', raw: 'max_output_tokens' };
+  const model = new MockLanguageModelV4({ doGenerate: [
+    call('create_request', { goal: { kind: 'count', quantity: 2, stage: '1-7' } }), exhausted,
+  ] });
+  const x = setup(model); t.after(x.close);
+  const turn = x.runtime.submit('chat', 'message', '刷1-7两次');
+  const result = await x.runtime.settled(turn.id);
+  assert.equal(result.turn.state, 'failed'); assert.equal(result.turn.reason, 'model_output_budget_exceeded');
+  const snapshot = x.business.conversation('chat');
+  assert.equal(snapshot.requests.length, 1); assert.ok(snapshot.currentPlan);
+  assert.equal(snapshot.messages.filter(message => message.role === 'assistant').length, 0);
+  assert.equal(x.submissions(), 0);
+});
+
+test('空白模型回复是失败且不自动重试', async t => {
+  const model = new MockLanguageModelV4({ doGenerate: reply(' ') });
+  const x = setup(model); t.after(x.close);
+  const turn = x.runtime.submit('chat', 'message', '你好');
+  const result = await x.runtime.settled(turn.id);
+  assert.equal(result.turn.reason, 'model_empty_response'); assert.equal(result.turn.state, 'failed');
+  assert.equal(model.doGenerateCalls.length, 1);
+});
+
+test('模型将工具协议误输出为正文时不发布，保持业务事实可查', async t => {
+  const model = new MockLanguageModelV4({ doGenerate: reply('<｜｜DSML｜｜ calls><｜｜DSML｜｜ invoke name="read_state">') });
+  const x = setup(model); t.after(x.close);
+  const turn = x.runtime.submit('chat', 'message', '查看状态');
+  const result = await x.runtime.settled(turn.id);
+  assert.equal(result.turn.reason, 'model_invalid_response'); assert.equal(result.turn.state, 'failed');
+  assert.equal(x.business.conversation('chat').messages.filter(message => message.role === 'assistant').length, 0);
+  assert.equal(model.doGenerateCalls.length, 1); assert.equal(x.submissions(), 0);
+});

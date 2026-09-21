@@ -122,7 +122,7 @@ export function businessTools(business: BusinessService, run: RunInput, options:
       (input, op) => { const target = request(text(input, 'requestId')); return op.sync(() => ({ targetId: target.id, result: business.prepare(target.id, version(input)) })); }),
     cancel_request: define('cancel_request', '取消尚未开始的需求。执行中的任务须停止，取消模型不等于停止。', { requestId: string, revision }, ['requestId', 'revision'], true,
       (input, op) => { const target = request(text(input, 'requestId')); return op.sync(() => ({ targetId: target.id, result: business.cancelRequest(target.id, version(input)) })); }),
-    inspect_inventory: define('inspect_inventory', '用户明确要求查看库存时建立库存查询意图；随后调用 scan_inventory。', {}, [], true,
+    inspect_inventory: define('inspect_inventory', '仅用户独立要求查看库存时建立新意图，会替换当前需求。不是读取工具！补库存需求禁止用它作前置步骤，应直接 scan_inventory 原 execute 请求；已有事实用 read_state。', {}, [], true,
       (_input, op) => op.sync(() => ({ targetId: op.id, result: business.inspectInventory(conversationId, op.id, op.sourceMessage) }))),
     scan_inventory: define('scan_inventory', '仅明确补库存或查看库存意图可扫描；先保存说明，扫描受理后结束本轮，不循环等待。',
       { requestId: string, revision, explanation: string }, ['requestId', 'revision', 'explanation'], true,
@@ -134,7 +134,7 @@ export function businessTools(business: BusinessService, run: RunInput, options:
       (input, op) => { const target = plan(text(input, 'planId')); return op.sync(() => ({ targetId: op.id, result: business.reusePlan(target.id, conversationId, op.id, op.sourceMessage) })); }),
     stop_task: define('stop_task', '用户明确停止或调整执行中的任务时先停止。含糊调整也先停止，再澄清总共或新增；假设咨询不停止。', { taskId: string }, ['taskId'], true,
       (input, op) => { const target = task(text(input, 'taskId'), true); return op.async(associate => business.stop(target.id, associate)); }),
-    adjust_task: define('adjust_task', '已明确调整语义后，建立与原任务关联的新目标。total 是总目标，additional 是再获得；不得猜测。先 stop_task。',
+    adjust_task: define('adjust_task', '执行中明确调整时调用，工具内部先停止再建立与原任务关联的新目标。total 是总目标，additional 是再获得；不得猜测。不必先单独 stop_task；受理后结束本轮。',
       { taskId: string, goal, semantics: { type: 'string', enum: ['total', 'additional'] } }, ['taskId', 'goal', 'semantics'], true,
       async (input, op) => { const target = task(text(input, 'taskId')); if (!['total', 'additional'].includes(String(input.semantics))) throw new TaskError(422, 'invalid_adjustment');
         // Even an incomparable replacement must not leave an explicitly adjusted task running.
