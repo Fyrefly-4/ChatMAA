@@ -429,6 +429,36 @@ test('消息写入在消费者存储故障和关闭后被拒绝，正常重复�
   assert.throws(() => x.business.appendMessage('chat', 'closed', 'user', '关闭后不应写入'), /business_unavailable/);
   assert.equal(x.business.records.read('messages', 'closed'), undefined);
 });
+
+test('退出开始即取消消费者并拒绝迟到变更，交接期间仍投影扫描事实但不派发新工作', async t => {
+  const x = setup(); t.after(x.close);
+  x.request('inventory', { kind: 'inventory', quantity: 100, itemId: '30012' });
+  await x.business.scan('inventory', 1, 'scan', '查看库存');
+  let release!: () => void; const gate = new Promise<void>(r => { release = r; }); t.after(() => release());
+  let entered!: () => void; const started = new Promise<void>(r => { entered = r; });
+  let finished!: () => void; const returned = new Promise<void>(r => { finished = r; });
+  let signal!: AbortSignal; let calls = 0; let applied = false;
+  x.business.setFollowupConsumer(async context => {
+    calls++; signal = context.signal; entered(); await gate;
+    assert.throws(() => x.business.acceptFollowup(context.record.id, context.record.token!, () => { applied = true; }), /business_unavailable/);
+    finished();
+  });
+  const incomplete: Snapshot['inventory_result'] = { items: {}, complete: false, certainty: 'unknown', missing_items: 'unknown', observed_at: 1, issues: [] };
+  await x.publish('scan', { ...x.completed, inventory_result: incomplete }); await started;
+  x.request('other', { kind: 'inventory', quantity: 100, itemId: '30012' }, 'other-chat');
+  await x.business.scan('other', 1, 'other-scan', '查看另一次库存');
+  const drained = x.business.beginShutdown();
+  assert.equal(signal.aborted, true);
+  assert.throws(() => x.business.appendMessage('chat', 'late', 'user', '退出期间不能写入'), /business_unavailable/);
+  release(); await returned; await drained;
+  await x.publish('other-scan', { ...x.completed, inventory_result: incomplete });
+  assert.equal(applied, false); assert.equal(calls, 1);
+  assert.equal(x.business.records.list('continuations', 'chat')[0].state, 'interrupted');
+  assert.equal(x.business.records.list('continuations', 'other-chat').length, 0);
+  assert.ok(x.business.records.read('observations', 'other-scan'));
+  assert.ok(x.business.conversation('other-chat').messages.some(m => m.reference === 'other-scan' && m.id.startsWith('scan-result-')));
+  assert.equal(x.business.global().projection.available, true);
+});
 test('失败的事实与后续处理一起回滚；下一项同步补齐失败范围，提交后才启动消费者', async t => {
   const x = setup(); t.after(x.close); x.request('first', { kind: 'count', quantity: 1, stage: '1-7' });
   const first = await x.start(); await x.publish(first.id, { ...x.completed, count_result: { value: 1, certainty: 'exact', issues: [] } });

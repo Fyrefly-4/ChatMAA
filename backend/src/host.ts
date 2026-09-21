@@ -100,6 +100,7 @@ export async function startHost(config: Config, options: { business?: boolean; c
   function close() {
     if (closing) return closing;
     service.closing = true;
+    business?.beginShutdown();
     clearInterval(heartbeat); clearInterval(poll);
     closing = (async () => {
       const until = Date.now() + config.stopDeadlineMs + config.httpTimeoutMs;

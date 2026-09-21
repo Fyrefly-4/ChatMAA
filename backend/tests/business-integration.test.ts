@@ -39,6 +39,30 @@ test('同目录重启先同步历史，保留仍有效的已展示库存方案�
   assert.equal(audit(), 2); assert.equal(restored.task(task.id).result!.target, 'achieved');
 });
 
+test('宿主退出立即封锁业务变更，最终停止结果及会话摘要仍在双库交接前保存', async t => {
+  const dataDir = resolve(repository, '.artifacts/checks', `business-shutdown-${Date.now()}`);
+  const host = await startHost({ mode: 'maa-replay', dataDir, python: resolve(repository, 'adapter/maa/.venv/Scripts/python.exe'),
+    port: 0, pollMs: 50, httpTimeoutMs: 1000, leaseMs: 5000, stopDeadlineMs: 3000 }, { business: true });
+  t.after(() => host.close()); const b = host.business!;
+  b.createConversation('chat', '退出交接'); b.appendMessage('chat', 'goal', 'user', '刷100次');
+  b.createRequest('chat', 'request', 'goal', { kind: 'count', quantity: 100, stage: '1-7' });
+  const planId = b.conversation('chat').currentPlan!; b.present(planId, 'shown');
+  const task = await b.confirm(planId, 'shown', 'confirm', 'button');
+  await until(() => b.task(task.id), value => value.task.started_cycles > 0);
+  const closing = host.close();
+  assert.throws(() => b.appendMessage('chat', 'late', 'user', '退出后不能再追加'), /business_unavailable/);
+  assert.throws(() => b.acceptFollowup('unused', 'unused', () => {}), /business_unavailable/);
+  const result = await closing; assert.equal(result.handoffComplete, true); assert.equal(result.childExited, true);
+  const db = new DatabaseSync(resolve(dataDir, 'business.sqlite'), { readOnly: true });
+  try {
+    const link = JSON.parse(String(db.prepare('SELECT body FROM task_links WHERE id=?').get(task.id)!.body));
+    assert.equal(link.result.execution.state, 'ended'); assert.equal(link.result.execution.automationStopped, true);
+    const messages = db.prepare("SELECT body FROM messages WHERE conversation_id='chat'").all().map(row => JSON.parse(String(row.body)));
+    assert.ok(messages.some(message => message.reference === task.id && message.id.startsWith('result-')));
+    assert.equal(messages.some(message => message.id === 'late'), false);
+  } finally { db.close(); }
+});
+
 test('MVP 业务 API 经正式 Python HTTP 与双库走通三种目标、停止和同目录恢复；不调用模型或游戏', async t => {
   const dataDir = resolve(repository, '.artifacts/checks', `business-${Date.now()}`);
   const config = { mode: 'maa-replay' as const, dataDir, python: resolve(repository, 'adapter/maa/.venv/Scripts/python.exe'),

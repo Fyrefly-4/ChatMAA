@@ -31,6 +31,8 @@ export class BusinessService {
   private catalogProjectionPending = false;
   private projectionFailure: string | null = null;
   private closing = false;
+  private retiring = false;
+  private followupsClosing?: Promise<void>;
   constructor(tasks: TaskService, catalog?: Catalog) {
     this.tasks = tasks; this.records = new BusinessRecords(tasks.store);
     const active = tasks.store.db.prepare("SELECT value FROM business_metadata WHERE id='catalog'").get();
@@ -42,7 +44,7 @@ export class BusinessService {
     this.projection = new FactProjection(this.records, tasks, this.basis);
     this.followups = new FollowupRunner(this.records, (record, signal) => {
       this.current(record.requestId, record.revision);
-      if (this.closing || this.projectionFailure) return fail('business_unavailable', 503);
+      if (this.closing || this.retiring || this.projectionFailure) return fail('business_unavailable', 503);
       return { record, request: this.request(record.requestId), conversation: this.conversation(record.conversationId),
         task: record.taskId ? this.tasks.get(record.taskId) : null, signal };
     }, () => { this.projectionFailure = 'followup_storage_failed'; });
@@ -50,7 +52,7 @@ export class BusinessService {
     this.reconcile();
   }
   private transaction<T>(work: () => T): T {
-    if (this.closing || this.tasks.storageFailed || (this.projectionFailure && !this.reconciling)) return fail('business_unavailable', 503);
+    if (this.closing || this.tasks.storageFailed || ((this.retiring || this.projectionFailure) && !this.reconciling)) return fail('business_unavailable', 503);
     return this.tasks.store.transaction(work);
   }
   private retainCatalog(catalog: Catalog) {
@@ -415,6 +417,7 @@ export class BusinessService {
     }
   }
   private enqueue(request: Request, reason: string, taskId: string | null) {
+    if (this.retiring) return;
     const id = digest({ request: request.id, revision: request.revision, reason, taskId });
     if (!this.records.read('continuations', id)) this.records.insert('continuations', { id, conversationId: request.conversationId,
       requestId: request.id, revision: request.revision, taskId, state: 'pending', reason, token: null });
@@ -423,10 +426,11 @@ export class BusinessService {
     this.followups.setConsumer(consumer); this.dispatchFollowups();
   }
   private dispatchFollowups() {
-    if (this.closing || this.projectionFailure || this.tasks.storageFailed) return;
+    if (this.closing || this.retiring || this.projectionFailure || this.tasks.storageFailed) return;
     try { this.followups.dispatch(); } catch { this.projectionFailure = 'followup_storage_failed'; }
   }
   acceptFollowup<T>(id: string, token: string, apply: (request: Request) => T): T {
+    if (this.retiring) return fail('business_unavailable', 503);
     return this.transaction(() => {
       const entry = this.records.read('continuations', id);
       if (!entry || entry.state !== 'processing' || entry.token !== token) return fail('followup_not_current');
@@ -440,5 +444,10 @@ export class BusinessService {
       admission: this.projectionFailure ? { ...this.tasks.admission(), state: 'unavailable' as const } : this.tasks.admission(), tasks: this.tasks.list().filter(t => blocksExecution(t)).map(t => this.task(t.id)),
       conversations: this.records.list('conversations'), catalogVersion: this.catalog.snapshot.version };
   }
-  async close() { this.closing = true; await this.followups.close(); this.tasks.onSynchronized = undefined; }
+  beginShutdown() {
+    // Freeze external mutations and consumers now; keep deterministic projection until final close.
+    this.retiring = true;
+    return this.followupsClosing ??= this.followups.close();
+  }
+  async close() { this.closing = true; await this.beginShutdown(); this.tasks.onSynchronized = undefined; }
 }
