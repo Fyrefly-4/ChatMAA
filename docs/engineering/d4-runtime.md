@@ -38,6 +38,8 @@ node --test --test-concurrency=1 backend/tests/business.test.ts backend/tests/ru
 
 ## 调试入口
 
+真实模型样例驱动为 `node backend/src/runtime/samples.ts --allow-model`，必须先获得该次调用授权，并用 `CHATMAA_CONFIG` 显式指定 `mode=maa-replay` 的配置。脚本在读取模型凭据和启动宿主前拒绝 live；不进入离线 CI。它保存模型标识、提示版本、输入、工具活动、业务快照与退出结果到本地数据目录下的 `model-samples-*/evidence.json`。当前脚本提供三种目标、咨询／修改、资源范围和未知库存的初始样例，输出仍需人工对照事实审阅，不以脚本退出作为验收通过，也不替代提案要求的全部改写与异常样例。此入口尚未调用真实模型。
+
 先按 [Demo 回放配置](demo.md#回放入口)显式设置 `CHATMAA_CONFIG`，避免读到本地 live 配置。`node backend/src/main.ts --runtime --no-model` 可检查连接及确定操作，不加载模型密钥；显式去掉 `--no-model` 才按现有 DeepSeek 配置启用模型。启用模型不等于获得本轮真实模型调用授权。
 
 `--runtime` 不能与 engineering 或 legacy 模式混用；默认 MVP 无模型入口保持可用。关闭时先撤销 Runtime 写入资格并取消后台消费者，再排空操作、交接执行证据。
