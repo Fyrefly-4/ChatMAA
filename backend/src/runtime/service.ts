@@ -63,7 +63,7 @@ export class RuntimeService {
     try {
       this.assertCurrent(turn, signal);
       if (this.providerCalls.size >= this.maxConcurrent) throw new TaskError(503, 'model_busy');
-      const context = contextFor(this.business, turn.conversationId, turn.sourceMessage);
+      const context = contextFor(this.business, turn.conversationId, turn.sourceMessage, 48000, turn.sourceMessages);
       const work = Promise.resolve().then(() => {
         this.assertCurrent(turn, signal);
         return this.run!({ turn, context, signal, assertCurrent: () => this.assertCurrent(turn, signal), track: work => {

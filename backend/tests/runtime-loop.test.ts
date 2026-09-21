@@ -110,3 +110,40 @@ test('跨会话方案不可修改；额外 source 字段不能冒充按钮确认
   assert.match(JSON.stringify(x.runtime.read(turn.id).activities), /object_outside_conversation/);
   assert.equal(x.submissions(), 0);
 });
+
+test('被中断轮已创建的请求随原消息承接，不因新工具 call ID 重建', async t => {
+  let steps = 0; let waiting!: () => void; let release!: (value: LanguageModelV4GenerateResult) => void;
+  const entered = new Promise<void>(resolve => { waiting = resolve; });
+  const model = new MockLanguageModelV4({ doGenerate: async options => {
+    steps++;
+    if (steps === 1) return call('create_request', { goal: { kind: 'count', quantity: 5, stage: '1-7' } }, 'old');
+    if (steps === 2) { waiting(); return new Promise(resolve => { release = resolve; }); }
+    if (steps === 3) {
+      assert.match(JSON.stringify(options.prompt), /pendingSources/);
+      assert.match(JSON.stringify(options.prompt), /operations/);
+      return call('create_request', { goal: { stage: '1-7', quantity: 5, kind: 'count' }, intentMessageId: 'original' }, 'new-call');
+    }
+    return reply('沿用已建立的方案，等待确认。');
+  } });
+  const x = setup(model); t.after(x.close);
+  const old = x.runtime.submit('chat', 'original', '刷1-7五次'); await entered;
+  const next = x.runtime.submit('chat', 'followup', '刚才处理到哪里了？');
+  await x.runtime.settled(next.id);
+  assert.equal(x.runtime.read(next.id).turn.state, 'completed');
+  assert.equal(x.runtime.read(old.id).turn.state, 'interrupted');
+  assert.equal(x.business.conversation('chat').requests.length, 1);
+  release(reply('迟到')); await new Promise(resolve => setImmediate(resolve));
+});
+
+test('工具活动存储故障后关闭本轮，不能接着产生业务变更', async t => {
+  let steps = 0;
+  const model = new MockLanguageModelV4({ doGenerate: async () => {
+    steps++; return call('create_request', { goal: { kind: 'count', quantity: 5, stage: '1-7' } });
+  } });
+  const x = setup(model); t.after(x.close);
+  x.store.db.exec("CREATE TRIGGER fail_tool_log BEFORE INSERT ON runtime_activities WHEN NEW.kind='tool_call' BEGIN SELECT RAISE(ABORT,'storage_failed'); END");
+  const turn = x.runtime.submit('chat', 'message', '刷1-7五次');
+  const result = await x.runtime.settled(turn.id);
+  assert.equal(result.turn.state, 'failed');
+  assert.equal(steps, 1); assert.equal(x.business.conversation('chat').requests.length, 0);
+});

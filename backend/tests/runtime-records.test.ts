@@ -114,7 +114,7 @@ test('忽略取消的旧模型不能发布，新消息保留上下文并完成�
   const runtime = new RuntimeService(x.business, async input => {
     calls++;
     if (input.turn.sourceMessage === 'm1') { entered(); return new Promise(resolve => { release = resolve; }); }
-    assert.ok(input.context.messages.some(m => m.id === 'm1'));
+    assert.ok(input.context.anchors.some(m => m.id === 'm1'));
     return '请补充材料名称';
   });
   const old = runtime.submit('chat', 'm1', '补到100'); await started;

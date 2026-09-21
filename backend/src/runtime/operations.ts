@@ -28,6 +28,10 @@ export class RuntimeOperations {
     const row = this.store.db.prepare('SELECT body FROM runtime_operations WHERE id=?').get(id);
     return row ? JSON.parse(String(row.body)) : undefined;
   }
+  forSources(conversationId: string, sourceMessages: string[]): Operation[] {
+    return this.store.db.prepare('SELECT body FROM runtime_operations WHERE conversation_id=? AND source_message IN (SELECT value FROM json_each(?)) ORDER BY rowid')
+      .all(conversationId, JSON.stringify(sourceMessages)).map(row => JSON.parse(String(row.body)));
+  }
   private insert(operation: Operation) {
     if (!this.store.db.isTransaction) throw new Error('operation_association_requires_transaction');
     this.store.db.prepare('INSERT INTO runtime_operations VALUES(?,?,?,?)')
@@ -44,7 +48,7 @@ export class RuntimeOperations {
       guard(); this.insert({ ...base, targetId, state: 'committed' });
     };
     return {
-      id,
+      id, sourceMessage,
       sync: <T>(work: () => { targetId: string; result: T }): Operation => {
         return this.store.transaction(() => {
           const existing = prior(); if (existing) return existing;
