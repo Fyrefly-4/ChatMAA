@@ -4,6 +4,10 @@
 
 Backend 提供明确参数的提交、查询、停止和结果读取；确定参数入口不依赖 Web 或模型，`--agent` 与 `--web` 可装配自然语言 Agent。TS 管理 Python 子进程，通过本机 HTTP 协作，各自保存 SQLite。默认使用脱敏回调回放，启动不会自动提交任务。完整网页使用从 [Demo 运行入口](../docs/engineering/demo.md)开始，显式选择配置。
 
+## 执行协调的事务边界
+
+`TaskService.reserve` 与 `reserveStop` 分别同步保存执行预留和停止意图，可加入调用方的本地事务，返回的 dispatch 只在事务提交后送达 Adapter。回滚不留下执行或停止副作用；重建执行记录不重发任务。直接停止在存储失败时仍尝试送达，事务型调整则整体失败。`onSynchronized` 通知具体任务，观察者故障单独记录，不冒充执行证据存储失败或阻断已持久化停止的送达。独立回归见 `tests/task-reservation.test.ts`。
+
 ## 浏览器入口
 
 日常从根目录 `.\start-demo.ps1` 启动，首次准备和可选参数见 [Demo 运行入口](../docs/engineering/demo.md#日常启动一条命令)。它进入同一 Backend，仅增加启动前配置／窗口检查及终端操作；真实执行仍经网页明确指令。下面是保留的底层入口。

@@ -19,6 +19,12 @@ export class TaskService {
   private stopIntents = new Set<string>();
   private rechecking = false;
   private pendingRechecks = new Map<string, string>();
+  synchronizationObserverFailed = false;
+  onSynchronized?: (id: string) => void;
+  private notifySynchronized(id: string) {
+    try { this.onSynchronized?.(id); this.synchronizationObserverFailed = false; }
+    catch { this.synchronizationObserverFailed = true; }
+  }
 
   constructor(store: Store, adapter: AdapterClient, source: string) {
     this.store = store; this.adapter = adapter; this.source = source;
@@ -84,6 +90,7 @@ export class TaskService {
       catch (error) { this.storageFailed = true; throw error; }
       this.synchronizations.set(id, { available: !this.exited, last_success_at: Date.now() / 1000,
         reason: this.exited ? 'executor_exited' : null });
+      this.notifySynchronized(id);
       const recheck = this.get(id).recheck;
       if (this.get(id).takeover?.released ||
           (recheck?.id === this.pendingRechecks.get(id) && recheck?.state === 'ended' && recheck.automation_stopped)) {
@@ -96,6 +103,7 @@ export class TaskService {
       }
     } catch (error) {
       this.unavailable(id, this.storageFailed ? 'storage_unavailable' : 'adapter_unavailable');
+      this.notifySynchronized(id);
       throw error;
     }
   }
@@ -106,18 +114,29 @@ export class TaskService {
       try { await this.sync(row.id); } catch { /* get exposes the last known result and sync failure. */ }
     }
   }
-  async submit(input: unknown) {
+  reserve(input: unknown): { id: string; dispatch: () => Promise<TaskView> } {
     const { id, params } = executionSubmission(input);
     const existing = this.store.get(id);
     if (existing) {
       if (existing.params !== JSON.stringify(params)) throw new TaskError(409, 'id_parameter_conflict');
-      return this.get(id); // Never resend an uncertain operation, including after restart.
+      return { id, dispatch: async () => this.get(id) }; // Never resend an uncertain operation, including after restart.
     }
     if (this.closing || this.exited || this.storageFailed || this.rechecking) throw new TaskError(503, 'service_unavailable');
     if (this.admission().state !== 'ready') throw new TaskError(409, 'device_busy_or_uncertain');
     // Reserve synchronously before the first await, so concurrent callers cannot both pass admission.
     try { this.store.prepare(id, params, this.source); }
     catch { this.storageFailed = true; throw new TaskError(503, 'storage_unavailable'); }
+    let dispatched = false;
+    return { id, dispatch: async () => {
+      if (dispatched) return this.get(id);
+      dispatched = true;
+      // Only this ephemeral reservation can send; reconstructing records never sends.
+      if (!this.store.get(id) || this.store.db.isTransaction) throw new TaskError(409, 'reservation_not_committed');
+      return this.dispatch(id, params);
+    } };
+  }
+  async submit(input: unknown) { return this.reserve(input).dispatch(); }
+  private async dispatch(id: string, params: ReturnType<typeof executionSubmission>['params']) {
     try {
       await this.adapter.call('/executions', 'POST', { id, params });
       await this.sync(id);
@@ -130,27 +149,42 @@ export class TaskService {
     }
     return this.get(id);
   }
-  async stop(id: string) {
+  // Synchronous intent reservation can join a business transaction. Dispatch only
+  // after commit; rolled-back reservations must not leave an in-memory stop intent.
+  reserveStop(id: string) {
     taskId(id);
     const known = this.get(id);
-    if (known.takeover?.released) return { id, stop_requested: false, confirmed: false, historically_released: true };
-    // A repeated stop must not erase terminal evidence, even after the Adapter exits.
-    if (['ended', 'rejected'].includes(known.state) && !['running', 'stopping'].includes(known.recheck?.state ?? '')) {
-      return { id, stop_requested: false, confirmed: known.automation_stopped && (!known.recheck || known.recheck.automation_stopped) };
+    if (known.takeover?.released) return { dispatch: async () => ({ id, stop_requested: false, confirmed: false, historically_released: true }) };
+    const rechecking = ['running', 'stopping'].includes(known.recheck?.state ?? '');
+    if (['ended', 'rejected'].includes(known.state) && !rechecking) {
+      return { dispatch: async () => ({ id, stop_requested: false, confirmed: known.automation_stopped && (!known.recheck || known.recheck.automation_stopped) }) };
     }
-    if (['running', 'stopping'].includes(known.recheck?.state ?? '')) {
-      await this.adapter.call(`/executions/${id}/stop`, 'POST');
-      await this.sync(id);
-      return { id, stop_requested: true, confirmed: false };
-    }
+    try {
+      this.store.mark(id, known.state === 'unknown' || rechecking ? { stop_requested: true } :
+        { state: 'stopping', reason: 'stop_requested', stop_requested: true });
+    } catch { this.storageFailed = true; throw new TaskError(503, 'storage_unavailable'); }
+    let delivery: ReturnType<TaskService['deliverStop']> | undefined;
+    return { dispatch: () => {
+      if (this.store.db.isTransaction || !this.store.view(id)?.stop_requested) throw new TaskError(409, 'stop_intent_not_committed');
+      return delivery ??= this.deliverStop(id, rechecking);
+    } };
+  }
+  private async deliverStop(id: string, rechecking = false) {
     this.stopIntents.add(id);
-    try { this.store.mark(id, known.state === 'unknown' ? { stop_requested: true } :
-      { state: 'stopping', reason: 'stop_requested', stop_requested: true }); }
-    catch { this.storageFailed = true; }
     let delivered = false;
     try { await this.adapter.call(`/executions/${id}/stop`, 'POST'); delivered = true; }
     catch { this.unavailable(id, 'stop_delivery_unconfirmed'); }
+    if (delivered && rechecking) await this.sync(id).catch(() => {});
     return { id, stop_requested: true, delivered, confirmed: false };
+  }
+  async stop(id: string) {
+    try { return await this.reserveStop(id).dispatch(); }
+    catch (error) {
+      // Direct stop remains available when persistence fails. Transactional callers
+      // use reserveStop and get the failure instead of committing half an adjustment.
+      if (error instanceof TaskError && error.message === 'storage_unavailable') return this.deliverStop(id);
+      throw error;
+    }
   }
   async recheck(id: string, input: unknown) {
     taskId(id);
