@@ -19,13 +19,13 @@ test('两个真实模型样例入口必须显式授权参数且拒绝 live，不
   }
   assert.equal(existsSync(resolve(data, 'connection.json')), false);
 });
-test('独立 Runtime 无模型进程与 CLI：消息可见、打印展示、防重和退出；不读取模型凭据', async () => {
+for (const web of [false, true]) test(`独立 Runtime ${web ? 'Web 与' : ''}无模型进程与 CLI：消息可见、打印展示、防重和退出；不读取模型凭据`, async () => {
   const data = resolve(repository, '.artifacts/checks', `runtime-cli-${Date.now()}`); mkdirSync(data, { recursive: true });
   const config = resolve(data, 'config.json');
   writeFileSync(config, JSON.stringify({ mode: 'maa-replay', dataDir: data,
     python: resolve(repository, 'adapter/maa/.venv/Scripts/python.exe'), pollMs: 60, httpTimeoutMs: 1000, leaseMs: 5000, stopDeadlineMs: 3000 }));
   const env = { ...process.env, CHATMAA_CONFIG: config, DEEPSEEK_API_KEY: 'must-not-be-used' };
-  const server = spawn(process.execPath, [resolve(repository, 'backend/src/main.ts'), '--runtime', '--no-model'],
+  const server = spawn(process.execPath, [resolve(repository, 'backend/src/main.ts'), '--runtime', '--no-model', ...(web ? ['--web'] : [])],
     { env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
   let output = ''; let errors = ''; let exited = false;
   server.stdout.on('data', chunk => { output += chunk; }); server.stderr.on('data', chunk => { errors += chunk; });
@@ -38,6 +38,18 @@ test('独立 Runtime 无模型进程与 CLI：消息可见、打印展示、防�
     assert(!exited, errors); assert(existsSync(resolve(data, 'connection.json')), errors);
     const connection = JSON.parse(readFileSync(resolve(data, 'connection.json'), 'utf8'));
     assert.equal(connection.entry, 'mvp-runtime');
+    if (web) {
+      const until = Date.now() + 3000;
+      while (!output.includes('web_ready') && Date.now() < until) await new Promise(r => setTimeout(r, 20));
+      const ready = output.trim().split('\n').map(line => JSON.parse(line)).find(row => row.kind === 'web_ready');
+      assert.ok(ready);
+      const url = new URL(ready.url);
+      const webToken = new URLSearchParams(url.hash.slice(1)).get('token')!;
+      assert.notEqual(webToken, connection.token);
+      const status = await fetch(`${url.origin}/api/status`, { headers: { 'x-web-token': webToken, origin: url.origin } }).then(r => r.json());
+      assert.equal(status.entry, 'mvp-runtime'); assert.equal(status.runtime.available, false);
+      assert.equal(status.mode, 'offline_callback_replay');
+    }
     async function operation(body: object) {
       const result = await fetch(`${connection.address}/business/operations`, { method: 'POST',
         headers: { 'x-app-token': connection.token, 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(5000) });

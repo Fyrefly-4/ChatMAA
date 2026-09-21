@@ -9,16 +9,18 @@ import { businessRoutes } from './business/routes.ts';
 import type { BusinessService } from './business/service.ts';
 import type { RuntimeService } from './runtime/service.ts';
 import { runtimeRoutes } from './runtime/routes.ts';
+import { mvpRoutes } from './browser/mvp-routes.ts';
 
-export type BrowserOptions = { requests: BrowserRequests; token: string; staticRoot: string;
+export type BrowserOptions = { requests?: BrowserRequests; token: string; staticRoot: string;
   origin: () => string; developmentOrigin?: string };
 function equal(provided: unknown, token: string) {
   return typeof provided === 'string' && Buffer.byteLength(provided) === Buffer.byteLength(token) &&
     timingSafeEqual(Buffer.from(provided), Buffer.from(token));
 }
 export function createApp(tasks: TaskService, token: string, shutdown: () => void, browser?: BrowserOptions, business?: BusinessService, runtime?: RuntimeService) {
-  if (browser && business) throw new Error('MVP 与旧 Demo 浏览器入口不能同时装配');
-  if (runtime && (!business || runtime.business !== business || browser)) throw new Error('Runtime 只能装配匹配的 MVP 业务服务');
+  if (browser?.requests && business) throw new Error('MVP 与旧 Demo 浏览器入口不能同时装配');
+  if (runtime && (!business || runtime.business !== business || browser?.requests)) throw new Error('Runtime 只能装配匹配的 MVP 业务服务');
+  if (browser && !browser.requests && (!business || !runtime)) throw new Error('MVP 浏览器须装配业务服务与 Runtime');
   const app = Fastify({ logger: false });
   app.addHook('onRequest', async (request, reply) => {
     const path = request.url.split('?')[0];
@@ -61,7 +63,8 @@ export function createApp(tasks: TaskService, token: string, shutdown: () => voi
     setTimeout(shutdown, 10);
   });
   if (browser) {
-    browserRoutes(app, tasks, browser.requests);
+    if (browser.requests) browserRoutes(app, tasks, browser.requests);
+    else mvpRoutes(app, business!, runtime!);
     // Only build output is reachable; there is no source-directory SPA fallback.
     app.register(fastifyStatic, { root: browser.staticRoot, serve: false });
     app.get('/', async (_request, reply) => reply.sendFile('index.html'));
