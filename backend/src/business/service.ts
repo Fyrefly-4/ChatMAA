@@ -16,6 +16,11 @@ import type { Goal, Amount } from './goals.ts';
 
 const now = () => new Date().toISOString();
 const fail = (code: string, status = 409): never => { throw new TaskError(status, code); };
+export type OperationAssociation = (id: string) => void;
+function associate(callback: OperationAssociation | undefined, id: string) {
+  const result: unknown = callback?.(id);
+  if (result && typeof (result as PromiseLike<unknown>).then === 'function') throw new Error('association_must_be_synchronous');
+}
 export type FollowUp = { record: Continuation; request: Request; conversation: ReturnType<BusinessService['conversation']>; task: TaskView | null; signal: AbortSignal };
 export class BusinessService {
   readonly tasks: TaskService;
@@ -240,7 +245,7 @@ export class BusinessService {
       this.records.insert('plan_presentations', receipt); this.records.save('plan_versions', { ...plan, state: 'presented' }); return receipt;
     });
   }
-  async confirm(planId: string, presentationId: string, id: string, source: 'button' | 'message', sourceMessage?: string) {
+  async confirm(planId: string, presentationId: string, id: string, source: 'button' | 'message', sourceMessage?: string, association?: OperationAssociation) {
     taskId(id);
     this.reconcile({ taskIds: [] });
     let reservation: ReturnType<TaskService['reserve']> | undefined;
@@ -256,7 +261,7 @@ export class BusinessService {
       }
       const old = this.records.read('confirmations', id);
       if (old && (old.planId !== planId || old.presentationId !== presentationId || old.source !== source || old.sourceMessage !== (sourceMessage ?? null))) return fail('id_parameter_conflict');
-      if (plan.taskId) return plan.taskId;
+      if (plan.taskId) { associate(association, plan.taskId); return plan.taskId; }
       // Order by persisted messages, not wall-clock timestamps (messages may share a millisecond).
       // Older receipts without a boundary require a fresh presentation before message confirmation.
       if (source === 'message' && (receipt.lastMessageId === undefined ||
@@ -271,16 +276,18 @@ export class BusinessService {
         requestRevision: plan.revision, planId, purpose: 'fight', result: null, resultDigest: null });
       this.records.save('plan_versions', { ...plan, state: 'started', taskId: task });
       this.saveRequest(transitionRequest(this.request(plan.requestId), { type: 'execute' }));
+      associate(association, task);
       return task;
     });
     if (reservation) await reservation.dispatch();
     this.reconcile({ taskIds: [linked] }); return this.task(linked);
   }
-  async scan(requestId: string, revision: number, task: string, explanation: string) {
+  async scan(requestId: string, revision: number, task: string, explanation: string, association?: OperationAssociation) {
     taskId(task); if (typeof explanation !== 'string' || !explanation.trim()) return fail('scan_explanation_required', 422);
     const existing = this.records.read('task_links', task);
     if (existing) {
       if (existing.requestId !== requestId || existing.requestRevision !== revision || existing.purpose !== 'inventory') return fail('id_parameter_conflict');
+      this.transaction(() => associate(association, task));
       return this.task(task);
     }
     const reservation = this.transaction(() => {
@@ -291,6 +298,7 @@ export class BusinessService {
       this.records.insert('task_links', { id: task, conversationId: request.conversationId, requestId, requestRevision: revision,
         planId: null, purpose: 'inventory', result: null, resultDigest: null });
       this.saveRequest(transitionRequest(request, { type: 'scan_started', taskId: task }));
+      associate(association, task);
       return reserved;
     });
     await reservation.dispatch(); this.reconcile({ taskIds: [task] }); return this.task(task);
@@ -317,7 +325,7 @@ export class BusinessService {
     return this.createRequest(conversationId, requestId, sourceMessage, { ...plan.goal, stage: plan.stage });
   }
   async stop(id: string) { const result = await this.tasks.stop(id); this.reconcile({ taskIds: [id] }); return result; }
-  async adjust(taskId: string, requestId: string, sourceMessage: string, goal: unknown, semantics: 'total' | 'additional') {
+  async adjust(taskId: string, requestId: string, sourceMessage: string, goal: unknown, semantics: 'total' | 'additional', association?: OperationAssociation) {
     const link = this.records.read('task_links', taskId) ?? fail('business_task_required');
     if (link.purpose !== 'fight' || !link.planId) return fail('fight_task_required');
     const plan = this.plan(link.planId);
@@ -329,6 +337,7 @@ export class BusinessService {
     const old = this.records.read('execution_requests', requestId);
     if (old) {
       if (old.sourceMessage !== sourceMessage || old.adjustment !== semantics || !old.previousTasks.includes(taskId) || !isDeepStrictEqual(old.goal, draft)) return fail('id_parameter_conflict');
+      this.transaction(() => associate(association, requestId));
       return old;
     }
     const stop = this.transaction(() => {
@@ -339,7 +348,9 @@ export class BusinessService {
       const conversation = this.records.read('conversations', link.conversationId)!;
       if (conversation.currentPlan) this.records.save('plan_versions', { ...this.plan(conversation.currentPlan), state: 'superseded' });
       this.records.save('conversations', { ...conversation, currentPlan: null });
-      return this.tasks.reserveStop(taskId);
+      const reserved = this.tasks.reserveStop(taskId);
+      associate(association, requestId);
+      return reserved;
     });
     await stop.dispatch(); this.reconcile({ taskIds: [taskId] }); return this.request(requestId);
   }
