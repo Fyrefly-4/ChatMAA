@@ -18,7 +18,7 @@ DAILY 条目标记为 scheduled，不能宣称当前开放；常驻关卡仍须�
 
 参考统计须单个窗口、至少 100 次样本且数量有效；重复窗口不相加。100 是避免极少样本的导入门槛，不构成统计精度保证。`end=null` 保留源语义，`asOf` 为实际获取时点，不虚构统计结束时间。缺统计时仍可形成适用方案，但明确无法可靠估算；参考产量不用于设置材料任务的次数上限。
 
-快照的 `version` 是除自身之外内容的 SHA-256；每个来源另保存原始下载字节摘要、URL、版本和获取时间。后续业务装配使用该版本标识保存方案依据。
+快照的 `version` 是除自身之外内容的 SHA-256；每个来源另保存原始下载字节摘要、URL、版本和获取时间。业务库保存使用过的完整快照，历史方案继续关联原版本。
 
 ## 显式更新
 
@@ -31,4 +31,12 @@ node backend/src/business/catalog-import.ts .artifacts/catalog-update .artifacts
 
 若 raw.githubusercontent.com 直连不可用，可以在第一条末尾加 `--github-cli`，使用本机已配置的 `gh` 只读下载 GitHub 文件；企鹅统计仍通过其公开 HTTPS API 获取。工具不修改远端，也不自动重试失败请求。下载未完成不会写入新清单；导入检查所有摘要和结构，失败不替换输出文件。
 
-导入、选择与估算实现见 [catalog.ts](../src/business/catalog.ts)、[catalog-import.ts](../src/business/catalog-import.ts)、[catalog-fetch.ts](../src/business/catalog-fetch.ts)。本提交提供离线资料与目标计算，尚未接入业务入口。
+检查导入输出的覆盖计数和新旧候选文件差异后，在运行中的 MVP Backend 显式激活：
+
+```powershell
+node backend/src/business/cli.ts catalog-activate .artifacts/catalog-update/catalog.json
+```
+
+激活将新版本和当前选择写入原业务库，重启继续使用该版本。更新仓库自带快照用于未来首次启动时，应另经代码审阅替换 `catalog-cn.json`；不会静默覆盖已有业务库的选择。影响待确认方案实际依据的变更使旧方案失效，重新准备、展示和确认；已经运行的任务不被资料更新改参数。业务接口见 [D3 契约](../../docs/engineering/d3-backend.md)。
+
+导入、选择与估算实现见 [catalog.ts](../src/business/catalog.ts)、[catalog-import.ts](../src/business/catalog-import.ts)、[catalog-fetch.ts](../src/business/catalog-fetch.ts)。本目录的覆盖说明不是实机验收记录。

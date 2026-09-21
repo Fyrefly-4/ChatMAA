@@ -5,6 +5,8 @@ import type { TaskService } from './task-service.ts';
 import fastifyStatic from '@fastify/static';
 import type { BrowserRequests } from './browser/requests.ts';
 import { browserRoutes } from './browser/routes.ts';
+import { businessRoutes } from './business/routes.ts';
+import type { BusinessService } from './business/service.ts';
 
 export type BrowserOptions = { requests: BrowserRequests; token: string; staticRoot: string;
   origin: () => string; developmentOrigin?: string };
@@ -12,7 +14,8 @@ function equal(provided: unknown, token: string) {
   return typeof provided === 'string' && Buffer.byteLength(provided) === Buffer.byteLength(token) &&
     timingSafeEqual(Buffer.from(provided), Buffer.from(token));
 }
-export function createApp(tasks: TaskService, token: string, shutdown: () => void, browser?: BrowserOptions) {
+export function createApp(tasks: TaskService, token: string, shutdown: () => void, browser?: BrowserOptions, business?: BusinessService) {
+  if (browser && business) throw new Error('MVP 与旧 Demo 浏览器入口不能同时装配');
   const app = Fastify({ logger: false });
   app.addHook('onRequest', async (request, reply) => {
     const path = request.url.split('?')[0];
@@ -44,7 +47,8 @@ export function createApp(tasks: TaskService, token: string, shutdown: () => voi
   app.get('/tasks', async () => tasks.list());
   app.get('/device', async () => tasks.device());
   app.post('/takeovers', async (request, reply) => reply.code(202).send(await tasks.takeover(request.body)));
-  app.post('/tasks', async (request, reply) => reply.code(202).send(await tasks.submit(request.body)));
+  if (!business) app.post('/tasks', async (request, reply) => reply.code(202).send(await tasks.submit(request.body)));
+  if (business) businessRoutes(app, business);
   app.get<{ Params: { id: string } }>('/tasks/:id', async request => tasks.get(request.params.id));
   app.post<{ Params: { id: string } }>('/tasks/:id/stop', async (request, reply) => reply.code(202).send(await tasks.stop(request.params.id)));
   app.post<{ Params: { id: string } }>('/tasks/:id/recheck', async (request, reply) => reply.code(202).send(await tasks.recheck(request.params.id, request.body)));

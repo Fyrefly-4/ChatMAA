@@ -62,7 +62,7 @@ test('separate CLI processes submit, query and stop; host shutdown hands off evi
     python: resolve(repository, 'adapter/maa/.venv/Scripts/python.exe'), pollMs: 60, httpTimeoutMs: 1000,
     leaseMs: 5000, stopDeadlineMs: 3000 }));
   const env = { ...process.env, CHATMAA_CONFIG: configFile };
-  const server = spawn(process.execPath, [resolve(repository, 'backend/src/main.ts')], { env, windowsHide: true,
+  const server = spawn(process.execPath, [resolve(repository, 'backend/src/main.ts'), '--engineering'], { env, windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'] });
   let output = ''; let errors = ''; let exited = false;
   server.stdout.on('data', chunk => { output += chunk; });
