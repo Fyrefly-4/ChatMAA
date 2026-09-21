@@ -23,8 +23,9 @@ export class FollowupRunner<T> {
     const current = this.records.read('continuations', id);
     if (current && ['pending', 'processing'].includes(current.state)) {
       this.records.save('continuations', { ...current, state: 'interrupted', token: null });
-      this.controllers.get(id)?.abort();
     }
+    // Runtime admission may already have invalidated the durable record atomically.
+    if (current && ['pending', 'processing', 'interrupted'].includes(current.state)) this.controllers.get(id)?.abort();
   }
   dispatch() {
     if (!this.consumer || this.closing) return;

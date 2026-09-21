@@ -10,17 +10,18 @@ async function until(check: () => boolean) {
   for (let i = 0; i < 200; i++) { if (check()) return; await new Promise(resolve => setTimeout(resolve, 5)); }
   assert.fail('condition_timeout');
 }
-function setup(run: RunTurn) {
+function setup(run: RunTurn, pending = true) {
   const store = new Store(':memory:');
   const tasks = new TaskService(store, { instance: 'fixture', call: async () => { throw new Error('no_execution_expected'); } }, 'fixture');
   const business = new BusinessService(tasks); business.createConversation('chat', '测试');
   business.appendMessage('chat', 'source', 'user', '补到100个固源岩');
   business.createRequest('chat', 'request', 'source', { kind: 'inventory', quantity: 100, itemId: '30012' });
   // Inject the D3 event boundary; actual Adapter delivery is covered separately.
-  business.records.insert('continuations', { id: 'event', conversationId: 'chat', requestId: 'request', revision: 1,
+  const enqueue = () => business.records.insert('continuations', { id: 'event', conversationId: 'chat', requestId: 'request', revision: 1,
     taskId: null, state: 'pending', reason: 'scan_needs_input', token: null });
+  if (pending) enqueue();
   const runtime = new RuntimeService(business, run);
-  return { store, business, runtime, event: () => business.records.read('continuations', 'event')!,
+  return { store, business, runtime, enqueue, event: () => business.records.read('continuations', 'event')!,
     close: async () => { await runtime.close(); await business.close(); store.db.close(); } };
 }
 
@@ -68,10 +69,10 @@ test('后台等待活动用户轮；新消息可中断等待，未完成来源�
     calls++;
     if (input.turn.sourceMessage === 'm1') return new Promise(resolve => { release = resolve; });
     return '新轮回答';
-  }); t.after(x.close);
+  }, false); t.after(x.close);
   const old = x.runtime.submit('chat', 'm1', '补充说明');
   await new Promise(resolve => setImmediate(resolve));
-  x.runtime.enableFollowups(); await until(() => x.event().state === 'processing');
+  x.enqueue(); x.runtime.enableFollowups(); await until(() => x.event().state === 'processing');
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(calls, 1);
   const next = x.runtime.submit('chat', 'm2', '更正说明'); await x.runtime.settled(next.id);
@@ -88,10 +89,10 @@ test('用户轮发布针对事件的解释后，等待中的后台不重复采�
     await new Promise<void>(resolve => { release = resolve; });
     input.explainWaiting('event', '识别不完整，请确认是否重新扫描。');
     return '已核对当前事实。';
-  }); t.after(x.close);
+  }, false); t.after(x.close);
   const turn = x.runtime.submit('chat', 'question', '识别情况如何');
   await new Promise(resolve => setImmediate(resolve));
-  x.runtime.enableFollowups(); await until(() => x.event().state === 'processing');
+  x.enqueue(); x.runtime.enableFollowups(); await until(() => x.event().state === 'processing');
   release(); await x.runtime.settled(turn.id); await until(() => x.event().state === 'completed');
   assert.equal(calls, 1);
   assert.equal(x.runtime.records.waitingExplained('event', 1, 'scan_needs_input'), true);
@@ -115,10 +116,10 @@ test('普通用户轮回复不冒充特定事件解释，后台仍处理该事�
     calls++;
     if (!input.turn.continuationId) { await new Promise<void>(resolve => { release = resolve; }); return '普通回答'; }
     return '针对扫描缺失的澄清';
-  }); t.after(x.close);
+  }, false); t.after(x.close);
   const turn = x.runtime.submit('chat', 'question', '你好');
   await new Promise(resolve => setImmediate(resolve));
-  x.runtime.enableFollowups(); await until(() => x.event().state === 'processing');
+  x.enqueue(); x.runtime.enableFollowups(); await until(() => x.event().state === 'processing');
   release(); await x.runtime.settled(turn.id); await until(() => x.event().state === 'completed');
   assert.equal(calls, 2); assert.equal(x.runtime.records.waitingExplained('event', 1, 'scan_needs_input'), false);
   assert.equal(x.business.conversation('chat').messages.filter(m => m.role === 'assistant').length, 2);
@@ -136,4 +137,42 @@ test('外层 Runtime 关联事务回滚前不领取或派发后台事件', async
   }), /outer_association_failed/);
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(calls, 0); assert.equal(x.event(), undefined);
+});
+
+for (const claimed of [false, true]) test(`新消息原子撤销${claimed ? '已领取但未注册消费者' : '尚未领取'}的旧事件`, async t => {
+  let backgroundCalls = 0;
+  const x = setup(async input => {
+    if (input.turn.continuationId) backgroundCalls++;
+    return input.turn.continuationId ? '过时后台回复' : '新用户回复';
+  }); t.after(x.close);
+  if (claimed) x.runtime.enableFollowups();
+  assert.equal(x.event().state, claimed ? 'processing' : 'pending');
+  // Deliberately stay in the same JS job, before the consumer's queued microtask.
+  const turn = x.runtime.submit('chat', 'new-message', '先不扫描');
+  assert.equal(x.event().state, 'interrupted'); assert.equal(x.event().token, null);
+  if (!claimed) x.runtime.enableFollowups();
+  await x.runtime.settled(turn.id); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(backgroundCalls, 0);
+  assert.deepEqual(x.business.conversation('chat').messages.filter(m => m.role === 'assistant').map(m => m.text), ['新用户回复']);
+});
+
+test('重复消息重传不撤销该消息之后到达的后台事件', async t => {
+  const x = setup(async () => '回复', false); t.after(x.close);
+  const first = x.runtime.submit('chat', 'message', '查询'); await x.runtime.settled(first.id);
+  x.enqueue(); x.runtime.enableFollowups();
+  const token = x.event().token;
+  const duplicate = x.runtime.submit('chat', 'message', '查询');
+  assert.equal(duplicate.id, first.id); assert.equal(x.event().token, token);
+  await until(() => x.event().state === 'completed');
+});
+
+test('用户消息受理事务失败时事件失效一起回滚，不提前中断消费者', async t => {
+  const x = setup(async () => '后台有效回复'); t.after(x.close);
+  x.runtime.enableFollowups(); const token = x.event().token;
+  x.store.db.exec("CREATE TRIGGER fail_admission BEFORE INSERT ON runtime_activities WHEN NEW.kind='accepted' BEGIN SELECT RAISE(ABORT,'admission_failed'); END");
+  assert.throws(() => x.runtime.records.accept(x.business, 'chat', 'failed-message', '新消息'), /admission_failed/);
+  assert.equal(x.event().state, 'processing'); assert.equal(x.event().token, token);
+  assert.equal(x.business.records.read('messages', 'failed-message'), undefined);
+  await until(() => x.event().state === 'completed');
+  assert.equal(x.business.conversation('chat').messages.filter(m => m.role === 'assistant').length, 1);
 });

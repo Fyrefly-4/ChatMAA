@@ -65,13 +65,21 @@ export class RuntimeRecords {
   assertCurrent(turn: Turn) {
     if (!this.current(turn)) throw new TaskError(409, 'turn_not_current');
   }
-  accept(business: BusinessService, conversationId: string, messageId: string, text: string): { turn: Turn; duplicate: boolean; interrupted: string[] } {
+  accept(business: BusinessService, conversationId: string, messageId: string, text: string): { turn: Turn; duplicate: boolean; interrupted: string[]; interruptedFollowups: string[] } {
     if (business.tasks.store !== this.store) throw new Error('runtime_business_store_mismatch');
     return this.store.transaction(() => {
       // The business service checks identity/content conflicts even for transport retries.
       business.appendMessage(conversationId, messageId, 'user', text);
       const existing = this.store.db.prepare('SELECT body FROM runtime_turns WHERE source_message=?').get(messageId);
-      if (existing) return { turn: JSON.parse(String(existing.body)) as Turn, duplicate: true, interrupted: [] };
+      if (existing) return { turn: JSON.parse(String(existing.body)) as Turn, duplicate: true, interrupted: [], interruptedFollowups: [] };
+      // Persist invalidation even when dispatch has claimed an event but its consumer
+      // has not registered in memory. Abort controllers only after this transaction commits.
+      const interruptedFollowups: string[] = [];
+      for (const event of business.records.list('continuations', conversationId)) {
+        if (!['pending', 'processing'].includes(event.state)) continue;
+        business.records.save('continuations', { ...event, state: 'interrupted', token: null });
+        interruptedFollowups.push(event.id);
+      }
       const previous = this.store.db.prepare('SELECT generation FROM runtime_heads WHERE conversation_id=?').get(conversationId);
       const generation = Number(previous?.generation ?? 0) + 1;
       const completed = this.store.db.prepare("SELECT MAX(generation) AS generation FROM runtime_turns WHERE conversation_id=? AND json_extract(body,'$.state')='completed' AND json_extract(body,'$.continuationId') IS NULL").get(conversationId);
@@ -90,7 +98,7 @@ export class RuntimeRecords {
       this.store.db.prepare('INSERT INTO runtime_turns VALUES(?,?,?,?,?)')
         .run(turn.id, conversationId, messageId, generation, JSON.stringify(turn));
       this.activity(turn.id, 'accepted', { sourceMessage: messageId });
-      return { turn, duplicate: false, interrupted };
+      return { turn, duplicate: false, interrupted, interruptedFollowups };
     });
   }
   beginFollowup(conversationId: string, sourceMessage: string, continuationId: string): Turn {

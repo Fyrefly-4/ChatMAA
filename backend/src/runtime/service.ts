@@ -74,6 +74,7 @@ export class RuntimeService {
     try { accepted = this.records.accept(this.business, conversationId, messageId, text); }
     catch (error) { if (!(error instanceof TaskError)) this.storageFailed = true; throw error; }
     if (accepted.duplicate) return accepted.turn;
+    for (const id of accepted.interruptedFollowups) this.business.interruptFollowup(id);
     for (const [id, entry] of this.followups) if (entry.conversationId === conversationId) {
       entry.abort.abort(); this.business.interruptFollowup(id);
     }
