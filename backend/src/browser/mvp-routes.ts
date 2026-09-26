@@ -1,3 +1,4 @@
+import { RecoveryService } from '../recovery.ts';
 import type { FastifyInstance } from 'fastify';
 import type { BusinessService } from '../business/service.ts';
 import type { RuntimeService } from '../runtime/service.ts';
@@ -14,17 +15,23 @@ function text(body: Record<string, unknown>, key: string) {
   if (typeof body[key] !== 'string') throw new TaskError(422, 'invalid_operation');
   return body[key] as string;
 }
-export async function mvpStatus(b: BusinessService, runtime: RuntimeService) {
+export async function mvpStatus(b: BusinessService, runtime: RuntimeService, recovery = new RecoveryService(b.tasks)) {
   const global = b.global(); const q = new MvpQueries(b, runtime);
   return { entry: 'mvp-runtime' as const, mode: b.tasks.source, ...global, tasks: global.tasks.map(t => q.task(t.id)), runtime: runtime.status(),
     closing: b.tasks.closing, adapterAvailable: !b.tasks.exited, storageFailed: b.tasks.storageFailed,
+    recovery: await recovery.status(),
     device: await b.tasks.device().catch(() => null) };
 }
 export type MvpStatus = Awaited<ReturnType<typeof mvpStatus>>;
 
 export function mvpRoutes(app: FastifyInstance, b: BusinessService, runtime: RuntimeService) {
   const q = new MvpQueries(b, runtime);
-  app.get('/api/status', () => mvpStatus(b, runtime));
+  const recovery = new RecoveryService(b.tasks);
+  app.get('/api/status', () => mvpStatus(b, runtime, recovery));
+  app.post('/api/recovery', async (r, reply) => {
+    const v = fields(r.body, ['id', 'action']);
+    return reply.code(202).send(await recovery.act(text(v, 'id'), text(v, 'action')));
+  });
   app.post('/api/conversations', request => {
     const v = fields(request.body, ['id', 'title']); return b.createConversation(text(v, 'id'), text(v, 'title'));
   });

@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { appendFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { randomUUID } from 'node:crypto';
@@ -24,43 +24,51 @@ export function adapterEnvironment(environment: NodeJS.ProcessEnv = process.env)
 
 export async function startHost(config: Config, options: { business?: boolean; catalog?: Catalog } = {}) {
   mkdirSync(config.dataDir, { recursive: true });
-  const controller = randomUUID(); const token = randomUUID();
-  const runtime = pythonRuntime(config.python);
-  const childEnv = adapterEnvironment();
-  const child: ChildProcess = spawn(runtime.executable, ['-S', '-u', resolve(repository, 'adapter/maa/main.py')], {
-    env: { ...childEnv, PYTHONPATH: runtime.site, CHATMAA_ADAPTER_CONFIG: JSON.stringify({
-      mode: config.mode, data: config.dataDir, controller, token, lease_ms: config.leaseMs,
-      stop_deadline_ms: config.stopDeadlineMs, installation: config.installation, hwnd: config.hwnd,
-      connection: config.connection,
-    }) },
-    stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true, detached: true,
-  });
-  let exited = false;
+  let controller: string, token: string, child!: ChildProcess, ready!: Ready;
+  let exited = true;
   let tasks: TaskService | undefined;
-  child.on('exit', () => { exited = true; tasks?.adapterExited(); });
-  child.stderr!.on('data', chunk => process.stderr.write(chunk));
-  let ready: Ready;
-  try {
-    ready = await new Promise<Ready>((ok, fail) => {
-      const timer = setTimeout(() => fail(new Error('Adapter 启动超时')), 10000);
-      const reject = (error: Error) => { clearTimeout(timer); fail(error); };
-      child.once('error', reject);
-      child.once('exit', code => reject(new Error(`Adapter 在就绪前退出：${code}`)));
-      createInterface({ input: child.stdout! }).on('line', line => {
-        let message;
-        try { message = JSON.parse(line); } catch { return; }
-        if (message.kind === 'ready') {
-          if (message.pid !== child.pid || message.controller !== controller) return reject(new Error('Adapter 身份不匹配'));
-          clearTimeout(timer); ok(message);
-        }
-      });
+  async function launchExecutor() {
+    controller = randomUUID(); token = randomUUID();
+    const runtime = pythonRuntime(config.python);
+    const childEnv = adapterEnvironment();
+    child = spawn(runtime.executable, ['-S', '-u', resolve(repository, 'adapter/maa/main.py')], {
+      env: { ...childEnv, PYTHONPATH: runtime.site, CHATMAA_ADAPTER_CONFIG: JSON.stringify({
+        mode: config.mode, data: config.dataDir, controller, token, lease_ms: config.leaseMs,
+        stop_deadline_ms: config.stopDeadlineMs, installation: config.installation, hwnd: config.hwnd,
+        connection: config.connection,
+      }) },
+      stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true, detached: true,
     });
-  } catch (error) {
-    child.kill();
-    const until = Date.now() + 3000;
-    while (!exited && Date.now() < until) await pause(20);
-    throw error;
+    exited = false;
+    child.on('exit', () => { exited = true; tasks?.adapterExited(); });
+    child.on('error', () => {
+      if (!child.pid) { exited = true; tasks?.adapterExited(); }
+    });
+    child.stderr!.on('data', chunk => process.stderr.write(chunk));
+
+    try {
+      ready = await new Promise<Ready>((ok, fail) => {
+        const timer = setTimeout(() => fail(new Error('Adapter 启动超时')), 10000);
+        const reject = (error: Error) => { clearTimeout(timer); fail(error); };
+        child.once('error', reject);
+        child.once('exit', code => reject(new Error(`Adapter 在就绪前退出：${code}`)));
+        createInterface({ input: child.stdout! }).on('line', line => {
+          let message;
+          try { message = JSON.parse(line); } catch { return; }
+          if (message.kind === 'ready') {
+            if (message.pid !== child.pid || message.controller !== controller) return reject(new Error('Adapter 身份不匹配'));
+            clearTimeout(timer); ok(message);
+          }
+        });
+      });
+    } catch (error) {
+      child.kill();
+      const until = Date.now() + 3000;
+      while (!exited && Date.now() < until) await pause(20);
+      throw error;
+    }
   }
+  await launchExecutor();
   async function call(path: string, method = 'GET', body?: unknown): Promise<unknown> {
     if (exited) throw new TaskError(503, 'executor_exited');
     const response = await fetch(`http://127.0.0.1:${ready.port}${path}`, {
@@ -79,7 +87,7 @@ export async function startHost(config: Config, options: { business?: boolean; c
   tasks = new TaskService(store, { instance: ready.instance, call },
     config.mode === 'maa-replay' ? 'offline_callback_replay' : 'MaaCore_v6.17.5');
   const service = tasks;
-  const heartbeat = setInterval(() => { if (!service.closing) void call('/lease', 'POST').catch(() => {}); }, config.pollMs);
+  const heartbeat = setInterval(() => { if (!service.closing && !service.restarting) void call('/lease', 'POST').catch(() => {}); }, config.pollMs);
   let business: BusinessService | undefined;
   try {
     // Reconcile existing records before exposing operations; never resubmit them.
@@ -92,10 +100,50 @@ export async function startHost(config: Config, options: { business?: boolean; c
   }
   let polling: Promise<void> | undefined;
   const poll = setInterval(() => {
-    if (!service.closing && !exited && !polling) {
+    if (!service.closing && !service.restarting && !exited && !polling) {
       polling = service.poll().catch(() => { service.storageFailed = true; }).finally(() => { polling = undefined; });
     }
   }, config.pollMs);
+  function recoveryLog(kind: string, details: Record<string, unknown> = {}) {
+    const entry = JSON.stringify({ kind, at: new Date().toISOString(), ...details });
+    try { appendFileSync(resolve(config.dataDir, 'recovery.jsonl'), entry + '\n'); } catch { /* stderr remains available */ }
+    console.error(entry);
+  }
+  let restarting: Promise<void> | undefined;
+  service.restartExecutor = () => {
+    if (restarting) return restarting;
+    if (service.closing || service.storageFailed) throw new TaskError(503, 'service_unavailable');
+    service.restarting = true;
+    recoveryLog('executor_reconnect_requested', { pid: child.pid, instance: service.adapter.instance });
+    restarting = (async () => {
+      try {
+        await polling;
+        const until = Date.now() + config.stopDeadlineMs + config.httpTimeoutMs;
+        await call('/prepare-shutdown', 'POST').catch(() => {});
+        await service.poll(true);
+        await call('/shutdown', 'POST').catch(() => {});
+        while (!exited && Date.now() < until) { await service.poll(); await pause(50); }
+        if (!exited) {
+          child.kill();
+          const deadline = Date.now() + 3000;
+          while (!exited && Date.now() < deadline) await pause(30);
+        }
+        if (!exited) throw new TaskError(503, 'executor_exit_unconfirmed');
+        recoveryLog('executor_exit_confirmed', { pid: child.pid });
+        if (service.closing) return;
+        // A new controller is created only after our own child has exited.
+        await launchExecutor();
+        service.adapter.instance = ready.instance;
+        service.exited = false;
+        await service.poll(true);
+        recoveryLog('executor_reconnected', { pid: ready.pid, instance: ready.instance });
+      } catch (error) {
+        recoveryLog('executor_reconnect_failed', { reason: error instanceof Error ? error.message : String(error) });
+        throw error;
+      } finally { service.restarting = false; restarting = undefined; }
+    })();
+    return restarting;
+  };
   let closing: Promise<{ handoffComplete: boolean; childExited: boolean; finalTasks: TaskView[] }> | undefined;
   function close() {
     if (closing) return closing;
@@ -103,6 +151,7 @@ export async function startHost(config: Config, options: { business?: boolean; c
     business?.beginShutdown();
     clearInterval(heartbeat); clearInterval(poll);
     closing = (async () => {
+      await restarting?.catch(() => {});
       const until = Date.now() + config.stopDeadlineMs + config.httpTimeoutMs;
       let handoffComplete = false;
       try {
@@ -139,5 +188,5 @@ export async function startHost(config: Config, options: { business?: boolean; c
     })();
     return closing;
   }
-  return { tasks: service, business, close, pid: ready.pid, mode: config.mode };
+  return { tasks: service, business, close, get pid() { return ready.pid; }, mode: config.mode };
 }

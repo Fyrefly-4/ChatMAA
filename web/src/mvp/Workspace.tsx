@@ -5,7 +5,7 @@ import { TaskSummary } from './TaskSummary';
 import { DetailPanel } from './DetailPanel';
 import { AssistantMessage } from './AssistantMessage';
 import { MessageActivity } from './MessageActivity';
-import { api, id, pathId } from './api';
+import { api, id } from './api';
 import { execution, waitingText } from './presentation';
 import './workspace.css';
 
@@ -18,7 +18,7 @@ export default function Workspace() {
   const previousLength = useRef(0); const historyAnchor = useRef<number | null>(null);
   const composer = useRef<HTMLTextAreaElement>(null); const detailsButton = useRef<HTMLButtonElement>(null);
   const blockers = status?.tasks ?? [];
-  const abnormal = !!state.connection || !status?.adapterAvailable || !status?.device || !status.projection.available || !!status.storageFailed ||
+  const abnormal = (status?.recovery && status.recovery.state !== 'ready') || !!state.connection || !status?.adapterAvailable || !status?.device || !status.projection.available || !!status.storageFailed ||
     blockers.some(t => !t.task.sync.available || t.task.state === 'unknown' || (t.task.automation_stopped && t.task.device !== 'ready'));
   const currentPlan = state.conversation?.currentPlan ? state.plans[state.conversation.currentPlan] ?? state.conversation.plan : null;
   const latestTurn = Object.values(state.turns).sort((a, b) => b.generation - a.generation)[0];
@@ -70,12 +70,15 @@ export default function Workspace() {
           <p>业务投影：{status?.projection.available ? '可用' : status?.projection.reason ?? '尚未读取'}；模型：{status?.runtime.available ? '可用' : '不可用，已有任务仍可查询和停止'}。</p>
           <p>执行来源：{status?.mode === 'offline_callback_replay' ? '离线回放，不操作游戏' : status?.mode ?? '尚未读取'}。</p>
           {status?.closing && <p>后台正在退出并交接执行证据。</p>}
-          {blockers.some(t => t.task.automation_stopped && t.task.device !== 'ready') && <p>自动化已停止不等于游戏内战斗结束。请接管现场并核对；环境放行不改写旧未知成果。</p>}
-          {blockers.filter(t => t.task.automation_stopped && t.task.device !== 'ready').map(task => <button key={task.id} disabled={!!state.actions[`recheck.${task.id}`]} onClick={() => void state.action(`recheck.${task.id}`, () => api(`/tasks/${pathId(task.id)}/recheck`, { id: id() }))}>核对任务环境</button>)}
-          {status?.device?.recoverable && <div className="m-recovery"><label><input type="checkbox" checked={manual} onChange={e => setManual(e.target.checked)} />我已停止其他自动化、接管游戏并准备好界面</label>
-            <button disabled={!manual || !!state.actions.takeover} onClick={() => void state.action('takeover', async () => {
-              await api('/takeovers', { id: id(), confirmed: true, targets: status.device!.blockers.map(b => ({ id: b.id, seq: b.seq })) }); setManual(false);
-            })}>核对环境并恢复使用</button></div>}
+          {status?.recovery && status.recovery.state !== 'ready' && <section className="m-recovery" aria-label="恢复使用">
+            <h3>恢复使用</h3><p>{status.recovery.message}</p>
+            {status.recovery.lastCheck && ('ready' in status.recovery.lastCheck ? status.recovery.lastCheck.state === 'ended' && !status.recovery.lastCheck.ready : status.recovery.lastCheck.state === 'failed') && <p>上次未识别到可用画面。请关闭弹窗、等待战斗结束，回到游戏首页或关卡准备页再试。检查停止状态与旧任务成果分别保留。</p>}
+            {status.recovery.actions.includes('check') && <label><input type="checkbox" checked={manual} onChange={e => setManual(e.target.checked)} />我已停止其他自动化，并准备好游戏画面</label>}
+            {status.recovery.actions.map(action => <button key={action} disabled={!!state.actions.recovery || (action === 'check' && !manual)} onClick={() => void state.action('recovery', async () => {
+              await api('/recovery', { id: id(), action }); setManual(false);
+            })}>{({ check: '我已准备好，检查环境', cancel: '取消检查', stop: '停止任务', reconnect: '结束本次执行服务并重新连接' } as Record<string, string>)[action]}</button>)}
+          </section>}
+
         </div>}
       </header>
       <div className="m-body">

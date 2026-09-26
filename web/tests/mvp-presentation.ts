@@ -63,7 +63,7 @@ export function sceneData(scene: Scene) {
   if (scene === 'cross') { p.conversationId = 'other'; p.presentation!.conversationId = 'other'; messages.forEach(m => m.conversationId = 'other'); messages.pop(); }
   const conversation: MvpConversation = { id: cid, conversationId: cid, title: scene === 'cross' ? '关卡咨询' : '补充固源岩', currentRequest: 'request', currentPlan,
     createdAt: p.createdAt, request: null, plan: currentPlan ? p : null, activeTasks: withTask && scene !== 'cross' ? [t] : [] };
-  const status: MvpStatus = { entry: 'mvp-runtime', mode: 'offline_callback_replay', projection: { available: true, reason: null },
+  const status: MvpStatus = { recovery: { state: 'ready', message: '游戏环境可用', actions: [], target: null, taskIds: [], lastCheck: null, device: null }, entry: 'mvp-runtime', mode: 'offline_callback_replay', projection: { available: true, reason: null },
     admission: { state: withTask && !t.task.automation_stopped ? 'blocked' : 'ready', conflictingTaskIds: withTask && !t.task.automation_stopped ? ['task'] : [] },
     tasks: withTask && !t.task.automation_stopped ? [t] : [], conversations: [{ id: 'chat', conversationId: 'chat', title: '补充固源岩', currentRequest: 'request', currentPlan: 'plan', createdAt: p.createdAt },
       ...(scene === 'cross' ? [{ id: 'other', conversationId: 'other', title: '关卡咨询', currentRequest: 'request', currentPlan: 'plan', createdAt: p.createdAt }] : [])],

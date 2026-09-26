@@ -1,5 +1,7 @@
 # Backend 独立执行入口
 
+2026-09-26 D6 恢复整改：统一恢复入口，修正已放行历史误拦截，并提供自有执行服务受控重连；状态、代码入口和离线验证边界见 [恢复使用整改](../docs/engineering/d5-web.md#d6-恢复使用整改2026-09-26)。
+
 2026-09-26：MVP 日常使用可双击根目录 `启动 ChatMAA.bat`，首次保存配置，随后自动打开网页；退出在启动窗口完成。配置、记录与验证边界见 [MVP 用户入口](../docs/engineering/mvp-launcher.md)。
 
 2026-09-21 D5 浏览器契约：新增 `--runtime --web` 服务装配入口，`--no-model` 可用于无模型读取和停止。`browser/mvp-routes.ts` 在现有 `x-web-token`／Host／Origin 边界下复用 Runtime、BusinessService 和 TaskService，不提供裸任务创建或通用业务转发。MVP 页面现已接入，启动与验证边界见 [D5 Web 接入](../docs/engineering/d5-web.md)；下文旧 `/api/requests` 表格仅适用于 legacy Demo。

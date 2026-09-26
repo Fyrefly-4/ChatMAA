@@ -1,5 +1,5 @@
 import { Store } from './store.ts';
-import { taskId, TaskError, blocksExecution, needsSynchronization, uncertainEvidence } from './task-contract.ts';
+import { taskId, TaskError, blocksExecution, blocksProbe, needsSynchronization, uncertainEvidence } from './task-contract.ts';
 import { executionSubmission } from './execution-contract.ts';
 import type { Update, SyncStatus, TaskView, DeviceStatus, BackendDeviceStatus, Admission } from './task-contract.ts';
 
@@ -12,6 +12,8 @@ export class TaskService {
   readonly store: Store;
   readonly adapter: AdapterClient;
   readonly source: string;
+  restarting = false;
+  restartExecutor?: () => Promise<void>;
   closing = false;
   exited = false;
   storageFailed = false;
@@ -44,7 +46,7 @@ export class TaskService {
   list() { return this.store.all().map(t => this.get(t.id)); }
   admission(): Admission {
     const conflictingTaskIds = this.list().filter(t => blocksExecution(t) || this.pendingRechecks.has(t.id)).map(t => t.id);
-    return { state: this.closing || this.exited || this.storageFailed ? 'unavailable' :
+    return { state: this.closing || this.restarting || this.exited || this.storageFailed ? 'unavailable' :
       this.rechecking || conflictingTaskIds.length ? 'blocked' : 'ready', conflictingTaskIds };
   }
   async device(): Promise<BackendDeviceStatus> {
@@ -57,7 +59,7 @@ export class TaskService {
     return { ...device, admission: { ...local, state } };
   }
   async takeover(input: unknown) {
-    if (this.closing || this.exited || this.storageFailed || this.rechecking) throw new TaskError(503, 'service_unavailable');
+    if (this.closing || this.restarting || this.exited || this.storageFailed || this.rechecking) throw new TaskError(503, 'service_unavailable');
     this.rechecking = true;
     try {
       await this.poll(true);
@@ -121,7 +123,7 @@ export class TaskService {
       if (existing.params !== JSON.stringify(params)) throw new TaskError(409, 'id_parameter_conflict');
       return { id, dispatch: async () => this.get(id) }; // Never resend an uncertain operation, including after restart.
     }
-    if (this.closing || this.exited || this.storageFailed || this.rechecking) throw new TaskError(503, 'service_unavailable');
+    if (this.closing || this.restarting || this.exited || this.storageFailed || this.rechecking) throw new TaskError(503, 'service_unavailable');
     if (this.admission().state !== 'ready') throw new TaskError(409, 'device_busy_or_uncertain');
     // Reserve synchronously before the first await, so concurrent callers cannot both pass admission.
     try { this.store.prepare(id, params, this.source); }
@@ -190,13 +192,13 @@ export class TaskService {
     taskId(id);
     if (!input || typeof input !== 'object' || Object.keys(input).join() !== 'id') throw new TaskError(422, 'invalid_recheck');
     const recheckId = taskId((input as { id: string }).id);
-    if (this.closing || this.exited || this.storageFailed || this.rechecking) throw new TaskError(503, 'service_unavailable');
+    if (this.closing || this.restarting || this.exited || this.storageFailed || this.rechecking) throw new TaskError(503, 'service_unavailable');
     this.rechecking = true;
     try {
       await this.poll();
       await this.sync(id);
-      this.get(id);
-      if (this.list().some(t => t.state !== 'rejected' && (t.state !== 'ended' || !t.automation_stopped || !t.sync.available || t.gap || t.evidence_conflict))) {
+      if (this.get(id).takeover?.released) throw new TaskError(409, 'recovery_preconditions_changed');
+      if (this.list().some(blocksProbe)) {
         throw new TaskError(409, 'automation_stop_unconfirmed');
       }
       // Keep polling even if acceptance is delayed or its response is lost.

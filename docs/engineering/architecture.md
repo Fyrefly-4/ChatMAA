@@ -1,5 +1,7 @@
 # ChatMAA 当前工程与目标架构
 
+2026-09-26 D6 恢复整改：统一恢复入口，修正已放行历史误拦截，并提供自有执行服务受控重连；状态、代码入口和离线验证边界见 [恢复使用整改](d5-web.md#d6-恢复使用整改2026-09-26)。
+
 2026-09-26：MVP 日常使用可双击根目录 `启动 ChatMAA.bat`，首次保存配置，随后自动打开网页；退出在启动窗口完成。配置、记录与验证边界见 [MVP 用户入口](mvp-launcher.md)。
 
 2026-09-24 D6 分支补充：Backend 模型连接从环境读取 `CHATMAA_MODEL_BASE_URL`、`CHATMAA_MODEL_API_KEY`、`CHATMAA_MODEL_ID`，仍使用 AI SDK 的 Responses 接口与原有有界工具循环。配置入口见 [Backend 说明](../../backend/README.md#agent-调试与接入)，代码在 `backend/src/agent/provider.ts`；模型身份按实际配置记录，密钥不传给 Python 子进程。此处是配置能力和离线协议检查，不代表其他模型端点或 D6 真实整链已通过。下文固定 DeepSeek 的说法与实测数字均按原记录时期解读。

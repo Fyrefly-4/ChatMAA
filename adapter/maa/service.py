@@ -223,8 +223,10 @@ class Controller:
                            (execution_id, body.id)).fetchone():
             return snap
         snapshots = [json.loads(r[0]) for r in self.db.execute("SELECT snapshot FROM executions")]
-        if self.active or any(s["state"] != "ended" or not s["automation_stopped"] or
-                              (s.get("recheck") and not s["recheck"].get("automation_stopped")) for s in snapshots):
+        if released(snap):
+            raise HTTPException(409, "recovery_preconditions_changed")
+        if self.active or self.takeovers.uncertain_probe or any(not released(s) and (s["state"] != "ended" or not s["automation_stopped"] or
+                              (s.get("recheck") and not s["recheck"].get("automation_stopped"))) for s in snapshots):
             raise HTTPException(409, "automation_stop_unconfirmed")
         self.takeovers.owned.add(execution_id)
         self.record(execution_id, "recheck_requested", detail={"recheck_id": body.id}, device="occupied",
@@ -332,6 +334,11 @@ def create_app(control, port):
     @app.post("/takeovers", status_code=202)
     async def takeover(body: TakeoverRequest):
         return control.takeovers.start(body)
+
+    @app.post("/takeovers/stop", status_code=202)
+    async def stop_takeover():
+        control.request_stop(control.takeovers.key)
+        return control.takeovers.status()
 
     @app.post("/lease")
     async def lease():
