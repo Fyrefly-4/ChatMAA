@@ -1,5 +1,7 @@
 # Web 连续协作入口
 
+2026-09-26：MVP 日常使用可双击根目录 `启动 ChatMAA.bat`，首次保存配置，随后自动打开网页；退出在启动窗口完成。配置、记录与验证边界见 [MVP 用户入口](../docs/engineering/mvp-launcher.md)。
+
 2026-09-21 D5：MVP 页面在 `src/mvp/`，接入连续会话、三类方案、独立确认、任务结果、跨会话停止和历史恢复。使用 `--runtime --web`；可复制的显式回放／无模型启动命令、文件职责、API 与证据边界见 [D5 Web 接入](../docs/engineering/d5-web.md)。离线整链使用模型替身与正式 Python 回放；真实模型网页代表路径也已核对，表达限制与验证原 SHA 见接入说明，未新增真实游戏证据。
 
 修改 MVP 布局从 `Workspace.tsx`／`workspace.css` 入手，状态读取与恢复在 `useWorkspace.ts`，方案在 `PlanCard.tsx`，结果与依据在 `TaskSummary.tsx`／`DetailPanel.tsx`。UI 不承担目标计算或确认有效性判断。

@@ -1,5 +1,7 @@
 # ChatMAA 当前工程与目标架构
 
+2026-09-26：MVP 日常使用可双击根目录 `启动 ChatMAA.bat`，首次保存配置，随后自动打开网页；退出在启动窗口完成。配置、记录与验证边界见 [MVP 用户入口](mvp-launcher.md)。
+
 2026-09-24 D6 分支补充：Backend 模型连接从环境读取 `CHATMAA_MODEL_BASE_URL`、`CHATMAA_MODEL_API_KEY`、`CHATMAA_MODEL_ID`，仍使用 AI SDK 的 Responses 接口与原有有界工具循环。配置入口见 [Backend 说明](../../backend/README.md#agent-调试与接入)，代码在 `backend/src/agent/provider.ts`；模型身份按实际配置记录，密钥不传给 Python 子进程。此处是配置能力和离线协议检查，不代表其他模型端点或 D6 真实整链已通过。下文固定 DeepSeek 的说法与实测数字均按原记录时期解读。
 
 2026-09-21 D5 补充（从 `b9d580de` 建设）：`web/src/mvp/` 已提供连续会话、方案展示与确认、全局任务、独立停止、历史恢复及依据／执行详情。`backend/src/browser/mvp-routes.ts` 与 `mvp-queries.ts` 在原同源身份边界装配既有 Runtime 和业务服务；启动使用 `--runtime --web`，legacy 页面分别加载。数据和进程归属不变，代码职责、运行路径与分层验证见 [D5 Web](d5-web.md)。真实模型＋正式回放网页代表路径已核对，仍有回复表达与阅读体验限制；未调用真实游戏，不代表 D5 已获验收或 D6 已完成。下文有日期的页面缺口与 Demo 描述按原历史基线理解。

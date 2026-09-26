@@ -1,5 +1,7 @@
 # D5 Web 接入与检查
 
+2026-09-26：MVP 日常使用可双击根目录 `启动 ChatMAA.bat`，首次保存配置，随后自动打开网页；退出在启动窗口完成。配置、记录与验证边界见 [MVP 用户入口](mvp-launcher.md)。
+
 2026-09-21，从 D4 合并基线 `b9d580de` 建设，当前实现见本文件所在提交。页面已接入 Runtime、业务服务和正式 Python 回放，离线整链与真实模型网页代表路径均已核对；仍有回复表达与阅读体验限制，未调用真实游戏，不代表 D5 已获验收或 MVP 全部完成。产品与阶段标准分别见 [Spec #18](https://github.com/Fyrefly-4/ChatMAA/issues/18)、[D5 #24](https://github.com/Fyrefly-4/ChatMAA/issues/24)。
 
 ## 启动 MVP 页面

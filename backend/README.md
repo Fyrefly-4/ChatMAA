@@ -1,5 +1,7 @@
 # Backend 独立执行入口
 
+2026-09-26：MVP 日常使用可双击根目录 `启动 ChatMAA.bat`，首次保存配置，随后自动打开网页；退出在启动窗口完成。配置、记录与验证边界见 [MVP 用户入口](../docs/engineering/mvp-launcher.md)。
+
 2026-09-21 D5 浏览器契约：新增 `--runtime --web` 服务装配入口，`--no-model` 可用于无模型读取和停止。`browser/mvp-routes.ts` 在现有 `x-web-token`／Host／Origin 边界下复用 Runtime、BusinessService 和 TaskService，不提供裸任务创建或通用业务转发。MVP 页面现已接入，启动与验证边界见 [D5 Web 接入](../docs/engineering/d5-web.md)；下文旧 `/api/requests` 表格仅适用于 legacy Demo。
 
 MVP 的 `/api/status` 返回会话列表、全局任务、Runtime 和环境状态；`/api/conversations/:id` 返回当前业务快照。消息通过 `POST /api/messages` 受理；消息和轮次列表支持互斥的 before／after 游标、每页 20 条，消息游标校验会话归属。`/api/plans/:id` 返回保存版本的依据，`present` 与 `confirm` 分离，按钮确认来源固定由服务包装提供。`/api/tasks/:id/events` 每页最多 100 条，按实际证据序号续读；直接停止及环境核对沿用原服务。
