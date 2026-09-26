@@ -148,5 +148,6 @@ test('closing waits for an already issued task operation before storage handoff'
   release(); await closing;
   assert.equal(closed, true);
   assert.equal(x.requests.read('one').record.status, 'failed');
+  await until(() => x.audit().length === 1); // Acceptance precedes the worker's durable audit.
   assert.equal(x.audit().length, 1);
 });
