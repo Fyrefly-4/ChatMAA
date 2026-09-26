@@ -1,9 +1,11 @@
 // Local desktop launcher: lifecycle and diagnostics only; never submits business operations.
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
-import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, unlinkSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { loadConfig, repository } from './config.ts';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { repository } from './config.ts';
+import { checkMvpEnvironment } from './mvp-preflight.ts';
+import { acquireLauncherGuard } from './launcher-guard.ts';
 
 const args = process.argv.slice(2);
 const value = (name: string) => { const i = args.indexOf(name); return i < 0 ? undefined : args[i + 1]; };
@@ -24,7 +26,8 @@ const log = (message: string) => {
   appendFileSync(resolve(directory, 'launcher.jsonl'), JSON.stringify({ at: new Date().toISOString(), message }) + '\n');
 };
 let child: ReturnType<typeof spawn> | undefined;
-let lock: string | undefined;
+let releaseGuard: (() => Promise<void>) | undefined;
+let input: ReturnType<typeof createInterface> | undefined;
 let stopping = false;
 let stopPending = false;
 async function stop() {
@@ -42,17 +45,10 @@ async function stop() {
   } catch { state.message = '尚未成功请求退出，请等待启动完成后重试；保留窗口和记录。'; save(); }
 }
 try {
-  const config = loadConfig(configFile);
+  const config = checkMvpEnvironment(configFile);
   state.dataDir = config.dataDir; state.mode = config.mode;
-  lock = resolve(repository, '.artifacts/mvp/launcher.lock'); mkdirSync(dirname(lock), { recursive: true });
-  if (existsSync(lock)) {
-    const previous = JSON.parse(readFileSync(lock, 'utf8'));
-    let alive = true;
-    try { process.kill(previous.pid, 0); } catch (e) { if ((e as NodeJS.ErrnoException).code === 'ESRCH') alive = false; }
-    if (alive) throw new Error('ChatMAA 启动窗口已在运行，请回到原窗口。');
-    throw new Error('上次启动窗口异常退出，请先核对原 Backend／Python 和游戏现场，再处理 .artifacts/mvp/launcher.lock。');
-  }
-  writeFileSync(lock, JSON.stringify({ pid: process.pid, directory }), { flag: 'wx' });
+  releaseGuard = await acquireLauncherGuard(repository);
+  state.node = process.execPath; state.python = config.python;
   state.owner = true; save();
   child = spawn(process.execPath, [resolve(repository, 'backend/src/mvp-entry.ts'), '--runtime', '--web', ...(args.includes('--no-model') ? ['--no-model'] : [])],
     { cwd: repository, env: { ...process.env, CHATMAA_CONFIG: configFile }, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -63,13 +59,15 @@ try {
       if (event.kind === 'web_ready') { state.url = event.url; state.status = 'ready'; save(); log('网页已就绪'); if (stopPending) void stop(); return; }
       if (event.kind === 'shutdown') state.shutdown = event;
       if (event.kind === 'model_unavailable') state.message = '模型未配置或不可用；仍可查看和停止已有任务。';
+      if (event.kind === 'startup_failed') state.message = event.error;
     } catch { /* Plain diagnostic line. */ }
     // Startup URL stays only in the private session file, never in the diagnostic log.
+    if (line.startsWith('MVP 启动失败：')) state.message = line;
     log(line.replace(/#token=[^\s"']+/g, '#token=[redacted]')); save();
   };
   createInterface({ input: child.stdout! }).on('line', consume);
   createInterface({ input: child.stderr! }).on('line', consume);
-  const input = createInterface({ input: process.stdin });
+  input = createInterface({ input: process.stdin });
   input.on('line', line => { if (line.trim() === 'stop') void stop(); });
   input.on('close', () => { void stop(); });
   process.on('SIGINT', () => { void stop(); });
@@ -78,11 +76,13 @@ try {
   input.close(); process.stdin.pause();
   state.status = state.shutdown?.handoffComplete && state.shutdown?.childExited && state.exitCode === 0 ? 'completed' : 'failed';
   state.finishedAt = new Date().toISOString(); save();
-  // Keep the lock after an uncertain child exit for explicit recovery.
-  if (state.status === 'completed' || !existsSync(resolve(config.dataDir, 'connection.json'))) unlinkSync(lock);
+  if (state.status === 'failed' && !state.message) state.message = 'Backend 已退出，但未确认完整交接。请查看记录和游戏现场；执行端互斥与历史任务核对仍然有效。';
+  save();
   process.exitCode = state.status === 'completed' ? 0 : 1;
 } catch (error) {
   state.status = 'failed'; state.message = error instanceof Error ? error.message : String(error); save(); log(state.message);
-  if (state.owner && !child && lock) unlinkSync(lock);
   process.exitCode = 1;
+} finally {
+  input?.close(); process.stdin.pause();
+  await releaseGuard?.();
 }

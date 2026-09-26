@@ -32,3 +32,23 @@ test('MVP 用户入口：正式回放、重复启动保护和正常退出归档'
   expect(state().shutdown.handoffComplete).toBe(true); expect(state().shutdown.childExited).toBe(true);
   expect(readFileSync(resolve(session, 'launcher.jsonl'), 'utf8')).not.toContain('#token=');
 });
+
+test('预检失败后保留具体原因，历史连接文件不阻止修正后重试', async () => {
+  const root = resolve(import.meta.dirname, '../..');
+  const directory = resolve(root, '.artifacts/checks', `mvp-retry-${Date.now()}`);
+  mkdirSync(directory, { recursive: true });
+  const config = resolve(directory, 'config.json');
+  writeFileSync(resolve(directory, 'connection.json'), JSON.stringify({ address: 'http://127.0.0.1:1', token: 'old', entry: 'mvp-runtime' }));
+  writeFileSync(config, JSON.stringify({ mode: 'maa-replay', dataDir: directory, python: resolve(directory, 'missing-python.exe') }));
+  const run = (session: string) => spawn(process.execPath, [resolve(root, 'backend/src/launcher.ts'), '--config', config, '--session', session, '--no-model'], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+  const failedSession = resolve(directory, 'failed');
+  const failed = run(failedSession); await new Promise(ok => failed.once('close', ok));
+  const failure = JSON.parse(readFileSync(resolve(failedSession, 'session.json'), 'utf8'));
+  expect(failure.status).toBe('failed'); expect(failure.message).toContain('missing-python.exe'); expect(failure.pid).toBeUndefined();
+  writeFileSync(config, JSON.stringify({ mode: 'maa-replay', dataDir: directory }));
+  const retrySession = resolve(directory, 'retry'); const child = run(retrySession);
+  const ended = new Promise(ok => child.once('close', ok));
+  const state = () => { try { return JSON.parse(readFileSync(resolve(retrySession, 'session.json'), 'utf8')); } catch { return {}; } };
+  try { await expect.poll(() => state().status, { timeout: 15000 }).toBe('ready'); }
+  finally { child.stdin.write('stop\n'); await expect.poll(() => state().status, { timeout: 15000 }).toBe('completed'); await ended; }
+});
