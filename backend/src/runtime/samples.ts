@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { loadConfig, repository } from '../config.ts';
 import { startHost } from '../host.ts';
-import { deepseekModel, MODEL_IDENTITY } from '../agent/provider.ts';
+import { configuredModel, modelIdentity } from '../agent/provider.ts';
 import { RuntimeService } from './service.ts';
 import { modelRunner } from './loop.ts';
 import { INSTRUCTIONS_VERSION } from './instructions.ts';
@@ -17,7 +17,7 @@ const rawConfig = JSON.parse(readFileSync(resolve(configPath), 'utf8'));
 if (rawConfig.mode !== 'maa-replay') throw new Error('真实模型样例只允许 maa-replay，拒绝 live 配置');
 const config = loadConfig(configPath, rawConfig);
 if (existsSync(resolve(repository, '.env'))) process.loadEnvFile(resolve(repository, '.env'));
-const model = deepseekModel();
+const model = configuredModel();
 const host = await startHost(config, { business: true });
 const business = host.business!;
 const runtime = new RuntimeService(business, modelRunner(business, model)); runtime.enableFollowups();
@@ -33,8 +33,8 @@ const scenarios = [
   { name: 'unverified-stage', messages: ['去CE-6再获得3个固源岩', '资料不支持的话先不要执行'] },
   { name: 'paraphrase', messages: ['去1-7打两把，只用现在的理智', '先别开始，改成打一把', '这次按显示的方案执行', '再来一次，先让我看方案'] },
 ];
-const report: { model: typeof MODEL_IDENTITY; instructions: string; mode: string; scenarios: unknown[]; shutdown?: unknown } = {
-  model: MODEL_IDENTITY, instructions: INSTRUCTIONS_VERSION, mode: config.mode, scenarios: [] };
+const report: { model: ReturnType<typeof modelIdentity>; instructions: string; mode: string; scenarios: unknown[]; shutdown?: unknown } = {
+  model: modelIdentity(model), instructions: INSTRUCTIONS_VERSION, mode: config.mode, scenarios: [] };
 const save = () => writeFileSync(resolve(directory, 'evidence.json'), JSON.stringify(report, null, 2));
 try {
   const selected = values.scenario?.split(',');

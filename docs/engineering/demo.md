@@ -28,7 +28,7 @@ MAA 安装目录应包含 `MaaCore.dll` 和 `resource/tasks/tasks.json`。2026-0
 
 配置分别保存在忽略目录 `.artifacts/demo/live.json` 和 `replay.json`。真实数据默认复用 `.artifacts/live/`，回放复用 `.artifacts/replay/`，不自动清记录或建立新轮次。原数据存在未知任务时仍阻止冲突执行，不能为了演示顺利换目录绕过。启动入口不读取 `backend/config.local.json` 或 `CHATMAA_CONFIG` 作为默认配置，避免模式被其他入口意外改变。
 
-根目录 `.env` 自动加载到 Backend；也可沿用当前进程的 `DEEPSEEK_API_KEY`。密钥不会出现在配置提示中。终端显示本次模式、窗口与数据目录，Backend 就绪后自动打开默认浏览器；不自动提交刷图任务。自动打开失败时，可使用终端 `web_ready.url` 手动打开。
+根目录 `.env` 自动加载到 Backend；也可在当前进程设置 `CHATMAA_MODEL_BASE_URL`、`CHATMAA_MODEL_API_KEY`、`CHATMAA_MODEL_ID`。密钥不会出现在配置提示中。终端显示本次模式、窗口与数据目录，Backend 就绪后自动打开默认浏览器；不自动提交刷图任务。自动打开失败时，可使用终端 `web_ready.url` 手动打开。
 
 保留终端，按 **Ctrl+C** 请求原有停止与证据交接。输入控制在当前 Backend 内处理，Python 仍由原宿主管理；没有额外常驻管理进程。先显示 Python／证据交接结果，再由 PowerShell 显示 Backend 已退出。关闭网页不会退出应用，直接关闭终端也不能证明正常交接。
 
@@ -116,7 +116,7 @@ $env:CHATMAA_CONFIG = Join-Path $run 'config.json'
 
 ## 打开网页与执行
 
-模型固定为 DeepSeek `deepseek-flash`。Backend 读取 `DEEPSEEK_API_KEY`；根目录 Demo 入口自动加载 `.env`，直接运行底层 `main.ts --web` 则需显式加载。可在当前终端设置环境变量后运行 `node backend/src/main.ts --legacy-demo --web`；或将密钥保存在仓库根目录本地 `.env` 中（`DEEPSEEK_API_KEY=实际密钥`），使用：
+当前模型由 Backend 的 `CHATMAA_MODEL_BASE_URL`、`CHATMAA_MODEL_API_KEY`、`CHATMAA_MODEL_ID` 指定；原 DeepSeek 组合可填 `https://api.deepseek.com`、对应密钥与 `deepseek-flash`。根目录 Demo 入口自动加载 `.env`，直接运行底层 `main.ts --legacy-demo --web` 则需显式加载。可在当前终端设置环境变量后运行 `node backend/src/main.ts --legacy-demo --web`；或将三项保存在仓库根目录本地 `.env` 中，使用：
 
 ```powershell
 node --env-file=.env backend/src/main.ts --legacy-demo --web

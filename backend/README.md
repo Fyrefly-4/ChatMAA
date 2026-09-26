@@ -149,7 +149,7 @@ await host.tasks.stop(applicationOperationId);
 
 2026-09-18：在 `be62348` 基础上增加 Agent 实现，当前验证为模型替身与正式回放 Adapter；真实 DeepSeek 四个固定样例的回放调用及回复审阅已通过，该证据限于真实模型与正式回放执行端，不代表真实游戏闭环。
 
-在本地环境设置 `DEEPSEEK_API_KEY` 后，执行 `npm --prefix backend start -- --legacy-demo --agent`。普通 Backend 启动不需要模型凭据；密钥不写入业务库，也不传给 Python 子进程。模型固定为 DeepSeek `deepseek-flash`，通过 `@ai-sdk/openai` 的 Responses 接口请求 `https://api.deepseek.com/responses`。没有自动重试或备用模型。
+当前模型入口从 Backend 环境读取 `CHATMAA_MODEL_BASE_URL`、`CHATMAA_MODEL_API_KEY`、`CHATMAA_MODEL_ID`；三项必须同时提供。`BASE_URL` 是 API 前缀，不含末尾的 `/responses`；例如继续使用原 DeepSeek 时分别填 `https://api.deepseek.com`、本地密钥、`deepseek-flash`。配置后可执行 `npm --prefix backend start -- --legacy-demo --agent`。普通无模型 Backend 启动不需要这些值；密钥不写入业务库，也不传给 Python 或浏览器辅助进程。当前仍用 `@ai-sdk/openai` 的 Responses 接口及原有工具循环，不自动退回 Chat Completions；目标端点须实际支持 Responses 函数工具调用。没有自动重试或备用模型。上段 2026-09-18 的 DeepSeek 样例仍按原版本解读。
 
 该终端是常驻 Backend 控制台：输入一条完整指令后，依次看到原文、核对结论、模型工具参数、应用摘要、工具返回和回复。模型返回后 Backend 继续执行与同步任务；关闭该终端、输入 `/exit` 或输入流结束会关闭宿主并执行既有退出交接。第二个终端中的独立 `client get/stop` 仍可使用，退出客户端不影响任务。
 
@@ -177,7 +177,7 @@ await host.tasks.stop(applicationOperationId);
 
 真实模型验收是单独入口：`node backend/src/agent/verify.ts`。它需要本地密钥，会发送四条固定测试指令及工具结果，使用正式 `maa-replay`，不读取 live 配置、不操作游戏。结果写入忽略目录 `.artifacts/agent-verification/run-*/`；默认测试与 CI 不运行它。需逐条复查原文、工具参数、返回和解释；离线通过不替代该验收。
 
-可在仓库根目录的 `.env` 中本地配置 `DEEPSEEK_API_KEY`，从根目录执行 `node --env-file=.env backend/src/agent/verify.ts`；程序不会自动加载 `.env`，该文件已被 Git 忽略。新记录用 `automaticChecksPassed` 表示样例断言和退出交接检查结果，`replyReview: pending` 表示回复尚待逐条审阅，不能以自动检查成功替代整体验收。`verification.json` 附带语义审阅清单；旧记录中的 `passed` 同样只代表当时的自动断言。
+可在仓库根目录已被 Git 忽略的 `.env` 中本地配置上述三项，从根目录执行 `node --env-file=.env backend/src/agent/verify.ts`；该独立样例程序不会自动加载 `.env`。新记录用 `automaticChecksPassed` 表示样例断言和退出交接检查结果，`replyReview: pending` 表示回复尚待逐条审阅，不能以自动检查成功替代整体验收。`verification.json` 附带语义审阅清单；旧记录中的 `passed` 同样只代表当时的自动断言。
 
 ## 结果怎样理解
 

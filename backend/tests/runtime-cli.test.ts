@@ -24,7 +24,8 @@ for (const web of [false, true]) test(`独立 Runtime ${web ? 'Web 与' : ''}无
   const config = resolve(data, 'config.json');
   writeFileSync(config, JSON.stringify({ mode: 'maa-replay', dataDir: data,
     python: resolve(repository, 'adapter/maa/.venv/Scripts/python.exe'), pollMs: 60, httpTimeoutMs: 1000, leaseMs: 5000, stopDeadlineMs: 3000 }));
-  const env = { ...process.env, CHATMAA_CONFIG: config, DEEPSEEK_API_KEY: 'must-not-be-used' };
+  const env = { ...process.env, CHATMAA_CONFIG: config, CHATMAA_MODEL_BASE_URL: 'https://models.example/v1',
+    CHATMAA_MODEL_API_KEY: 'must-not-be-used', CHATMAA_MODEL_ID: 'chosen-model' };
   const server = spawn(process.execPath, [resolve(repository, 'backend/src/main.ts'), '--runtime', '--no-model', ...(web ? ['--web'] : [])],
     { env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
   let output = ''; let errors = ''; let exited = false;

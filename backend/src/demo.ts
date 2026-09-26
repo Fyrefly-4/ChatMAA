@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
-import { loadConfig, repository } from './config.ts';
+import { loadConfig, repository, withoutModelCredentials } from './config.ts';
 import type { Config } from './config.ts';
 import type { ReadStream } from 'node:tty';
 
@@ -138,7 +138,7 @@ export function openDemoBrowser(url: string): Promise<void> {
     // URL is validated and passed as an environment value, never shell source.
     const child = spawn(powershell, ['-NoProfile', '-NonInteractive', '-Command', 'Start-Process -FilePath $env:CHATMAA_DEMO_URL'], {
       windowsHide: true, stdio: 'ignore', timeout: 10000,
-      env: { ...Object.fromEntries(Object.entries(process.env).filter(([key]) => key.toUpperCase() !== 'DEEPSEEK_API_KEY')), CHATMAA_DEMO_URL: url },
+      env: { ...withoutModelCredentials(process.env), CHATMAA_DEMO_URL: url },
     });
     child.once('error', fail);
     child.once('exit', code => code === 0 ? ok() : fail(new Error(`浏览器启动失败：${code}`)));

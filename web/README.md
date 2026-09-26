@@ -28,7 +28,7 @@ npm --prefix backend start -- --legacy-demo --web
 
 打开终端 `web_ready.url` 对应的本机地址。地址片段中的令牌只供本次本机启动；页面读取后立即移除地址片段，在当前标签页 `sessionStorage` 中保存。请勿分享该地址。API 同时检查令牌、Host 和 Origin，静态目录仅为 `web/dist`。
 
-模型配置沿用 [Backend Agent 说明](../backend/README.md)的 `DEEPSEEK_API_KEY`；不得放入 `VITE_` 环境变量或前端文件。未配置模型也可查看、停止已有任务。默认无配置时为回放模式，**若存在 `backend/config.local.json` 会使用该配置**；离线检查务必明确使用 `maa-replay` 配置及独立数据目录，避免误用本地 live 配置。回放不操作游戏；真实模式必须按对应任务的明确授权运行。
+模型配置沿用 [Backend Agent 说明](../backend/README.md)的 `CHATMAA_MODEL_BASE_URL`、`CHATMAA_MODEL_API_KEY`、`CHATMAA_MODEL_ID`；密钥不得放入 `VITE_` 环境变量或前端文件。未配置模型也可查看、停止已有任务。默认无配置时为回放模式，**若存在 `backend/config.local.json` 会使用该配置**；离线检查务必明确使用 `maa-replay` 配置及独立数据目录，避免误用本地 live 配置。回放不操作游戏；真实模式必须按对应任务的明确授权运行。
 
 开发时先启动 `--web --web-dev` Backend。另一个终端把实际 Backend 地址填入环境变量：
 

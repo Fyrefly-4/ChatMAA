@@ -2,6 +2,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 
 export const repository = resolve(import.meta.dirname, '../..');
+export function withoutModelCredentials(environment: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return Object.fromEntries(Object.entries(environment).filter(([key]) =>
+    !['CHATMAA_MODEL_API_KEY', 'DEEPSEEK_API_KEY', 'OPENAI_API_KEY'].includes(key.toUpperCase())));
+}
 export type MuMuConnection = { kind: 'mumu'; adb: string; address: string; config: 'MuMuEmulator12' };
 export type Config = {
   mode: 'maa-replay' | 'maa-live'; python: string; dataDir: string; port: number;

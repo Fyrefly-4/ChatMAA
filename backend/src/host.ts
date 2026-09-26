@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { randomUUID } from 'node:crypto';
 import { pythonRuntime } from './python-runtime.ts';
-import { repository } from './config.ts';
+import { repository, withoutModelCredentials } from './config.ts';
 import type { Config } from './config.ts';
 import { Store } from './store.ts';
 import { TaskService } from './task-service.ts';
@@ -19,7 +19,7 @@ type Ready = { instance: string; controller: string; port: number; pid: number }
 type Health = { retiring: boolean; storage_failed: boolean; active: string[] };
 
 export function adapterEnvironment(environment: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
-  return Object.fromEntries(Object.entries(environment).filter(([key]) => key.toUpperCase() !== 'DEEPSEEK_API_KEY'));
+  return withoutModelCredentials(environment);
 }
 
 export async function startHost(config: Config, options: { business?: boolean; catalog?: Catalog } = {}) {

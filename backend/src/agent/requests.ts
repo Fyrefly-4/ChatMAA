@@ -5,7 +5,7 @@ import type { TaskService } from '../task-service.ts';
 import { authorize, POLICY_VERSION } from './policy.ts';
 import { AgentRecords } from './records.ts';
 import type { EventSink, RequestRecord } from './records.ts';
-import { MODEL_IDENTITY } from './provider.ts';
+import { modelIdentity } from './provider.ts';
 import { boundTools } from './tools.ts';
 import { runModel } from './runtime.ts';
 import { waitForOutput } from './wait.ts';
@@ -42,7 +42,7 @@ export class AgentRequests {
     if (!model) throw new Error('model_unavailable');
     const record: RequestRecord = { ...input, operationId: randomUUID(),
       permission: authorize(input.original, input.targetId), policyVersion: POLICY_VERSION,
-      ...MODEL_IDENTITY, createdAt: new Date().toISOString(), status: 'running' };
+      ...modelIdentity(model), createdAt: new Date().toISOString(), status: 'running' };
     this.records.create(record);
     const controller = new AbortController();
     this.active.set(record.requestId, controller);

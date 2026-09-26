@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { loadConfig } from './config.ts';
 import { startHost } from './host.ts';
 import { createApp } from './app.ts';
-import { deepseekModel } from './agent/provider.ts';
+import { configuredModel } from './agent/provider.ts';
 import { startDebug } from './agent/debug.ts';
 import { BrowserRequests } from './browser/requests.ts';
 import { repository } from './config.ts';
@@ -40,9 +40,9 @@ if (web && process.argv.includes('--agent')) throw new Error('--web 与 --agent 
 const noModel = (demo || useRuntime) && process.argv.includes('--no-model');
 if ((demo || useRuntime) && !noModel && existsSync(resolve(repository, '.env'))) process.loadEnvFile(resolve(repository, '.env'));
 let model;
-if (process.argv.includes('--agent')) model = deepseekModel();
+if (process.argv.includes('--agent')) model = configuredModel();
 if (web || useRuntime) {
-  try { if (!noModel) model = deepseekModel(); else throw new Error('model disabled'); }
+  try { if (!noModel) model = configuredModel(); else throw new Error('model disabled'); }
   catch { console.log(JSON.stringify({ kind: 'model_unavailable', message: '模型未配置；已有任务仍可查询和停止。' })); }
 }
 let stopRequested = false;

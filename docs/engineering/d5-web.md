@@ -18,7 +18,7 @@ npm --prefix backend start -- --runtime --web --no-model
 
 打开终端 `web_ready.url`，页面读取 URL 片段中的本机令牌后移除片段。使用 `--no-model` 不加载 `.env`，可新建会话、读取历史、查询与停止已有任务，不能自然语言规划。该配置明确选择回放及独立数据目录，不使用 `backend/config.local.json`。首次空库不会自动产生方案或任务。
 
-允许模型调用的检查可在明确授权后去掉 `--no-model`，配置沿用 [D4](d4-runtime.md)。模型凭据仅在 Backend，不放入 `VITE_` 变量。MuMu 配置沿用 [D2](d2-adapter.md)，只在明确的实机任务授权内使用；本轮没有改变根目录 `start-demo.ps1`，它仍是 legacy Demo 入口。
+允许模型调用的检查可在明确授权后去掉 `--no-model`。当前模型连接从 Backend 环境读取 `CHATMAA_MODEL_BASE_URL`、`CHATMAA_MODEL_API_KEY`、`CHATMAA_MODEL_ID`，见 [Backend 说明](../../backend/README.md#agent-调试与接入)；本阶段原验证仍按当时 DeepSeek 配置和版本解释。模型凭据仅在 Backend，不放入 `VITE_` 变量。MuMu 配置沿用 [D2](d2-adapter.md)，只在明确的实机任务授权内使用；本轮没有改变根目录 `start-demo.ps1`，它仍是 legacy Demo 入口。
 
 开发模式增加 `--web-dev`，并按 [Web](../../web/README.md)设置 Vite 的 `CHATMAA_BACKEND`。结束时在 Backend 终端 Ctrl+C，或使用 `npm --prefix backend run client -- shutdown`；等待 `shutdown` 的 `childExited`、`handoffComplete` 均为 true。关闭页面不停止任务。动态端口沿用原宿主行为，不新增端口管理机制。
 
