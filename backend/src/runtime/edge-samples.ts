@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { loadConfig, repository } from '../config.ts';
 import { startHost } from '../host.ts';
-import { deepseekModel, MODEL_IDENTITY } from '../agent/provider.ts';
+import { configuredModel, modelIdentity } from '../agent/provider.ts';
 import { sealCatalog } from '../business/catalog.ts';
 import { RuntimeService } from './service.ts';
 import { modelRunner } from './loop.ts';
@@ -31,10 +31,10 @@ const scenarios = [
 const selected = values.scenario?.split(',');
 if (selected?.some(name => !scenarios.some(s => s.name === name))) throw new Error('unknown_scenario');
 if (existsSync(resolve(repository, '.env'))) process.loadEnvFile(resolve(repository, '.env'));
-const model = deepseekModel();
+const model = configuredModel();
 const directory = resolve(config.dataDir, `model-edges-${Date.now()}`); mkdirSync(directory, { recursive: true });
-const report: { model: typeof MODEL_IDENTITY; instructions: string; mode: string; scenarios: unknown[] } = {
-  model: MODEL_IDENTITY, instructions: INSTRUCTIONS_VERSION, mode: config.mode, scenarios: [] };
+const report: { model: ReturnType<typeof modelIdentity>; instructions: string; mode: string; scenarios: unknown[] } = {
+  model: modelIdentity(model), instructions: INSTRUCTIONS_VERSION, mode: config.mode, scenarios: [] };
 const save = () => writeFileSync(resolve(directory, 'evidence.json'), JSON.stringify(report, null, 2));
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 for (const scenario of scenarios.filter(s => !selected || selected.includes(s.name))) {

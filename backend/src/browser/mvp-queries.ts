@@ -22,6 +22,7 @@ export class MvpQueries {
     if (!conversation) throw new TaskError(404, 'unknown_conversation');
     return { ...conversation,
       request: conversation.currentRequest ? b.request(conversation.currentRequest) : null,
+      waitingGuidance: conversation.currentRequest ? b.waitingGuidance(conversation.currentRequest) : null,
       plan: conversation.currentPlan ? this.plan(conversation.currentPlan) : null,
       activeTasks: b.tasks.list().filter(blocksExecution)
         .filter(t => b.records.read('task_links', t.id)?.conversationId === id).map(t => this.task(t.id)),

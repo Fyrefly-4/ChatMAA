@@ -1,5 +1,11 @@
 # Web 连续协作入口
 
+2026-09-27 D6 体验整改：等待需求取消、模型失败交接、过程反馈与完成摘要，见 [整改说明](../docs/engineering/d6-remediation.md)；真实模型候选预算待验证。
+
+2026-09-26 D6 恢复整改：统一恢复入口，修正已放行历史误拦截，并提供自有执行服务受控重连；状态、代码入口和离线验证边界见 [恢复使用整改](../docs/engineering/d5-web.md#d6-恢复使用整改2026-09-26)。
+
+2026-09-26：MVP 日常使用可双击根目录 `启动 ChatMAA.bat`，首次保存配置，随后自动打开网页；退出在启动窗口完成。配置、记录与验证边界见 [MVP 用户入口](../docs/engineering/mvp-launcher.md)。
+
 2026-09-21 D5：MVP 页面在 `src/mvp/`，接入连续会话、三类方案、独立确认、任务结果、跨会话停止和历史恢复。使用 `--runtime --web`；可复制的显式回放／无模型启动命令、文件职责、API 与证据边界见 [D5 Web 接入](../docs/engineering/d5-web.md)。离线整链使用模型替身与正式 Python 回放；真实模型网页代表路径也已核对，表达限制与验证原 SHA 见接入说明，未新增真实游戏证据。
 
 修改 MVP 布局从 `Workspace.tsx`／`workspace.css` 入手，状态读取与恢复在 `useWorkspace.ts`，方案在 `PlanCard.tsx`，结果与依据在 `TaskSummary.tsx`／`DetailPanel.tsx`。UI 不承担目标计算或确认有效性判断。
@@ -28,7 +34,7 @@ npm --prefix backend start -- --legacy-demo --web
 
 打开终端 `web_ready.url` 对应的本机地址。地址片段中的令牌只供本次本机启动；页面读取后立即移除地址片段，在当前标签页 `sessionStorage` 中保存。请勿分享该地址。API 同时检查令牌、Host 和 Origin，静态目录仅为 `web/dist`。
 
-模型配置沿用 [Backend Agent 说明](../backend/README.md)的 `DEEPSEEK_API_KEY`；不得放入 `VITE_` 环境变量或前端文件。未配置模型也可查看、停止已有任务。默认无配置时为回放模式，**若存在 `backend/config.local.json` 会使用该配置**；离线检查务必明确使用 `maa-replay` 配置及独立数据目录，避免误用本地 live 配置。回放不操作游戏；真实模式必须按对应任务的明确授权运行。
+模型配置沿用 [Backend Agent 说明](../backend/README.md)的 `CHATMAA_MODEL_BASE_URL`、`CHATMAA_MODEL_API_KEY`、`CHATMAA_MODEL_ID`；密钥不得放入 `VITE_` 环境变量或前端文件。未配置模型也可查看、停止已有任务。默认无配置时为回放模式，**若存在 `backend/config.local.json` 会使用该配置**；离线检查务必明确使用 `maa-replay` 配置及独立数据目录，避免误用本地 live 配置。回放不操作游戏；真实模式必须按对应任务的明确授权运行。
 
 开发时先启动 `--web --web-dev` Backend。另一个终端把实际 Backend 地址填入环境变量：
 

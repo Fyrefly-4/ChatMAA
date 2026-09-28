@@ -10,6 +10,7 @@ test('MVP 次数方案修改、按钮确认、结果与刷新不重复执行', a
   await page.getByRole('button', { name: '确认并开始' }).click();
   await expect(page.getByRole('region', { name: '刷图任务', exact: true }).getByText('目标已达成', { exact: false })).toBeVisible({ timeout: 15000 });
   expect(server.audit().length).toBe(1);
+  await expect(page.getByRole('region', { name: '刷图任务', exact: true }).getByText('任务已完成', { exact: true })).toBeVisible();
   await page.reload(); await expect(page.getByRole('region', { name: '刷图任务', exact: true }).getByText('目标已达成', { exact: false })).toBeVisible();
   expect(server.audit().length).toBe(1);
   await page.getByRole('button', { name: '查看任务详情 →' }).click();

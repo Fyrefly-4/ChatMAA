@@ -57,7 +57,7 @@ node --test --test-concurrency=1 backend/tests/business.test.ts backend/tests/ru
 
 驱动保存模型标识、提示版本、输入、工具活动、业务快照与退出结果到本地数据目录下的 `model-samples-*/evidence.json` 或 `model-edges-*/evidence.json`。普通样例实际打印方案后才登记展示；边界样例中的长任务由脚本模拟前置展示／按钮确认，缺推荐及指令性资料是明确标注的夹具。它们验证模型读取与后续选择，不作为用户前置交互的证据。边界驱动每场景独立宿主，检查结束后的清理停止单独记录；超时样例人为设为 1 秒，正式运行仍为 60 秒。脚本退出不等于验收通过，需核对原文、工具参数、当时事实、最终事实及回复。
 
-先按 [Demo 回放配置](demo.md#回放入口)显式设置 `CHATMAA_CONFIG`，避免读到本地 live 配置。`node backend/src/main.ts --runtime --no-model` 可检查连接及确定操作，不加载模型密钥；显式去掉 `--no-model` 才按现有 DeepSeek 配置启用模型。启用模型不等于获得本轮真实模型调用授权。
+先按 [Demo 回放配置](demo.md#回放入口)显式设置 `CHATMAA_CONFIG`，避免读到本地 live 配置。`node backend/src/main.ts --runtime --no-model` 可检查连接及确定操作，不加载模型密钥；显式去掉 `--no-model` 才按当前环境中的 `CHATMAA_MODEL_BASE_URL`、`CHATMAA_MODEL_API_KEY`、`CHATMAA_MODEL_ID` 启用模型，见 [Backend 说明](../../backend/README.md#agent-调试与接入)。本阶段原真实模型证据仍是当时的 DeepSeek 配置。启用模型不等于获得本轮真实模型调用授权。
 
 `--runtime` 不能与 engineering 或 legacy 模式混用；默认 MVP 无模型入口保持可用。关闭时先撤销 Runtime 写入资格并取消后台消费者，再排空操作、交接执行证据。
 

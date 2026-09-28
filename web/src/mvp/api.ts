@@ -9,6 +9,10 @@ export const pathId = (value: string) => encodeURIComponent(value);
 export function failure(error: unknown) {
   if (!(error instanceof ApiError)) return '页面与后台连接中断，保留最后已知状态。操作是否受理仍需核对。';
   const messages: Record<string, string> = {
+    automation_stop_unconfirmed: '停止尚未确认，请按照页面“恢复使用”的步骤处理。',
+    executor_exit_unconfirmed: '未能确认本次执行服务退出。请查看启动记录，确认 ChatMAA 执行端退出后重新启动；不要删除数据。',
+    recovery_in_progress: '恢复操作正在处理，请等待状态更新。',
+    recovery_id_conflict: '恢复操作编号冲突，请刷新状态后重试。',
     unauthorized: '访问凭据已失效，请从后台本次启动地址重新打开。',
     plan_not_current: '方案已更新或依据已失效，请查看当前方案并重新确认。',
     presentation_required: '方案展示尚未登记，请等待页面完成展示。',

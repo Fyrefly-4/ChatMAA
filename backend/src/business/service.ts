@@ -12,7 +12,7 @@ import { Catalog, digest } from './catalog.ts';
 import { BusinessRecords } from './records.ts';
 import type { Request, Plan, Message, Continuation } from './records.ts';
 import { goalDraft, missingGoal, amount, sumAmounts, executionParams, resultText } from './goals.ts';
-import type { Goal, Amount } from './goals.ts';
+import type { Goal, Amount, GoalResult } from './goals.ts';
 
 const now = () => new Date().toISOString();
 const fail = (code: string, status = 409): never => { throw new TaskError(status, code); };
@@ -104,6 +104,16 @@ export class BusinessService {
     return message;
   }
   request(id: string) { return this.records.read('execution_requests', taskId(id)) ?? fail('unknown_request', 404); }
+  waitingGuidance(id: string) {
+    const request = this.request(id);
+    if (request.state !== 'active' || !request.waiting.length) return null;
+    const uncertain = request.waiting.includes('previous_result_uncertain');
+    return { requestId: id, revision: request.revision, canCancel: true,
+      taskIds: request.previousTasks, environment: this.tasks.admission().state,
+      message: uncertain ? '旧任务已结束，但成果不能精确核算，无法计算这个总目标的剩余量。环境检查或重启不会补齐旧成果，重复等待也不能保证补回。可查看旧任务结果、取消本次调整，或明确提出独立的新目标（例如“再刷 1 次”），新方案仍需确认。' :
+        request.waiting.includes('stop_or_environment_unconfirmed') ? '请先按“恢复使用”处理停止或环境核对；旧成果若仍未知，总目标可能仍无法准备。可取消本次调整，取消需求不会停止已受理任务。' :
+        request.waiting.includes('scan_pending') ? '正在等待库存扫描反馈。可查看扫描任务；取消需求不会停止扫描，请使用任务上的停止入口。' : '需求仍需补充信息或可靠依据。可补充说明，或取消本次需求。' };
+  }
   private current(id: string, revision: number) {
     const request = this.request(id);
     if (request.revision !== revision || request.state !== 'active' || this.records.read('conversations', request.conversationId)!.currentRequest !== id) return fail('request_not_current');
@@ -305,8 +315,18 @@ export class BusinessService {
   }
   task(id: string) {
     const task = this.tasks.get(id); const link = this.records.read('task_links', id);
+    const result = link?.purpose === 'fight' ? this.basis.calculate(link, task) : null;
+    const first = this.tasks.store.db.prepare('SELECT body FROM evidence WHERE id=? ORDER BY seq LIMIT 1').get(id);
+    const startedAt = first ? (JSON.parse(String(first.body)).snapshot.updated_at as number | undefined) ?? null : null;
+    const stop = task.stop_requested ? this.tasks.store.db.prepare("SELECT body FROM evidence WHERE id=? AND json_extract(body,'$.kind')='stop_requested' ORDER BY seq LIMIT 1").get(id) : undefined;
+    const stopRequestedAt = stop ? (JSON.parse(String(stop.body)).snapshot.updated_at as number | undefined) ?? null : null;
     return { ...link, id, origin: link ? 'mvp' : 'engineering_or_legacy', task,
-      result: link?.purpose === 'fight' ? this.basis.calculate(link, task) : null };
+      startedAt, stopRequestedAt,
+      result, summary: result && link?.planId && task.state === 'ended' ? this.resultSummary(this.plan(link.planId), result) : null };
+  }
+  private resultSummary(plan: Plan, result: GoalResult) {
+    const name = plan.goal.itemId ? this.records.read('catalogs', plan.catalogVersion)?.snapshot.items[plan.goal.itemId]?.name : undefined;
+    return resultText(plan.goal, result, name);
   }
   inspectInventory(conversationId: string, id: string, sourceMessage: string) {
     const existing = this.records.read('execution_requests', id);
@@ -427,7 +447,7 @@ export class BusinessService {
       if (updated.waiting.length) this.enqueue(updated, 'scan_needs_input', link.id);
     } else if (effect.terminal) {
       this.appendMessage(link.conversationId, `result-${digest({ task: link.id, resultDigest: effect.resultDigest }).slice(0,40)}`,
-        'system', resultText(effect.plan.goal, effect.result), link.id);
+        'system', this.resultSummary(effect.plan, effect.result), link.id);
       if (request.state === 'executing') this.saveRequest(transitionRequest(request, { type: 'complete' }));
     }
   }

@@ -4,10 +4,10 @@ import { mkdirSync, appendFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { repository } from '../config.ts';
 import { startHost } from '../host.ts';
-import { deepseekModel } from './provider.ts';
+import { configuredModel } from './provider.ts';
 import { AgentRequests } from './requests.ts';
 
-const model = deepseekModel();
+const model = configuredModel();
 const dataDir = resolve(repository, '.artifacts/agent-verification', `run-${Date.now()}`);
 mkdirSync(dataDir, { recursive: true });
 const host = await startHost({ mode: 'maa-replay', dataDir,

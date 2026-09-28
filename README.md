@@ -1,5 +1,7 @@
 # ChatMAA
 
+2026-09-26：MVP 日常使用可双击根目录 `启动 ChatMAA.bat`，首次保存配置，随后自动打开网页；退出在启动窗口完成。配置、记录与验证边界见 [MVP 用户入口](docs/engineering/mvp-launcher.md)。
+
 ChatMAA 是一个正在开发中的智能自动化应用，探索如何让 Agent 连接用户的自然语言目标与真实的自动化能力。项目以 MaaAssistantArknights（MAA）为执行环境，由 Agent 理解需求、选择工具，并结合执行反馈完成《明日方舟》相关游戏任务。
 
 项目希望构建一个具备实际使用价值的 AI Native 应用，围绕自然语言交互构建完整的智能任务处理流程，涵盖用户意图理解、Agent 编排、工具调用、任务执行与结果反馈等核心能力，同时探索现代前端架构、全栈系统设计与 Agent Engineering 的工程实践。

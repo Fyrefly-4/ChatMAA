@@ -69,8 +69,22 @@ function task(): TaskView {
 test('库存目标由初始观察和掉落核算；normal 不猜理智不足，掉落不混用次数', () => {
   const result = goalResult(task(), { kind: 'inventory', itemId: 'rock', quantity: 100 }, undefined, 72);
   assert.equal(result.estimatedInventory?.value, 101); assert.equal(result.target, 'achieved');
-  assert.equal(result.process, 'unknown'); assert.equal(result.amount.value, 29); assert.equal(result.rescanned, false);
+  assert.equal(result.process, 'succeeded'); assert.equal(result.amount.value, 29); assert.equal(result.rescanned, false);
+  assert.equal(goalResult(task(), { kind: 'count', quantity: 10 }).process, 'unknown');
   assert.equal(goalResult(task(), { kind: 'count', quantity: 10 }).amount.value, 5);
+});
+
+test('正常完成必须有完整精确成果；达标不掩盖错误、停止或缺口', () => {
+  const goal = { kind: 'count' as const, quantity: 5 };
+  for (const change of [{ normal_completed: false }, { unsettled_cycles: 1 }, { gap: true },
+    { sync: { available: false, last_success_at: 1, reason: 'lost' } }, { stop_requested: true },
+    { evidence_conflict: true }, { count_result: { value: 5, certainty: 'lower_bound', issues: [] } }]) {
+    assert.notEqual(goalResult({ ...task(), ...change }, goal).process, 'succeeded');
+  }
+  assert.equal(goalResult({ ...task(), reason: 'execution_or_evidence_error' }, goal).process, 'failed');
+  assert.equal(goalResult({ ...task(), reason: 'user_stop' }, goal).process, 'stopped');
+  assert.equal(goalResult({ ...task(), reason: 'sanity_insufficient' }, goal).process, 'partial');
+  assert.equal(goalResult({ ...task(), normal_completed: true, device: 'needs_check' }, goal).process, 'succeeded');
 });
 test('下界足够时可证明达标，但不生成精确剩余；缺失材料与冲突保持未知', () => {
   const view = task(); view.material_result!.certainty = 'lower_bound';

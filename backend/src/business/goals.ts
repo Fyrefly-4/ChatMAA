@@ -59,19 +59,30 @@ export function goalResult(task: TaskView, goal: Goal, prior: Amount = { value: 
   const process = task.state === 'rejected' ? 'failed' : !terminal ? (task.state === 'unknown' ? 'unknown' : 'running') :
     reason === 'user_stop' || reason === 'user_stop_before_start' || reason === 'stop_requested' ? 'stopped' :
     ['resource_load_failed', 'resource_validation_failed', 'runtime_error', 'execution_or_evidence_error', 'environment_unconfirmed'].includes(reason ?? '') ? 'failed' :
-    reason === 'target_reached' ? 'succeeded' : reason === 'sanity_insufficient' ? 'partial' : 'unknown';
+    ['normal', 'target_reached'].includes(reason ?? '') && target === 'achieved' && current.certainty === 'exact' &&
+      cumulative.certainty === 'exact' && task.unsettled_cycles === 0 && !task.stop_requested &&
+      !(goal.kind === 'count' ? task.count_result : task.material_result)?.issues.length &&
+      (reason === 'target_reached' || task.normal_completed === true || (task.normal_completed === undefined && task.device === 'ready')) ? 'succeeded' :
+    reason === 'sanity_insufficient' ? 'partial' : 'unknown';
   return { execution: { state: task.state, automationStopped: task.automation_stopped, reason }, process, target,
     amount: current, cumulative, initialInventory, estimatedInventory: goal.kind === 'inventory' ? { value: available, certainty: available === null ? 'unknown' : cumulative.certainty } : null,
     remaining: available !== null && cumulative.certainty === 'exact' ? Math.max(goal.quantity - available, 0) : null,
     differenceFromConfirmed: available !== null ? Math.max(goal.quantity - available, 0) : null, rescanned: false };
 }
-export function resultText(goal: Goal, result: GoalResult): string {
-  const execution = result.execution.automationStopped ? '自动化已停止' : '自动化停止尚未确认';
-  const unit = goal.kind === 'count' ? '次' : '个目标材料';
+export function resultText(goal: Goal, result: GoalResult, itemName = goal.itemId ?? '目标材料'): string {
+  const execution = !result.execution.automationStopped ? '自动化停止尚未确认' :
+    { succeeded: '任务已完成', stopped: '任务已停止', partial: '任务部分完成', failed: '任务异常结束', unknown: '任务已结束，成果仍待核实', running: '任务进行中' }[result.process];
+  const unit = goal.kind === 'count' ? '次' : `个${itemName}`;
   const count = result.amount.value === null ? '本次成果未知' : `本次已确认${result.amount.certainty === 'lower_bound' ? '至少' : ''}${result.amount.value}${unit}`;
   const target = { achieved: '目标已达成', not_achieved: '目标尚未达成', uncertain: '目标是否达成待核实' }[result.target];
   const inventory = result.estimatedInventory ? (result.estimatedInventory.value === null ? '；库存依据待核实' :
     `；推算库存${result.estimatedInventory.certainty === 'lower_bound' ? '至少' : ''}${result.estimatedInventory.value}，未重新扫描`) : '';
   const remainder = result.remaining === null ? '；不能给出精确剩余量' : `；剩余${result.remaining}`;
-  return `${execution}；${count}；${target}${inventory}${remainder}。停止不撤销消耗，也不表示游戏内战斗立即结束。`;
+  const caution = result.process === 'succeeded' ? '' : '停止不撤销消耗，也不表示游戏内战斗立即结束。';
+  const reasons: Record<string, string> = { user_stop: '用户请求停止', user_stop_before_start: '开始前请求停止',
+    stop_requested: '已请求停止', sanity_insufficient: '理智不足', execution_or_evidence_error: '执行或证据异常',
+    runtime_error: '执行端异常', resource_load_failed: '资源加载失败', resource_validation_failed: '资源校验失败',
+    environment_unconfirmed: '游戏环境未确认', normal: '正常结束，但目标或证据尚未充分确认' };
+  const reason = result.process !== 'succeeded' && result.execution.reason ? `；原因：${reasons[result.execution.reason] ?? result.execution.reason}` : '';
+  return `${execution}；${count}；${target}${inventory}${remainder}${reason}。${caution}`;
 }

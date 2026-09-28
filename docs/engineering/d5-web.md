@@ -1,5 +1,7 @@
 # D5 Web 接入与检查
 
+2026-09-26：MVP 日常使用可双击根目录 `启动 ChatMAA.bat`，首次保存配置，随后自动打开网页；退出在启动窗口完成。配置、记录与验证边界见 [MVP 用户入口](mvp-launcher.md)。
+
 2026-09-21，从 D4 合并基线 `b9d580de` 建设，当前实现见本文件所在提交。页面已接入 Runtime、业务服务和正式 Python 回放，离线整链与真实模型网页代表路径均已核对；仍有回复表达与阅读体验限制，未调用真实游戏，不代表 D5 已获验收或 MVP 全部完成。产品与阶段标准分别见 [Spec #18](https://github.com/Fyrefly-4/ChatMAA/issues/18)、[D5 #24](https://github.com/Fyrefly-4/ChatMAA/issues/24)。
 
 ## 启动 MVP 页面
@@ -18,7 +20,7 @@ npm --prefix backend start -- --runtime --web --no-model
 
 打开终端 `web_ready.url`，页面读取 URL 片段中的本机令牌后移除片段。使用 `--no-model` 不加载 `.env`，可新建会话、读取历史、查询与停止已有任务，不能自然语言规划。该配置明确选择回放及独立数据目录，不使用 `backend/config.local.json`。首次空库不会自动产生方案或任务。
 
-允许模型调用的检查可在明确授权后去掉 `--no-model`，配置沿用 [D4](d4-runtime.md)。模型凭据仅在 Backend，不放入 `VITE_` 变量。MuMu 配置沿用 [D2](d2-adapter.md)，只在明确的实机任务授权内使用；本轮没有改变根目录 `start-demo.ps1`，它仍是 legacy Demo 入口。
+允许模型调用的检查可在明确授权后去掉 `--no-model`。当前模型连接从 Backend 环境读取 `CHATMAA_MODEL_BASE_URL`、`CHATMAA_MODEL_API_KEY`、`CHATMAA_MODEL_ID`，见 [Backend 说明](../../backend/README.md#agent-调试与接入)；本阶段原验证仍按当时 DeepSeek 配置和版本解释。模型凭据仅在 Backend，不放入 `VITE_` 变量。MuMu 配置沿用 [D2](d2-adapter.md)，只在明确的实机任务授权内使用；本轮没有改变根目录 `start-demo.ps1`，它仍是 legacy Demo 入口。
 
 开发模式增加 `--web-dev`，并按 [Web](../../web/README.md)设置 Vite 的 `CHATMAA_BACKEND`。结束时在 Backend 终端 Ctrl+C，或使用 `npm --prefix backend run client -- shutdown`；等待 `shutdown` 的 `childExited`、`handoffComplete` 均为 true。关闭页面不停止任务。动态端口沿用原宿主行为，不新增端口管理机制。
 
@@ -81,3 +83,27 @@ npm --prefix backend start -- --runtime --web --no-model
 提交重整保留上述原验证 SHA。重整没有改变生产代码、测试或配置；原证据按原 SHA 解释，不能将改写后的提交日期或编号当作重新调用模型的证据。
 
 2026-09-21 后续页面修正：助手回复接入 `react-markdown` 的 CommonMark 渲染，禁用原始 HTML，仅允许 HTTP(S) 外链，图片显示替代文字；用户／系统消息仍为纯文本。增加排版、窄屏和不可信内容浏览器检查。此修正不调整模型提示、工程字段或业务事实，也没有重新调用真实模型；原模型证据继续按原 SHA 解释。
+
+
+## D6 恢复使用整改（2026-09-26）
+
+基于 `db18d10` 的工作区实现；当前通过离线回放和替身检查，真实 MuMu 画面的恢复识别尚待复测。立即停止、新方案重新确认、宿主管理自有 Python、双库分别保存事实的边界不变。
+
+MVP 页面使用单一“恢复使用”区域。`GET /api/status.recovery` 提供状态、说明、受影响任务、最新检查及允许动作；`POST /api/recovery` 接收 `{id, action}`，动作仅为 `check`、`cancel`、`stop`、`reconnect`。Backend 再核对条件，不以页面按钮是否可点作为授权或事实依据。旧任务 recheck／历史 takeover 接口保留兼容；新页面不自行选择两者。
+
+| 页面状态 | 下一步 |
+|---|---|
+| 正在执行或等待停止 | 请求停止；停止等待超过 10 秒可选择结束执行服务并重连 |
+| 已停止，环境待核对 | 停止其他自动化，将游戏停在首页或关卡准备页，勾选后点击“我已准备好，检查环境” |
+| 正在检查 | 等待只识别探针，可取消；超过 30 秒提供执行服务重连 |
+| 检查失败、检查已停止 | 显示画面要求，用户整理现场后显式再次检查 |
+| 执行端失联或停止未确认 | 用户触发结束本次执行服务并重新连接；退出无法确认时保留错误与记录 |
+| 恢复成功 | 原调整需求重新准备方案；用户阅读并重新确认才开始刷图 |
+
+实现入口：`backend/src/recovery.ts` 汇总条件并协调动作；`task-contract.ts` 的 `blocksProbe` 区分历史放行与当前停止事实，证据缺口及同步失败仍阻止放行。Adapter `service.py` 同步排除已放行历史，但保留活动执行、未知探针与当前停止未确认限制。`takeover.py` 的恢复意图增加开始时间，支持有界等待的页面提示；取消检查只向自有探针发停止信号。
+
+`host.ts` 的执行端重连先封锁新提交、暂停续期和周期轮询，请求停止并读取证据，确认自有子进程退出后才创建新控制身份。必要时沿用有期限的自有进程终止；不结束模拟器或其他 MAA。Backend、会话和业务库保持原对象，重连不启动游戏动作；历史未知仍需独立检查放行。过程写入数据目录 `recovery.jsonl` 并进入启动器诊断。应用退出会等待正在进行的重连收尾。
+
+同一恢复 ID 在当前 Backend 内复用原结果，拒绝不同动作复用 ID；Adapter 的检查／接管 ID 有持久防重。读取、刷新和恢复后同步均不重发刷图。新的显式检查使用新 ID；当前动作未完成时拒绝并发新恢复动作。运行中调整的可靠成果与环境同步后，沿用 `BusinessService.reconcile` 重新计算方案，不依靠模型承诺恢复成功。
+
+验证：Adapter 61 项通过；Backend 全量首次 157 项中 156 通过，旧浏览器退出测试曾在工作线程审计落盘前检查条数，改为等待审计事实后相关 23 项通过。两端类型检查及 Web 构建通过；MVP 原有浏览器 14 项、恢复入口新增 1 项通过。新增覆盖已放行未知历史与当前已停止任务共存、检查响应丢失防重、调整后准备新方案、自有执行端异常退出后重连及历史核对。没有调用真实模型或操作游戏；远端 CI 未运行。

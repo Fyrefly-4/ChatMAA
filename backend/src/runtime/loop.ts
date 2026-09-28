@@ -7,18 +7,20 @@ import { businessTools } from './tools.ts';
 import { RuntimeRecords } from './records.ts';
 import type { RunTurn } from './service.ts';
 import { instructions, INSTRUCTIONS_VERSION } from './instructions.ts';
+import { outputBudget } from './budget.ts';
 
 export function modelRunner(business: BusinessService, model: LanguageModel, readOnly = false): RunTurn {
   const records = new RuntimeRecords(business.tasks.store);
+  const maxOutputTokens = outputBudget();
   return async run => {
     const emit = (kind: string, data: unknown) => { run.assertCurrent(); records.activity(run.turn.id, kind, data); };
     const restricted = readOnly || !!run.turn.continuationId;
     const bound = businessTools(business, run, { emit, track: run.track, readOnly: restricted });
-    emit('model_started', { instructionsVersion: INSTRUCTIONS_VERSION, readOnly: restricted,
+    emit('model_started', { instructionsVersion: INSTRUCTIONS_VERSION, readOnly: restricted, maxOutputTokens,
       model: typeof model === 'string' ? model : model.modelId, provider: typeof model === 'string' ? null : model.provider });
     const result = await generateText({ model, tools: bound.tools, system: instructions,
       messages: [{ role: 'user', content: JSON.stringify(run.context) }], abortSignal: run.signal,
-      providerOptions, maxRetries: 0, maxOutputTokens: 6000, stopWhen: stepCountIs(8),
+      providerOptions, maxRetries: 0, maxOutputTokens, stopWhen: stepCountIs(8),
       prepareStep: ({ stepNumber, messages }) => {
         run.assertCurrent(); bound.nextStep();
         if (JSON.stringify(messages).length + instructions.length > 48000) throw new TaskError(422, 'context_budget_exceeded');

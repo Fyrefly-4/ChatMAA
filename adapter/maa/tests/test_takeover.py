@@ -8,7 +8,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fastapi import HTTPException
-from service import Controller, Submission
+from service import Controller, Submission, RecheckRequest
 from settings import Settings
 from takeover import TakeoverRequest
 
@@ -64,6 +64,31 @@ class TakeoverTests(unittest.TestCase):
         self.assertFalse(self.c.takeovers.status()["blockers"])
         self.assertEqual(self.calls, 1)
         self.assertEqual(self.c.read("old"), snap)
+
+    def test_released_unknown_does_not_block_current_recheck(self):
+        self.c.takeovers.start(self.request())
+        self.settle()
+        old = self.c.read("old")
+        current = {**self.old, "id": "current", "state": "ended", "automation_stopped": True}
+        self.c.db.execute("INSERT INTO executions VALUES(?,?,?)", ("current", "{}", json.dumps(current)))
+        self.c.takeovers.owned.add("current")
+        self.c.recheck("current", RecheckRequest(id="new-check"))
+        self.c.recheck("current", RecheckRequest(id="new-check"))
+        self.settle()
+        self.assertEqual(self.c.read("current")["device"], "ready")
+        self.assertEqual(self.c.read("old"), old)
+        self.assertEqual(self.calls, 2)
+
+    def test_unreleased_unknown_and_uncertain_probe_reject_recheck(self):
+        current = {**self.old, "id": "current", "state": "ended", "automation_stopped": True}
+        self.c.db.execute("INSERT INTO executions VALUES(?,?,?)", ("current", "{}", json.dumps(current)))
+        with self.assertRaises(HTTPException): self.c.recheck("current", RecheckRequest(id="blocked"))
+        self.c.takeovers.start(TakeoverRequest(id="release-all", confirmed=True,
+            targets=[{"id": "old", "seq": 0}, {"id": "current", "seq": 0}]))
+        self.settle()
+        self.c.record("current", "new-evidence", device="needs_check")
+        self.c.takeovers.uncertain_probe = True
+        with self.assertRaises(HTTPException): self.c.recheck("current", RecheckRequest(id="probe-blocked"))
 
     def test_active_and_current_uncertain_cannot_be_bypassed(self):
         self.c.takeovers.owned.add("old")

@@ -161,6 +161,11 @@ test('模型输出预算耗尽不能发布残缺回复或假完成，已创建�
   const snapshot = x.business.conversation('chat');
   assert.equal(snapshot.requests.length, 1); assert.ok(snapshot.currentPlan);
   assert.equal(snapshot.messages.filter(message => message.role === 'assistant').length, 0);
+  const handoff = snapshot.messages.find(message => message.id === `handoff-${turn.id}`)!;
+  assert.match(handoff.text, /已有业务记录已保留/);
+  assert.equal(handoff.reference, snapshot.currentPlan);
+  assert.doesNotMatch(handoff.text, /截断的解释/);
+  assert.equal(model.doGenerateCalls.length, 2);
   assert.equal(x.submissions(), 0);
 });
 
@@ -171,6 +176,7 @@ test('空白模型回复是失败且不自动重试', async t => {
   const result = await x.runtime.settled(turn.id);
   assert.equal(result.turn.reason, 'model_empty_response'); assert.equal(result.turn.state, 'failed');
   assert.equal(model.doGenerateCalls.length, 1);
+  assert.match(x.business.conversation('chat').messages.find(m => m.id === `handoff-${turn.id}`)!.text, /未登记业务操作/);
 });
 
 test('模型将工具协议误输出为正文时不发布，保持业务事实可查', async t => {
@@ -181,4 +187,17 @@ test('模型将工具协议误输出为正文时不发布，保持业务事实�
   assert.equal(result.turn.reason, 'model_invalid_response'); assert.equal(result.turn.state, 'failed');
   assert.equal(x.business.conversation('chat').messages.filter(message => message.role === 'assistant').length, 0);
   assert.equal(model.doGenerateCalls.length, 1); assert.equal(x.submissions(), 0);
+});
+
+test('输出预算集中配置且有界，模型调用记录实际预算', async t => {
+  const { outputBudget } = await import('../src/runtime/budget.ts');
+  assert.equal(outputBudget({}), 12000); assert.equal(outputBudget({ CHATMAA_MODEL_MAX_OUTPUT_TOKENS: '6000' }), 6000);
+  for (const raw of ['0', '999999', '1e4', 'abc']) assert.throws(() => outputBudget({ CHATMAA_MODEL_MAX_OUTPUT_TOKENS: raw }));
+  const model = new MockLanguageModelV4({ doGenerate: async options => {
+    assert.equal(options.maxOutputTokens, outputBudget()); return reply('只读回复。');
+  } });
+  const x = setup(model); t.after(x.close);
+  const turn = x.runtime.submit('chat', 'budget', '咨询'); await x.runtime.settled(turn.id);
+  assert.equal(x.runtime.read(turn.id).turn.state, 'completed');
+  assert.match(JSON.stringify(x.runtime.read(turn.id).activities), /maxOutputTokens/);
 });

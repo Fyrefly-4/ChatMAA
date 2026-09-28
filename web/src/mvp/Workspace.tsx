@@ -6,6 +6,7 @@ import { DetailPanel } from './DetailPanel';
 import { AssistantMessage } from './AssistantMessage';
 import { MessageActivity } from './MessageActivity';
 import { api, id, pathId } from './api';
+import { ProgressTime } from './ProgressTime';
 import { execution, waitingText } from './presentation';
 import './workspace.css';
 
@@ -18,7 +19,7 @@ export default function Workspace() {
   const previousLength = useRef(0); const historyAnchor = useRef<number | null>(null);
   const composer = useRef<HTMLTextAreaElement>(null); const detailsButton = useRef<HTMLButtonElement>(null);
   const blockers = status?.tasks ?? [];
-  const abnormal = !!state.connection || !status?.adapterAvailable || !status?.device || !status.projection.available || !!status.storageFailed ||
+  const abnormal = (status?.recovery && status.recovery.state !== 'ready') || !!state.connection || !status?.adapterAvailable || !status?.device || !status.projection.available || !!status.storageFailed ||
     blockers.some(t => !t.task.sync.available || t.task.state === 'unknown' || (t.task.automation_stopped && t.task.device !== 'ready'));
   const currentPlan = state.conversation?.currentPlan ? state.plans[state.conversation.currentPlan] ?? state.conversation.plan : null;
   const latestTurn = Object.values(state.turns).sort((a, b) => b.generation - a.generation)[0];
@@ -38,6 +39,7 @@ export default function Workspace() {
   const referencedPlans = new Set(state.messages.flatMap(m => m.reference && state.plans[m.reference] ? [m.reference] : []));
   const referencedTasks = new Set(state.messages.flatMap(m => m.reference && state.tasks[m.reference] ? [m.reference] : []));
   const renderedTasks = new Set<string>();
+  const renderedPlans = new Set<string>();
   // Execution may finish before a result message exists, including projection failures.
   const ownTasks = Object.values(state.tasks).filter(t => t.conversationId === state.conversationId && !referencedTasks.has(t.id));
   const title = status?.conversations.find(c => c.id === state.conversationId)?.title ?? '开始一段对话';
@@ -70,12 +72,16 @@ export default function Workspace() {
           <p>业务投影：{status?.projection.available ? '可用' : status?.projection.reason ?? '尚未读取'}；模型：{status?.runtime.available ? '可用' : '不可用，已有任务仍可查询和停止'}。</p>
           <p>执行来源：{status?.mode === 'offline_callback_replay' ? '离线回放，不操作游戏' : status?.mode ?? '尚未读取'}。</p>
           {status?.closing && <p>后台正在退出并交接执行证据。</p>}
-          {blockers.some(t => t.task.automation_stopped && t.task.device !== 'ready') && <p>自动化已停止不等于游戏内战斗结束。请接管现场并核对；环境放行不改写旧未知成果。</p>}
-          {blockers.filter(t => t.task.automation_stopped && t.task.device !== 'ready').map(task => <button key={task.id} disabled={!!state.actions[`recheck.${task.id}`]} onClick={() => void state.action(`recheck.${task.id}`, () => api(`/tasks/${pathId(task.id)}/recheck`, { id: id() }))}>核对任务环境</button>)}
-          {status?.device?.recoverable && <div className="m-recovery"><label><input type="checkbox" checked={manual} onChange={e => setManual(e.target.checked)} />我已停止其他自动化、接管游戏并准备好界面</label>
-            <button disabled={!manual || !!state.actions.takeover} onClick={() => void state.action('takeover', async () => {
-              await api('/takeovers', { id: id(), confirmed: true, targets: status.device!.blockers.map(b => ({ id: b.id, seq: b.seq })) }); setManual(false);
-            })}>核对环境并恢复使用</button></div>}
+          {status?.recovery && status.recovery.state !== 'ready' && <section className="m-recovery" aria-label="恢复使用">
+            <h3>恢复使用</h3><p>{status.recovery.message}</p>
+            {status.recovery.state === 'checking' && <ProgressTime since={status.recovery.startedAt} label="检查" />}
+            {status.recovery.lastCheck && ('ready' in status.recovery.lastCheck ? status.recovery.lastCheck.state === 'ended' && !status.recovery.lastCheck.ready : status.recovery.lastCheck.state === 'failed') && <p>上次未识别到可用画面。请关闭弹窗、等待战斗结束，回到游戏首页或关卡准备页再试。检查停止状态与旧任务成果分别保留。</p>}
+            {status.recovery.actions.includes('check') && <label><input type="checkbox" checked={manual} onChange={e => setManual(e.target.checked)} />我已停止其他自动化，并准备好游戏画面</label>}
+            {status.recovery.actions.map(action => <button key={action} disabled={!!state.actions.recovery || (action === 'check' && !manual)} onClick={() => void state.action('recovery', async () => {
+              await api('/recovery', { id: id(), action }); setManual(false);
+            })}>{({ check: '我已准备好，检查环境', cancel: '取消检查', stop: '停止任务', reconnect: '结束本次执行服务并重新连接' } as Record<string, string>)[action]}</button>)}
+          </section>}
+
         </div>}
       </header>
       <div className="m-body">
@@ -88,18 +94,24 @@ export default function Workspace() {
             {state.messages.map(message => {
               const plan = message.reference ? state.plans[message.reference] : null;
               const task = message.reference ? state.tasks[message.reference] : null;
+              const showPlan = plan && !renderedPlans.has(plan.id); if (plan) renderedPlans.add(plan.id);
               const showTask = task && !renderedTasks.has(task.id); if (task) renderedTasks.add(task.id);
               return <div key={message.id} className="m-message-group">
                 {message.role === 'assistant' ? <AssistantMessage text={message.text} />
                   : <p className={message.role === 'user' ? 'm-user' : 'm-system'}>{message.text}</p>}
                 {message.role === 'user' && <MessageActivity conversationId={message.conversationId} messageId={message.id} />}
-                {plan && <PlanCard plan={plan} current={plan.id === currentPlan?.id} state={state} />}
+                {showPlan && <PlanCard plan={plan} current={plan.id === currentPlan?.id} state={state} />}
                 {showTask && <TaskSummary task={task} state={state} />}
               </div>;
             })}
             {currentPlan && !referencedPlans.has(currentPlan.id) && <PlanCard plan={currentPlan} current state={state} />}
             {ownTasks.map(task => <TaskSummary key={task.id} task={task} state={state} />)}
-            {state.conversation?.request?.waiting.length ? <p className="m-activity">当前等待：{state.conversation.request.waiting.map(w => waitingText[w] ?? w).join('、')}</p> : null}
+            {state.conversation?.request?.state === 'active' && state.conversation.request.waiting.length ? <section className="m-activity" aria-label="待处理需求">
+              <p>当前等待：{state.conversation.request.waiting.map(w => waitingText[w] ?? w).join('、')}</p>
+              <p>{state.conversation.waitingGuidance?.message}</p>
+              {state.conversation.waitingGuidance?.taskIds.map(taskId => <button className="m-link" key={taskId} onClick={() => state.inspect({ type: 'task', id: taskId, conversationId: state.conversationId! })}>查看旧任务结果</button>)}
+              {state.conversation.waitingGuidance?.canCancel && <button disabled={!!state.actions['cancel.waiting']} onClick={() => void state.action('cancel.waiting', () => api(`/requests/${pathId(state.conversation!.request!.id)}/cancel`, { revision: state.conversation!.request!.revision }))}>取消本次{state.conversation.request.adjustment ? '调整' : '需求'}</button>}
+            </section> : null}
             {latestTurn && <div className="m-activity" role="status">{latestTurn.state === 'processing' ? latestActivity?.kind === 'tool_call' ? '助手正在处理业务操作…' : '助手正在理解与处理…' : latestTurn.state === 'completed' ? '本轮回复已结束，任务执行状态独立更新。' : `本轮${latestTurn.state === 'failed' ? '处理失败' : '已中断'}：${latestTurn.reason ?? '原因待核对'}。已受理任务不因此撤销。`}</div>}
           </div>
           {newContent && <button className="m-new-content" onClick={() => { stream.current?.scrollTo({ top: stream.current.scrollHeight, behavior: 'smooth' }); atBottom.current = true; setNewContent(false); }}>查看新内容 ↓</button>}

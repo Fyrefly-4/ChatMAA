@@ -1,5 +1,13 @@
 # ChatMAA 当前工程与目标架构
 
+2026-09-27 D6 体验整改：等待需求取消、模型失败交接、过程反馈与完成摘要，见 [整改说明](d6-remediation.md)；真实模型候选预算待验证。
+
+2026-09-26 D6 恢复整改：统一恢复入口，修正已放行历史误拦截，并提供自有执行服务受控重连；状态、代码入口和离线验证边界见 [恢复使用整改](d5-web.md#d6-恢复使用整改2026-09-26)。
+
+2026-09-26：MVP 日常使用可双击根目录 `启动 ChatMAA.bat`，首次保存配置，随后自动打开网页；退出在启动窗口完成。配置、记录与验证边界见 [MVP 用户入口](mvp-launcher.md)。
+
+2026-09-24 D6 分支补充：Backend 模型连接从环境读取 `CHATMAA_MODEL_BASE_URL`、`CHATMAA_MODEL_API_KEY`、`CHATMAA_MODEL_ID`，仍使用 AI SDK 的 Responses 接口与原有有界工具循环。配置入口见 [Backend 说明](../../backend/README.md#agent-调试与接入)，代码在 `backend/src/agent/provider.ts`；模型身份按实际配置记录，密钥不传给 Python 子进程。此处是配置能力和离线协议检查，不代表其他模型端点或 D6 真实整链已通过。下文固定 DeepSeek 的说法与实测数字均按原记录时期解读。
+
 2026-09-21 D5 补充（从 `b9d580de` 建设）：`web/src/mvp/` 已提供连续会话、方案展示与确认、全局任务、独立停止、历史恢复及依据／执行详情。`backend/src/browser/mvp-routes.ts` 与 `mvp-queries.ts` 在原同源身份边界装配既有 Runtime 和业务服务；启动使用 `--runtime --web`，legacy 页面分别加载。数据和进程归属不变，代码职责、运行路径与分层验证见 [D5 Web](d5-web.md)。真实模型＋正式回放网页代表路径已核对，仍有回复表达与阅读体验限制；未调用真实游戏，不代表 D5 已获验收或 D6 已完成。下文有日期的页面缺口与 Demo 描述按原历史基线理解。
 
 2026-09-21 D4 补充（代码 `a46e20d`）：MVP 已新增独立 [Runtime 模块](../../backend/src/runtime/service.ts)，使用有界 AI SDK 业务工具循环、会话轮次代次、上下文来源与后台只读澄清；显式 `--runtime` 经应用令牌 HTTP／回放 CLI 接入。三种目标及代表异常已通过真实模型＋正式 Python 回放核对，进入阶段审阅；完整页面与真实游戏整体验收仍留后续阶段。结构、活动契约、失败修正和检查入口见 [D4 Runtime](d4-runtime.md)。下文原 Agent／Web 描述继续属于 legacy Demo，不代表新 MVP 仍使用完整指令直接授权规则。
@@ -86,7 +94,7 @@ flowchart TD
 |---|---|---|
 | 网页，React + Vite | 输入、摘要展示、任务事实与停止入口 | 单页已实现；HTTP 轮询与展示回执，离线浏览器回放通过 |
 | 应用入口，Fastify | 接收消息与操作，交给对应模块 | 确定参数 CLI 与受控浏览器 API 已建立；浏览器只提交原文，不直接提交执行参数 |
-| Agent Runtime，AI SDK | 上下文、目标理解、澄清与工具调用 | 已接入 DeepSeek Responses 配置与两步 SDK 循环；离线验证通过，真实模型四个固定样例的回放调用与回复已验收 |
+| Agent Runtime，AI SDK | 上下文、目标理解、澄清与工具调用 | 当前连接通过环境配置 Responses 端点和模型；原 DeepSeek 固定样例有历史回放证据，新配置已做离线协议检查，其他端点仍须逐个验证 |
 | 任务管理，TypeScript | 参数与授权检查、防重、设备占用、状态协调 | 共同任务服务已有正式离线验证；Agent 增加原指令完整匹配及参数绑定 |
 | MAA Adapter，Python + FastAPI | 管住执行入口、调用 MaaCore、转换和保存证据 | 离线与 native 边界替身已检查；两个独立 1-7 任务各一次的正常实机流程已通过 |
 | 两份 SQLite | TS 保存业务记录，Python 保存最小执行证据 | D3 增加会话、需求、方案、确认与历史关联；证据投影和交接沿用，完整页面留 D5 |
@@ -170,7 +178,7 @@ TS 统一启动和管理 Python；正常退出时先拒绝新执行、请求停�
 | AI SDK 有界工具循环，自有任务管理 | 复用模型调用流程，长任务独立运行 | 仍需适配上下文与工具，循环结束不能代替游戏停止。[ADR-0004](../adr/0004-agent-loop-boundary.md) |
 | React + Vite 独立前端 | 页面通过应用 API 与后端协作 | 单页同源 HTTP 轮询已实现，接受更新延迟；刷新只恢复读取，完整历史和恢复后延。选择依据见[架构讨论 Q12](../archive/2026-09-prototype/architecture-discussion.md#第五轮技术组合已确认) |
 
-Fastify、FastAPI、SQLite 和 MaaCore 已有固定版本集成证据，见[合并报告](../../prototypes/maa/HTTP-MERGE.md)与[环境记录](../../prototypes/maa/ENVIRONMENT.md)。AI SDK 项目适配已有离线工具往返及 Responses 请求检查；模型服务固定为 DeepSeek `deepseek-flash`，真实模型四个固定样例的回放调用与回复已验收。本阶段使用普通 CSS，不引入 UI 组件库；浏览器约 500 ms 串行轮询，网络等待会增加延迟，不提供实时性能保证。
+Fastify、FastAPI、SQLite 和 MaaCore 已有固定版本集成证据，见[合并报告](../../prototypes/maa/HTTP-MERGE.md)与[环境记录](../../prototypes/maa/ENVIRONMENT.md)。AI SDK 项目适配已有离线工具往返及 Responses 请求检查；2026-09-18 的模型服务固定为 DeepSeek `deepseek-flash`，其四个固定样例的真实模型回放调用与回复已验收。当前 D6 分支改为环境配置，尚无新配置的真实调用证据。本阶段使用普通 CSS，不引入 UI 组件库；浏览器约 500 ms 串行轮询，网络等待会增加延迟，不提供实时性能保证。
 
 ## 7. 后续替换会影响哪里
 

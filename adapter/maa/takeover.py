@@ -75,7 +75,7 @@ class Takeovers:
         if not body.confirmed or not status["recoverable"] or actual != expected:
             raise HTTPException(409, "recovery_preconditions_changed")
         value = {"id": body.id, "request": body.model_dump(), "state": "running",
-                 "automation_stopped": False, "reason": None}
+                 "automation_stopped": False, "reason": None, "started_at": time.time()}
         self.save(value)  # Durable intent before any probe; repeating this ID never launches another.
         stop = threading.Event()
         c.active[self.key] = {"stop": stop, "kind": "takeover", "value": value}

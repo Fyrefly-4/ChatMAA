@@ -14,9 +14,10 @@ export type Snapshot = {
   material_result?: { items: Record<string, number>; certainty: string; issues: string[] };
   inventory_result?: { items: Record<string, number>; complete: boolean; certainty: string; missing_items: 'unknown'; observed_at: number | null; issues: string[] };
   threshold_reached?: boolean;
+  normal_completed?: boolean;
   resource_digest?: string;
   takeover?: { id: string; released: boolean; environment: EnvironmentEvidence };
-  recheck?: { id: string; state: string; automation_stopped: boolean; ready: boolean; environment?: EnvironmentEvidence };
+  recheck?: { id: string; state: string; automation_stopped: boolean; ready: boolean; environment?: EnvironmentEvidence; started_at?: number };
 };
 export type Evidence = { id: string; seq: number; kind: string; source_instance: string; snapshot: Snapshot };
 export type Update = { snapshot: Snapshot; events: Evidence[]; instance: string };
@@ -39,6 +40,12 @@ export function blocksExecution(t: Snapshot & { gap?: boolean; sync?: SyncStatus
   return !t.takeover?.released && (t.state !== 'ended' || !t.automation_stopped || t.device !== 'ready' ||
     !!(t.recheck && (t.recheck.state !== 'ended' || !t.recheck.automation_stopped)));
 }
+// Released history retains its original stop facts; only current control blocks a probe.
+export function blocksProbe(t: TaskView) {
+  if (t.state === 'rejected') return false;
+  return !t.sync.available || t.gap || !!t.evidence_conflict || (!t.takeover?.released &&
+    (t.state !== 'ended' || !t.automation_stopped || !!(t.recheck && !t.recheck.automation_stopped)));
+}
 // Execution termination is not evidence stability: recovery may still append a release.
 export function needsSynchronization(t: TaskView, pendingControl = false) {
   return t.state !== 'rejected' && (pendingControl || blocksExecution(t));
@@ -48,7 +55,7 @@ export type BackendDeviceStatus = DeviceStatus & { admission: Admission };
 export type DeviceStatus = {
   blockers: { id: string; seq: number; confirmed: number; certainty: string; reason: string | null; kind: 'current' | 'historical' }[];
   recoverable: boolean;
-  recovery: null | { id: string; state: string; reason: string | null; automation_stopped: boolean };
+  recovery: null | { id: string; state: string; reason: string | null; automation_stopped: boolean; started_at?: number };
 };
 
 export class TaskError extends Error {

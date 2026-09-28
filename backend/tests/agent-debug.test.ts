@@ -45,7 +45,8 @@ test('agent debug console starts one host and explicit exit hands it off without
   writeFileSync(config, JSON.stringify({ mode: 'maa-replay', dataDir: directory,
     python: resolve(repository, 'adapter/maa/.venv/Scripts/python.exe'), stopDeadlineMs: 3000, httpTimeoutMs: 1000 }));
   const child = spawn(process.execPath, [resolve(repository, 'backend/src/main.ts'), '--legacy-demo', '--agent'], {
-    env: { ...process.env, CHATMAA_CONFIG: config, DEEPSEEK_API_KEY: 'offline-unused-placeholder' },
+    env: { ...process.env, CHATMAA_CONFIG: config, CHATMAA_MODEL_BASE_URL: 'https://models.example/v1',
+      CHATMAA_MODEL_API_KEY: 'offline-unused-placeholder', CHATMAA_MODEL_ID: 'chosen-model' },
     stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true,
   });
   const events: Record<string, any>[] = [];

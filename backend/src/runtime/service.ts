@@ -3,6 +3,7 @@ import { TaskError } from '../task-contract.ts';
 import { RuntimeRecords } from './records.ts';
 import type { Turn } from './records.ts';
 import { contextFor } from './context.ts';
+import { failureHandoff } from './handoff.ts';
 
 export type RunInput = { turn: Turn; context: ReturnType<typeof contextFor>; signal: AbortSignal; assertCurrent: () => void;
   explainWaiting: (id: string, text: string) => unknown;
@@ -151,9 +152,12 @@ export class RuntimeService {
     } catch (error) {
       if (!this.closing && !this.storageFailed) {
         try {
-          if (this.records.current(turn)) this.records.finish(turn.id, signal.aborted ? 'interrupted' : 'failed',
-            signal.aborted ? (signal.reason?.message === 'model_timeout' ? 'model_timeout' : 'cancelled') :
-              error instanceof TaskError ? error.message : 'model_or_runtime_failed');
+          if (this.records.current(turn)) this.business.tasks.store.transaction(() => {
+            const reason = signal.aborted ? (signal.reason?.message === 'model_timeout' ? 'model_timeout' : 'cancelled') :
+              error instanceof TaskError ? error.message : 'model_or_runtime_failed';
+            if (!signal.aborted || reason === 'model_timeout') this.records.activity(turn.id, 'failure_handoff', failureHandoff(this.business, turn, reason));
+            this.records.finish(turn.id, signal.aborted ? 'interrupted' : 'failed', reason);
+          });
         } catch { this.storageFailed = true; }
       }
     } finally {
