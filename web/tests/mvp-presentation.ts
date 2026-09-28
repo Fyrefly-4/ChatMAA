@@ -19,6 +19,7 @@ export const plan: PlanView = {
     reliable: true, changeSequence: 0, evidenceSequence: 1 },
 };
 export const task: BusinessTask = {
+  startedAt: 1790000000, stopRequestedAt: null, summary: null,
   id: 'task', conversationId: 'chat', requestId: 'request', requestRevision: 1, planId: 'plan', purpose: 'fight', origin: 'mvp', resultDigest: 'fixture',
   plan: { ...plan, state: 'started', taskId: 'task' },
   task: { id: 'task', params: { version: 2, kind: 'fight_material', stage: '1-7', item_id: '30012', quantity: 28, series: 1, medicine: 0, premium: 0 },
@@ -62,8 +63,8 @@ export function sceneData(scene: Scene) {
   const cid = scene === 'cross' ? 'other' : 'chat';
   if (scene === 'cross') { p.conversationId = 'other'; p.presentation!.conversationId = 'other'; messages.forEach(m => m.conversationId = 'other'); messages.pop(); }
   const conversation: MvpConversation = { id: cid, conversationId: cid, title: scene === 'cross' ? '关卡咨询' : '补充固源岩', currentRequest: 'request', currentPlan,
-    createdAt: p.createdAt, request: null, plan: currentPlan ? p : null, activeTasks: withTask && scene !== 'cross' ? [t] : [] };
-  const status: MvpStatus = { recovery: { state: 'ready', message: '游戏环境可用', actions: [], target: null, taskIds: [], lastCheck: null, device: null }, entry: 'mvp-runtime', mode: 'offline_callback_replay', projection: { available: true, reason: null },
+    createdAt: p.createdAt, request: null, waitingGuidance: null, plan: currentPlan ? p : null, activeTasks: withTask && scene !== 'cross' ? [t] : [] };
+  const status: MvpStatus = { recovery: { state: 'ready', message: '游戏环境可用', actions: [], target: null, taskIds: [], lastCheck: null, device: null, startedAt: null }, entry: 'mvp-runtime', mode: 'offline_callback_replay', projection: { available: true, reason: null },
     admission: { state: withTask && !t.task.automation_stopped ? 'blocked' : 'ready', conflictingTaskIds: withTask && !t.task.automation_stopped ? ['task'] : [] },
     tasks: withTask && !t.task.automation_stopped ? [t] : [], conversations: [{ id: 'chat', conversationId: 'chat', title: '补充固源岩', currentRequest: 'request', currentPlan: 'plan', createdAt: p.createdAt },
       ...(scene === 'cross' ? [{ id: 'other', conversationId: 'other', title: '关卡咨询', currentRequest: 'request', currentPlan: 'plan', createdAt: p.createdAt }] : [])],

@@ -5,7 +5,7 @@ test('恢复入口由后端动作驱动：准备画面、检查失败、重试�
   await page.addInitScript(() => { Object.defineProperty(crypto, 'randomUUID', { value: () => 'fixture-check' }); });
   const data = sceneData('running');
   data.task.task.state = 'ended'; data.task.task.automation_stopped = true; data.task.task.device = 'needs_check';
-  data.status.recovery = { state: 'needs_check', message: '自动化已停止。请回到首页或关卡准备页。', actions: ['check'], target: 'task', taskIds: ['task'], lastCheck: null, device: null };
+  data.status.recovery = { state: 'needs_check', message: '自动化已停止。请回到首页或关卡准备页。', actions: ['check'], target: 'task', taskIds: ['task'], lastCheck: null, device: null, startedAt: null };
   await presentationPage(page, data);
   let calls = 0;
   await page.route('**/api/recovery', async route => {

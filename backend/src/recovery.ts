@@ -43,7 +43,8 @@ export class RecoveryService {
     }
     if (!this.tasks.restartExecutor) actions = actions.filter(a => a !== 'reconnect');
     const lastCheck = checking?.recheck ?? current.find(t => t.recheck)?.recheck ?? device?.recovery ?? null;
-    return { state, message, actions, target, taskIds: blocked.map(t => t.id), lastCheck, device };
+    return { state, message, actions, target, taskIds: blocked.map(t => t.id), lastCheck, device,
+      startedAt: checking?.recheck?.started_at ?? device?.recovery?.started_at ?? null };
   }
   async act(id: string, action: string) {
     taskId(id);

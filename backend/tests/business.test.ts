@@ -479,3 +479,27 @@ test('失败的事实与后续处理一起回滚；下一项同步补齐失败�
   assert.equal(calls, 1); assert.equal(x.business.global().projection.available, true);
   assert.equal(x.business.records.list('continuations')[0].state, 'completed'); assert.equal(x.submissions(), 2);
 });
+
+test('未知旧成果的调整可取消；重建业务后仍可明确新增并等待确认', async t => {
+  const x = setup(); t.after(x.close);
+  x.request('original', { kind: 'count', quantity: 2, stage: '1-7' });
+  const task = await x.start();
+  x.business.appendMessage('chat', 'adjust-msg', 'user', '改为总共一次');
+  await x.business.adjust(task.id, 'adjusted', 'adjust-msg', { kind: 'count', quantity: 1, stage: '1-7' }, 'total');
+  await x.publish(task.id, { ...x.completed, reason: 'user_stop', started_cycles: 1, unsettled_cycles: 1,
+    count_result: { value: 0, certainty: 'lower_bound', issues: ['unsettled'] } });
+  assert.deepEqual(x.business.request('adjusted').waiting, ['previous_result_uncertain']);
+  assert.equal(x.business.conversation('chat').currentPlan, null);
+  const guidance = x.business.waitingGuidance('adjusted')!;
+  assert.deepEqual(guidance.taskIds, [task.id]); assert.equal(guidance.environment, 'ready');
+  assert.match(guidance.message, /不会补齐旧成果/);
+  assert.throws(() => x.business.cancelRequest('adjusted', 2), /request_not_current/);
+  x.business.cancelRequest('adjusted', 1); x.business.cancelRequest('adjusted', 1);
+  assert.equal(x.business.waitingGuidance('adjusted'), null);
+  const restored = new BusinessService(x.tasks); t.after(() => restored.close());
+  assert.equal(restored.request('adjusted').state, 'cancelled');
+  restored.appendMessage('chat', 'additional-msg', 'user', '再刷一次');
+  restored.createRequest('chat', 'additional', 'additional-msg', { kind: 'count', quantity: 1, stage: '1-7' });
+  assert.equal(restored.plan(restored.conversation('chat').currentPlan!).state, 'unpresented');
+  assert.equal(x.submissions(), 1); assert.equal(restored.task(task.id).result!.amount.certainty, 'lower_bound');
+});

@@ -38,6 +38,7 @@ export class BusinessBasis {
     const result = goalResult(task, plan.goal, prior, plan.initialInventory);
     if (plan.observationId && !this.observationValid(plan.observationId, plan.goal.itemId!, [...plan.previousTasks, task.id], link.completedChangeSequence)) {
       result.estimatedInventory = { value: null, certainty: 'unknown' }; result.target = 'uncertain';
+      if (result.process === 'succeeded') result.process = 'unknown';
       result.remaining = null; result.differenceFromConfirmed = null;
     }
     return result;

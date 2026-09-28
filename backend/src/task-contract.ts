@@ -14,9 +14,10 @@ export type Snapshot = {
   material_result?: { items: Record<string, number>; certainty: string; issues: string[] };
   inventory_result?: { items: Record<string, number>; complete: boolean; certainty: string; missing_items: 'unknown'; observed_at: number | null; issues: string[] };
   threshold_reached?: boolean;
+  normal_completed?: boolean;
   resource_digest?: string;
   takeover?: { id: string; released: boolean; environment: EnvironmentEvidence };
-  recheck?: { id: string; state: string; automation_stopped: boolean; ready: boolean; environment?: EnvironmentEvidence };
+  recheck?: { id: string; state: string; automation_stopped: boolean; ready: boolean; environment?: EnvironmentEvidence; started_at?: number };
 };
 export type Evidence = { id: string; seq: number; kind: string; source_instance: string; snapshot: Snapshot };
 export type Update = { snapshot: Snapshot; events: Evidence[]; instance: string };

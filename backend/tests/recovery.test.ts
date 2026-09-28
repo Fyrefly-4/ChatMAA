@@ -45,9 +45,10 @@ async function until(read: () => boolean | Promise<boolean>) {
 }
 
 test('正式回放：执行中调整→检查→新方案；宿主重连保留会话且不重跑', async t => {
-  const host = await startHost({ mode: 'maa-replay', dataDir: resolve(repository, '.artifacts/checks', `recovery-${Date.now()}`),
+  const config = { mode: 'maa-replay' as const, dataDir: resolve(repository, '.artifacts/checks', `recovery-${Date.now()}`),
     python: resolve(repository, 'adapter/maa/.venv/Scripts/python.exe'), port: 0, pollMs: 50, httpTimeoutMs: 800,
-    leaseMs: 5000, stopDeadlineMs: 1500 }, { business: true });
+    leaseMs: 5000, stopDeadlineMs: 1500 };
+  const host = await startHost(config, { business: true });
   t.after(() => host.close()); const b = host.business!; const recovery = new RecoveryService(host.tasks);
   b.createConversation('chat', '执行中调整'); b.appendMessage('chat', 'goal', 'user', '刷100次');
   b.createRequest('chat', 'request', 'goal', { kind: 'count', quantity: 100, stage: '1-7' });
@@ -85,4 +86,12 @@ test('正式回放：执行中调整→检查→新方案；宿主重连保留�
   assert.equal(host.tasks.get(interrupted.id).confirmed, unknown.confirmed);
   assert.equal(host.tasks.list().length, 2);
   assert.equal((await host.close()).childExited, true);
+  const reopened = await startHost(config, { business: true }); t.after(() => reopened.close());
+  await until(async () => (await new RecoveryService(reopened.tasks).status()).state === 'ready');
+  assert.equal(reopened.tasks.get(interrupted.id).takeover?.released, true);
+  assert.equal(reopened.tasks.get(interrupted.id).state, 'unknown');
+  assert.equal(reopened.tasks.list().length, 2, '同目录重启不重跑历史');
+  reopened.business!.appendMessage('chat', 'fresh-goal', 'user', '再刷一次');
+  reopened.business!.createRequest('chat', 'fresh-request', 'fresh-goal', { kind: 'count', quantity: 1, stage: '1-7' });
+  assert.equal(reopened.business!.plan(reopened.business!.conversation('chat').currentPlan!).state, 'unpresented');
 });

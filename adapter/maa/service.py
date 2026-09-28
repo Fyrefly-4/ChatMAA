@@ -164,6 +164,7 @@ class Controller:
                     changes["certainty"] = changes.get("count_result", {}).get("certainty", "lower_bound")
                 environment = environment_view(value.get("environment", {}))
                 changes.update(state="ended" if stopped else "unknown", automation_stopped=stopped,
+                               normal_completed=value.get("reason") == "normal" and healthy and stopped and value.get("task_chain_completed") is True,
                                device="ready" if stopped and healthy and fresh(environment) else "needs_check",
                                environment=environment, reason=value.get("reason", "unknown"))
             signature = json.dumps(changes, sort_keys=True)
@@ -230,7 +231,7 @@ class Controller:
             raise HTTPException(409, "automation_stop_unconfirmed")
         self.takeovers.owned.add(execution_id)
         self.record(execution_id, "recheck_requested", detail={"recheck_id": body.id}, device="occupied",
-                    recheck={"id": body.id, "state": "running", "automation_stopped": False, "ready": False})
+                    recheck={"id": body.id, "state": "running", "automation_stopped": False, "ready": False, "started_at": time.time()})
         stop = threading.Event()
         self.active[execution_id] = {"stop": stop, "kind": "recheck", "recheck_id": body.id}
         def emit(kind, value):
