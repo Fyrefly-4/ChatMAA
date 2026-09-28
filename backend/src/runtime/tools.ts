@@ -90,7 +90,8 @@ export function businessTools(business: BusinessService, run: RunInput, options:
       input => run.explainWaiting(text(input, 'continuationId'), text(input, 'explanation'))),
     read_state: define('read_state', '读取本会话最新方案、展示、任务、未知及全局占用；进度回答前先读。', {}, [], false,
       () => ({ ...contextFor(business, conversationId, sourceMessage, 48000, run.turn.sourceMessages).facts,
-        globalTasks: business.global().tasks.map(t => ({ id: t.id, conversationId: t.conversationId, task: t.task })) })),
+        globalTasks: business.global().tasks.filter(t => t.conversationId !== conversationId)
+          .map(t => ({ id: t.id, conversationId: t.conversationId, task: t.task })) })),
     read_history: define('read_history', '本会话历史，返回按时间排列的最近一页，nextBefore 用于读取更早记录。',
       { before: string, query: string }, [], false,
       input => business.records.messagePage(conversationId, { before: input.before as string | undefined, query: input.query as string | undefined })),
