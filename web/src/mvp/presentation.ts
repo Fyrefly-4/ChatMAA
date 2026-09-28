@@ -12,12 +12,12 @@ export const planStates: Record<string, string> = { unpresented: '正在展示',
   superseded: '历史方案', cancelled: '已取消', started: '已关联任务' };
 export function execution(t: BusinessTask) {
   const v = t.task;
-  if (v.automation_stopped && v.state === 'ended') return '自动化已停止';
+  if (v.automation_stopped && v.state === 'ended') return t.result?.process === 'succeeded' ? '任务已完成' : t.result?.process === 'failed' ? '任务异常结束' : '自动化已停止';
   return ({ submitting: '提交中', accepted: '执行端已受理', running: '执行中', stopping: '停止中', unknown: '状态待核对', rejected: '未受理' } as Record<string, string>)[v.state] ?? '状态待核对';
 }
 export const processText: Record<string, string> = { succeeded: '过程成功', stopped: '用户停止', partial: '部分完成', failed: '执行失败', unknown: '过程结果待核实', running: '执行过程尚未结束' };
 export const targetText: Record<string, string> = { achieved: '目标已达成', not_achieved: '目标未达成', uncertain: '目标结果待核实' };
-export const reasonText: Record<string, string> = { normal: '执行端正常结束回调；不足以单独判断过程成功',
+export const reasonText: Record<string, string> = { normal: '执行端正常结束；成果按已核对记录展示',
   target_reached: '已达到执行目标', sanity_insufficient: '理智不足', user_stop: '用户请求停止', user_stop_before_start: '开始前请求停止',
   stop_requested: '已请求停止', evidence_gap: '执行证据存在缺口', submission_not_confirmed: '提交结果尚未确认',
   environment_unconfirmed: '游戏环境未确认', runtime_error: '执行端异常' };
